@@ -7,7 +7,7 @@ import { refreshTokenController } from '../controllers/RefreshToken.Controller.j
 import { logoutController } from '../controllers/logout.js';
 import { githubCallbackController, githubLoginController } from '../controllers/githubLogin.js';
 
-const indetityServiceRouter = express();
+const indetityServiceRouter = express.Router();
 
 indetityServiceRouter.post('/register/init', registerInitValidate, initRegisterController);
 indetityServiceRouter.post('/register/verify', registerVerifyValidator, verifyRegisterController);

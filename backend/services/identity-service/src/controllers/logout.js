@@ -7,7 +7,7 @@ export const logoutController = async (req, res) => {
     try {
         const redis = getRedis();
 
-        const accessToken = req.headers['authorization']?.split(' ')[1] || req.cookies.AccessToken;
+        const accessToken = req.headers['authorization']?.split(' ')[1] || req.cookies?.AccessToken;
 
         if (!accessToken) {
             return res
@@ -20,8 +20,8 @@ export const logoutController = async (req, res) => {
         try {
             const decoded = jwt.verify(accessToken, AUTH_ENV.ACCESS_TOKEN_SECRET);
 
-            if (decoded._Id && decoded.tokenId) {
-                await redis.del(`deployhub:session:${decoded._Id}:${decoded.tokenId}`);
+            if (decoded._id && decoded.tokenId) {
+                await redis.del(`deployhub:session:${decoded._id}:${decoded.tokenId}`);
             }
         } catch (error) {
             return res

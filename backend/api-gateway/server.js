@@ -1,4 +1,4 @@
-import { loadSecrets } from "../services/identity-service/src/core/config/secretsloader.js";
+import { loadSecrets } from "./src/configs/secretsloader.js";
 
 
 // load secrets

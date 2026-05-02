@@ -3,11 +3,9 @@ import { startHealthCheck } from './src/middlewares/healthCheck.js'
 import { connectRedis } from './src/configs/redis.js';
 import { services } from './src/configs/services.js';
 import { createShutdownHandler } from '../shared/utils/gracefulShutdown.js';
-
-const interval = startHealthCheck();
-
-
 import express from 'express';
+import routes from './src/routes/index.js';
+
 const app = express();
 
 
@@ -27,14 +25,12 @@ app.get('/gateway/status', (req, res) => {
     res.json(services);
 });
 
-
-const server = app.listen(ENV.PORT, () => {
-    console.log(`server is running on locahost:${ENV.PORT}`)
-})
+app.use('/', routes);
 
 
 export default async function startApp() {
     await connectRedis();
+    const interval = startHealthCheck();
 
     const server = app.listen(ENV.PORT, () => {
         console.log(`Api Gateway is running on port ${ENV.PORT}`);
@@ -43,7 +39,9 @@ export default async function startApp() {
     const shutdown = createShutdownHandler({
         server,
         logger: console,
-        closeResources: [],
+        closeResources: [
+            () => clearInterval(interval),
+        ],
     });
 
     process.on("SIGINT", shutdown);

@@ -2,7 +2,7 @@ import { body } from 'express-validator';
 
 
 export const registerInitValidate = [
-    body('fullname').notEmpty().withMessage("Fullname is Required").isString(),
+    body('fullName').notEmpty().withMessage("Fullname is Required").isString(),
     body('email')
         .notEmpty()
         .withMessage("email is Required")

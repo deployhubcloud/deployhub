@@ -71,6 +71,7 @@ export function getSecretsForService(serviceName) {
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
+      AUTH_SERVICE: env.AUTH_SERVICE || '',
       INTERNAL_SECRET: env.INTERNAL_SERVICE_SECRET,
       FRONTEND_URL: env.FRONTEND_URL,
       ACCESS_TOKEN_SECRET: env.ACCESS_TOKEN_SECRET,
@@ -90,5 +91,6 @@ export function getRegisteredServices() {
     'project-service',
     'deploy-service',
     'domain-service',
+    'api-gateway',
   ];
 }

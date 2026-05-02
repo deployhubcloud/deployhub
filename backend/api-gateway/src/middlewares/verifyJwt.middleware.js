@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { ENV } from '../lib/env';
+import { ENV } from '../lib/env.js';
 
 export const verifyJwt = async (req, res, next) => {
 
-    const accessToken = req.cookies.AccessTOken || req.headers('Authorization')?.replace('Bearer ', "");
+    const accessToken = req.cookies?.AccessToken || req.headers.authorization?.replace('Bearer ', "");
 
     if (!accessToken) {
         return res.status(401).json({

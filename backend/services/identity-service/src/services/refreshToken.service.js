@@ -1,31 +1,8 @@
 import jwt from 'jsonwebtoken';
-import * as crypto from 'crypto';
 import { AUTH_ENV } from '../lib/env.js';
 import { getRedis } from '../core/redis/client.js';
-import { GenerateAccessToken } from '../utils/token.js';
-
-
-const deleteAllSessions = async (userId) => {
-    const pattern = `session:${userId}:*`;
-    let cursor = '0';
-
-    do {
-        const [nextCursor, keys] = await redisClient.scan(
-            cursor,
-            'MATCH',
-            pattern,
-            'COUNT',
-            100
-        );
-
-        cursor = nextCursor;
-
-        if (keys.length > 0) {
-            await redisClient.del(...keys);
-        }
-
-    } while (cursor !== '0');
-};
+import { AppError } from '../../../../shared/errors/AppError.js';
+import { SESSION_TTL_SECONDS, createSessionKey, deleteAllSessions, generateAccessToken, hashRefreshToken, } from './session.service.js';
 
 export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
 
@@ -33,10 +10,7 @@ export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
 
     // here if refreshtoken not found
     if (!refreshToken) {
-        throw new Error({
-            status: 401,
-            message: "no refreshToken Found"
-        })
+        throw new AppError("no refreshToken Found", 401);
     };
 
 
@@ -44,49 +18,38 @@ export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
     let payload;
     try {
         payload = await jwt.verify(refreshToken, AUTH_ENV.REFRESH_TOKEN_SECRET);
-    } catch (error) {
-        throw new Error({
-            status: 401,
-            message: "invalid refreshToken"
-        })
+    } catch (_error) {
+        throw new AppError("invalid refreshToken", 401);
     };
 
 
-    const userid = payload._id;
+    const userId = payload._id;
     const tokenId = payload.jti;
 
-    if (!tokenId) {
-        throw new Error({
-            status: 401,
-            message: 'invalid token payload'
-        })
+    if (!userId || !tokenId) {
+        throw new AppError('invalid token payload', 401);
     }
 
-    const sessionData = await redis.get(`deployhub:session:${userid}:${tokenId}`);
+    const sessionKey = createSessionKey(userId, tokenId);
+    const sessionData = await redis.get(sessionKey);
     if (!sessionData) {
-        throw new Error({
-            status: 401,
-            message: 'Invalid Sessions'
-        })
+        throw new AppError('Invalid Sessions', 401);
     }
 
     const session = JSON.parse(sessionData);
 
-    const incommingHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const incommingHash = hashRefreshToken(refreshToken);
 
     if (incommingHash !== session.hashedToken) {
-        await deleteAllSessions(userid);
-        throw new Error({
-            status: 403,
-            message: 'Token reuse detected. All sessions revoked.'
-        })
+        await deleteAllSessions(redis, userId);
+        throw new AppError('Token reuse detected. All sessions revoked.', 403);
     };
 
 
-    await redisClient.expire(sessionKey, 60 * 60 * 24 * 7);
+    await redis.expire(sessionKey, SESSION_TTL_SECONDS);
 
     return {
-        AccessToken: GenerateAccessToken(userId, tokenId),
+        AccessToken: generateAccessToken(userId, tokenId),
         RefreshToken: refreshToken,
         tokenId
     };

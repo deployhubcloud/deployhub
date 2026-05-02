@@ -15,7 +15,7 @@ export const verifyJWT = async (req, res, next) => {
 
         let decoded;
         try {
-            decoded = jwt.verify(token, ENV.ACCESS_TOKEN_SECRET);
+            decoded = jwt.verify(token, AUTH_ENV.ACCESS_TOKEN_SECRET);
         } catch (err) {
             return res.status(401).json({ message: 'Invalid or expired token' });
         }

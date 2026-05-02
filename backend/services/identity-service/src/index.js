@@ -2,8 +2,9 @@
 import express from "express";
 import helmet from "helmet";
 import hpp from "hpp";
+import cookieParser from "cookie-parser";
 import { AUTH_ENV } from "./lib/env.js";
-import { connectDb } from "./core/db/mongo.js";
+import { closeDb, connectDb } from "./core/db/mongo.js";
 import { connectRedis } from "./core/redis/client.js";
 import { initRabbitMQ, closeRabbitMQ } from "./core/messageBroker/rabbitMq.js";
 import { createShutdownHandler } from "../../../shared/utils/gracefulShutdown.js";
@@ -22,6 +23,7 @@ app.set("trust proxy", 1);
 // parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 
 // health
@@ -53,7 +55,7 @@ export default async function startApp() {
     const shutdown = createShutdownHandler({
         server,
         logger: console,
-        closeResources: [closeRabbitMQ],
+        closeResources: [closeRabbitMQ, closeDb],
     });
 
     process.on("SIGINT", shutdown);

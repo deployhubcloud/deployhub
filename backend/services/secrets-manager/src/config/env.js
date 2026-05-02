@@ -15,6 +15,7 @@ const schema = z.object({
   REDIS_HOST: z.string(),
   REDIS_PORT: z.coerce.number().default('6379'),
   REDIS_PASSWORD: z.string(),
+  REDIS_URL: z.string().optional(),
 
 
   BOOTSTRAP_TOKEN: z.string().min(32, 'BOOTSTRAP_TOKEN too short — min 32 chars'),
@@ -49,7 +50,8 @@ const schema = z.object({
 
   FRONTEND_URL: z.string(),
 
-  RABBITMQ_URL: z.string()
+  RABBITMQ_URL: z.string(),
+  AUTH_SERVICE: z.string().optional()
 })
 
 const parsed = schema.safeParse(process.env);
@@ -60,7 +62,7 @@ if (!parsed.success) {
     console.error(`   • ${i.path.join('.')}: ${i.message}`);
   });
   console.error('\nFix .env and restart.\n');
-  process.exit(1);
+  throw new Error('Secrets Manager missing/invalid env vars');
 }
 
 export const env = parsed.data;

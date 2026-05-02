@@ -1,6 +1,6 @@
 import { AUTH_ENV } from "../lib/env.js";
-import axios from 'axios';
-import { generateToken } from "../utils/token.js";
+import { githubCallback } from "../services/github.service.js";
+import { generateToken } from "../services/session.service.js";
 import { getAccessTokenOptions, getRefreshTokenOptions } from "../utils/cookieOption.js";
 
 export const githubLoginController = async (req, res) => {
@@ -21,7 +21,7 @@ export const githubCallbackController = async (req, res) => {
         return res
             .cookie('AccessToken', AccessToken, getAccessTokenOptions())
             .cookie('RefreshToken', RefreshToken, getRefreshTokenOptions())
-            .redirect(`${process.env.FRONTEND_URL}/`);
+            .redirect(`${AUTH_ENV.FRONTEND_URL}/`);
 
     } catch (error) {
         return res.status(error.status || 500).json({

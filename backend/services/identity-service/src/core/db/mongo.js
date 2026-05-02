@@ -23,13 +23,11 @@ export const connectDb = async () => {
 
     } catch (error) {
         console.error("Error connecting to DB:", error.message);
-        process.exit(1);
+        throw error;
     }
 };
 
-
-process.on("SIGINT", async () => {
+export const closeDb = async () => {
     await mongoose.connection.close();
     console.log("MongoDB connection closed");
-    process.exit(0);
-});
+};

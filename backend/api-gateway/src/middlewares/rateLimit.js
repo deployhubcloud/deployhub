@@ -1,5 +1,4 @@
-import { time } from 'console';
-import { redisClient } from '../configs/redis.js'
+import { getRedis } from '../configs/redis.js';
 
 const limits = {
     auth: {
@@ -8,31 +7,42 @@ const limits = {
     }
 }
 
-const rateLimit = async (seriveName, req, res, time, limit, inputmessage) => {
+const rateLimit = async (serviceName, req, res, windowSeconds, limit, inputMessage) => {
+    const redis = getRedis();
+    const requester = req.user?._id || req.ip;
+    const redisKey = `Deployhub:RateLimit:${requester}:service:${serviceName}`;
 
-    const redisKey = `Deployhub:RateLimit:${req.user._id || req.ip}:service:${seriveName}`;
-
-    const count = await redisClient.incr(redisKey);
+    const count = await redis.incr(redisKey);
 
     if (count === 1) {
-        await redisClient.expire(redisKey, time);
+        await redis.expire(redisKey, windowSeconds);
     }
 
     if (count > limit) {
-        return res.status(429).json({
-            message: inputmessage
+        res.status(429).json({
+            message: inputMessage
         });
+        return true;
     }
+
+    return false;
 }
 
 export const rateLimitMiddleware = (apiType, inputMessage) => {
-    return (req, res, next) => {
-        const { time, limit } = limits[apiType];
+    return async (req, res, next) => {
+        try {
+            const config = limits[apiType];
+            if (!config) {
+                return next();
+            }
 
-        const excessed = rateLimit(apiType, req, res, time, limit, inputMessage);
-        if (excessed) {
-            return;
+            const exceeded = await rateLimit(apiType, req, res, config.time, config.limit, inputMessage);
+            if (exceeded) {
+                return;
+            }
+            next();
+        } catch (error) {
+            next(error);
         }
-        next();
     }
 }

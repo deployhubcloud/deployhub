@@ -1,6 +1,7 @@
 import { validationResult } from 'express-validator'
 import { login } from '../services/login.service.js';
-import { generateToken } from '../utils/token.js';
+import { generateToken } from '../services/session.service.js';
+import { getAccessTokenOptions, getRefreshTokenOptions } from '../utils/cookieOption.js';
 
 
 
@@ -8,7 +9,7 @@ export const loginController = async (req, res) => {
     try {
 
         const errors = validationResult(req);
-        if (errors.isEmpty()) {
+        if (!errors.isEmpty()) {
             return res.status(400).json({
                 message: errors.array()[0].msg
             })

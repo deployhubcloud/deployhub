@@ -8,10 +8,11 @@ import { healthCheck } from '../controllers/healthCheck.js';
 
 const router = Router();
 
+router.get('/meta/health', healthCheck);
+
 router.use(authenticate);
 router.use(secretsFetchLimiter);
 
-router.get('/meta/health', healthCheck);
 router.get('/:serviceName', fetchSecrets);
 router.post('/invalidate/:serviceName', invalidateServiceCache);
 router.post('/invalidate-all', invalidateAllCaches);

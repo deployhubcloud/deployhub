@@ -1,30 +1,23 @@
 import Redis from 'ioredis';
 import { env } from './env.js';
 import { logger } from './logger.js';
+import { createRedisClient } from '../../../../shared/redis/createRedisClient.js';
 
 let client = null;
 
 export async function connectRedis() {
 
-  client = new Redis({
+  client = createRedisClient({
+    Redis,
+    logger,
+    options: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
     password: env.REDIS_PASSWORD,
     maxRetriesPerRequest: 3,
     enableReadyCheck: true,
     lazyConnect: true
-  });
-
-  client.on('connect', () => {
-    logger.info('Redis connected')
-  });
-
-  client.on('error', (err) => {
-    logger.error('Redis error', { err: err.message })
-  });
-
-  client.on('reconnecting', () => {
-    logger.warn('Redis reconnecting')
+    }
   });
 
   await client.connect();

@@ -1,18 +1,18 @@
-import { OtpValidate } from "../models/otpValidator.js";
 import { User } from "../models/user.model.js";
-import { sendOtp } from "../utils/sendOtp.js";
+import { AppError } from "../../../../shared/errors/AppError.js";
+import { sendRegistrationOtp, verifyRegistrationOtp } from "./otp.service.js";
 
 export const initRegister = async (data) => {
 
     if (!data) {
-        throw new Error('Data Required')
+        throw new AppError('Data Required', 400);
     }
 
     const { fullName, email, password } = data;
 
     const checkMail = await User.findOne({ email });
     if (checkMail) {
-        throw new Error({ status: 409, message: 'user with this email already exist' })
+        throw new AppError('user with this email already exist', 409);
     }
 
     const user = new User({
@@ -21,7 +21,7 @@ export const initRegister = async (data) => {
         password
     })
 
-    await sendOtp(email);
+    await sendRegistrationOtp(email);
 
     await user.save({ validateBeforeSave: false });
 
@@ -31,27 +31,16 @@ export const initRegister = async (data) => {
 export const verifyRegister = async (data) => {
 
     if (!data) {
-        throw new Error('Data Required')
+        throw new AppError('Data Required', 400);
     }
 
     const { otp, email } = data;
-
-    const validateOtp = await OtpValidate.findOne({ email, code: otp });
-    if (!validateOtp) {
-        throw new Error({ status: 400, message: "Invalid or Expired Otp" })
-    }
-
-    if (validateOtp.code !== otp) {
-        throw new Error({ status: 400, message: "Expired Otp" })
-    }
+    await verifyRegistrationOtp(email, otp);
 
     await User.findOneAndUpdate(
         { email },
         { status: "active" }
     )
-
-    await OtpValidate.deleteOne({ email })
-
     return true
 
 }

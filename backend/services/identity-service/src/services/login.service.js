@@ -1,5 +1,6 @@
 import { User } from "../models/user.model.js";
 import sanatize from 'mongo-sanitize';
+import { AppError } from "../../../../shared/errors/AppError.js";
 
 export const login = async (data) => {
 
@@ -7,38 +8,26 @@ export const login = async (data) => {
 
     const { email, password } = sanatizeData;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
-        throw new Error({
-            status: 404,
-            message: 'Invalid Credentails'
-        })
+        throw new AppError('Invalid Credentials', 404);
     }
 
 
     if (user.provider !== 'local') {
-        throw new Error({
-            status: 400,
-            message: 'This Account login with OAuth'
-        })
+        throw new AppError('This Account login with OAuth', 400);
     }
 
     if (user.isLocked()) {
-        throw new Error({
-            status: 423,
-            message: 'Account temporarily locked. Try again in 15 minutes.'
-        })
+        throw new AppError('Account temporarily locked. Try again in 15 minutes.', 423);
     }
 
 
-    const verifyPassword = user.comparePassword(password);
+    const verifyPassword = await user.comparePassword(password);
 
     if (!verifyPassword) {
         await user.incrementLoginAttempts();
-        throw new Error({
-            status: 401,
-            message: 'Invalid Credentials'
-        })
+        throw new AppError('Invalid Credentials', 401);
     };
 
     await user.resetLoginAttempts();

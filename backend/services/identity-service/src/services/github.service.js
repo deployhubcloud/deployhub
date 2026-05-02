@@ -2,6 +2,7 @@
 import axios from "axios";
 import { AUTH_ENV } from "../lib/env.js";
 import { User } from "../models/user.model.js";
+import { AppError } from "../../../../shared/errors/AppError.js";
 
 
 
@@ -10,10 +11,7 @@ export const githubCallback = async (data) => {
     const { code } = data;
 
     if (!code) {
-        throw new Error({
-            status: 400,
-            message: 'github code missing'
-        })
+        throw new AppError('github code missing', 400);
     };
 
     // exange code to access token
@@ -34,7 +32,7 @@ export const githubCallback = async (data) => {
     const githubAccessToken = tokenRes.data.access_token;
 
     if (!githubAccessToken) {
-        throw new Error('GitHub token failed');
+        throw new AppError('GitHub token failed', 502);
     }
 
     // Get GitHub Profile
@@ -56,7 +54,7 @@ export const githubCallback = async (data) => {
     const primaryEmail = emailRes.data.find(e => e.primary)?.email;
 
     if (!primaryEmail) {
-        throw new Error('Email not found in GitHub');
+        throw new AppError('Email not found in GitHub', 400);
     }
 
     let user = await User.findOne({ email: primaryEmail });
