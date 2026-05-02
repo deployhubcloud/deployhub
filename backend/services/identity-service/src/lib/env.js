@@ -1,0 +1,38 @@
+const required = [
+    'NODE_ENV', 'PORT',
+    "MONGODB_URI",
+    'REDIS_HOST', 'REDIS_PORT', 'REDIS_PASSWORD',
+    'RABBITMQ_URL',
+    'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET',
+    'INTERNAL_SECRET',
+    'ACCESS_TOKEN_SECRET', 'ACCESS_TOKEN_EXPIRY',
+    'REFRESH_TOKEN_EXPIRY', 'REFRESH_TOKEN_SECRET',
+    'FRONTEND_URL',
+    'DEVLOAD_PROJECT_ID', 'DEVLOAD_API_KEY'
+]
+
+for (const key of required) {
+    if (!process.env[key]) {
+        throw new Error(`Missing Env: ${key}`);
+    }
+};
+ 
+export const AUTH_ENV = {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    MONGODB_URI: process.env.MONGODB_URI,
+    REDIS_HOST: process.env.REDIS_HOST,
+    REDIS_PORT: process.env.REDIS_PORT,
+    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+    INTERNAL_SECRET: process.env.INTERNAL_SECRET,
+    RABBITMQ_URL: process.env.RABBITMQ_URL,
+    REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+    REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
+    ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
+    ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
+    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+    FRONTEND_URL: process.env.FRONTEND_URL,
+    DEVLOAD_PROJECT_ID: process.env.DEVLOAD_PROJECT_ID,
+    DEVLOAD_API_KEY: process.env.DEVLOAD_API_KEY,
+    GITHUB_TOKEN_ENCRYPTION_KEY: process.env.GITHUB_TOKEN_ENCRYPTION_KEY
+}

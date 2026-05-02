@@ -1,0 +1,51 @@
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import { logger } from '../utils/logger.js'; 
+
+export default (target, serviceName) =>
+    createProxyMiddleware({
+        target,
+        changeOrigin: true,
+        on: {
+            proxyReq: (proxyReq, req) => {
+                proxyReq.setHeader("x-internal-secret", process.env.INTERNAL_SECRET);
+                proxyReq.setHeader("x-trace-id", req.traceId);
+                proxyReq.startTime = Date.now();
+                if (req.user) {
+                    proxyReq.setHeader("x-user-context", JSON.stringify(req.user));
+                }
+
+                // req log
+                logger.info({
+                    service: serviceName,
+                    method: req.method,
+                    url: req.url,
+                    traceId: req.traceId,
+                }, 'Request forwarded to service');
+            },
+
+            proxyRes(proxyRes, req, res) {
+                const latency = Date.now() - proxyRes.req.startTime;
+
+                // res log
+                logger.info({
+                    service: serviceName,
+                    method: req.method,
+                    url: req.url,
+                    status: proxyRes.statusCode,
+                    latency: `${latency}ms`,
+                    traceId: req.traceId,
+                }, 'Response received from service');
+            },
+
+            error(err, req) {
+                // Error log
+                logger.error({
+                    service: serviceName,
+                    method: req.method,
+                    url: req.url,
+                    error: err.message,
+                    traceId: req.traceId,
+                }, 'Proxy error occurred');
+            }
+        }
+    });

@@ -1,0 +1,108 @@
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { AUTH_ENV } from '../lib/env.js';
+
+const userSchema = new mongoose.Schema(
+    {
+        fullName: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 100,
+        },
+        email: {
+            type: String,
+            required: true,
+            unique: true,
+            lowercase: true,
+            trim: true,
+            index: true,
+        },
+        password: {
+            type: String,
+            required: function () { return this.provider === 'local'; },
+            select: false,
+        },
+
+        // OAuth
+        provider: {
+            type: String,
+            enum: ['local', 'github'],
+            default: 'local'
+        },
+        githubId: {
+            type: String,
+            index: true,
+            sparse: true
+        },
+        githubUsername: {
+            type: String
+        },
+        githubAccessToken: {
+            type: String,
+            select: false
+        },
+
+        // Profile
+        profilePic: {
+            type: String,
+            default: ''
+        },
+        profileFileId: {
+            type: String
+        },
+
+
+        // account status
+        status: {
+            type: String,
+            default: "pending",
+            enum: ['pending', 'active', 'suspend']
+        },
+
+
+        loginAttempts: { 
+            type: Number, 
+            default: 0 
+        },
+        lockUntil: { 
+            type: Date 
+        },
+
+
+    },
+    { timestamps: true }
+);
+
+
+userSchema.pre('save', async function () {
+    if (this.provider !== 'local') return;
+    if (!this.isModified('password') || !this.password) return;
+    this.password = await bcrypt.hash(this.password, env.BCRYPT_ROUNDS);
+});
+
+userSchema.methods.comparePassword = function (plain) {
+    return bcrypt.compare(plain, this.password);
+};
+
+userSchema.methods.isLocked = function () {
+    return this.lockUntil && this.lockUntil > Date.now();
+};
+
+userSchema.methods.incrementLoginAttempts = async function () {
+    if (this.lockUntil && this.lockUntil < Date.now()) {
+        return this.updateOne({ $set: { loginAttempts: 1 }, $unset: { lockUntil: 1 } });
+    }
+    const updates = { $inc: { loginAttempts: 1 } };
+    if (this.loginAttempts + 1 >= 5 && !this.isLocked()) {
+        updates.$set = { lockUntil: new Date(Date.now() + 15 * 60 * 1000) };
+    }
+    return this.updateOne(updates);
+};
+
+userSchema.methods.resetLoginAttempts = function () {
+    return this.updateOne({ $set: { loginAttempts: 0 }, $unset: { lockUntil: 1 } });
+};
+
+export const User = mongoose.model('User', userSchema);

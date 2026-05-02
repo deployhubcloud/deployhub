@@ -1,0 +1,19 @@
+import mongoose from "mongoose";
+
+const otpValidatorschema = new mongoose.Schema({
+    email: {
+        type: String,
+    },
+    code: {
+        type: String,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        expires: 600,
+        default: Date.now
+    }
+})
+
+
+export const OtpValidate = mongoose.model("OtpValidate", otpValidatorschema)
