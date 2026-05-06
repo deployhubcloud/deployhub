@@ -7,7 +7,7 @@ export const verifyJWT = async (req, res, next) => {
     try {
 
         const redis = getRedis();
-        const token = req.cookies?.AccessToken;
+        const token = req.headers['authorization']?.split(' ')[1] || req.cookies?.AccessToken;
 
         if (!token) {
             return res.status(401).json({ message: 'Unauthorized: No token' });
@@ -20,7 +20,7 @@ export const verifyJWT = async (req, res, next) => {
             return res.status(401).json({ message: 'Invalid or expired token' });
         }
 
-        const { _id: userId, tokenId, role } = decoded;
+        const { _id: userId, tokenId } = decoded;
 
         if (!userId || !tokenId) {
             return res.status(401).json({ message: 'Invalid token payload' });
@@ -39,8 +39,7 @@ export const verifyJWT = async (req, res, next) => {
 
         req.user = {
             _id: userId,
-            tokenId,
-            role
+            tokenId
         };
 
         next();

@@ -18,6 +18,10 @@ export const login = async (data) => {
         throw new AppError('This Account login with OAuth', 400);
     }
 
+    if (user.status !== 'active') {
+        throw new AppError('Please verify your email before login', 403);
+    }
+
     if (user.isLocked()) {
         throw new AppError('Account temporarily locked. Try again in 15 minutes.', 423);
     }

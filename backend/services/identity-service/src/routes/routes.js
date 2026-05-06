@@ -6,6 +6,13 @@ import { loginValidator } from '../validators/login.js';
 import { refreshTokenController } from '../controllers/RefreshToken.Controller.js';
 import { logoutController } from '../controllers/logout.js';
 import { githubCallbackController, githubLoginController } from '../controllers/githubLogin.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
+import { meController } from '../controllers/me.controller.js';
+import {
+    listSessionsController,
+    revokeAllSessionsController,
+    revokeSessionController,
+} from '../controllers/session.controller.js';
 
 const indetityServiceRouter = express.Router();
 
@@ -16,5 +23,10 @@ indetityServiceRouter.get('/refresh/token', refreshTokenController);
 indetityServiceRouter.post('/logout', logoutController);
 indetityServiceRouter.get('/github', githubLoginController);
 indetityServiceRouter.get('/github/callback', githubCallbackController);
+indetityServiceRouter.get('/sessions', verifyJWT, listSessionsController);
+indetityServiceRouter.delete('/sessions/:tokenId', verifyJWT, revokeSessionController);
+indetityServiceRouter.delete('/sessions', verifyJWT, revokeAllSessionsController);
+indetityServiceRouter.get('/user/profile', verifyJWT, meController);
+
 
 export default indetityServiceRouter;
