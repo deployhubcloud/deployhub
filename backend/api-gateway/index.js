@@ -25,7 +25,7 @@ app.get('/gateway/status', (req, res) => {
     res.json(services);
 });
 
-app.use('/', routes);
+app.use('/api', routes);
 
 
 export default async function startApp() {

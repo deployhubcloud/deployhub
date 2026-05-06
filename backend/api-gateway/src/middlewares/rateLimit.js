@@ -3,7 +3,7 @@ import { getRedis } from '../configs/redis.js';
 const limits = {
     auth: {
         time: 60,
-        limit: 5
+        limit: 60
     }
 }
 
