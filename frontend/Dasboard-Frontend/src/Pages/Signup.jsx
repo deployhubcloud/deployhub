@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BaseUrl } from '../api/ApiUrl'
 import { api } from '../api/apiclient'
+import { redirectPathFromState, storeAuthRedirect } from '../routes/authRedirect'
 
 const EmailIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +68,7 @@ function ErrorAlert({ message }) {
   )
 }
 
-function OTPBox({ formData, setShowOTP }) {
+function OTPBox({ formData, setShowOTP, authRedirectState }) {
   const [otp, setOtp]             = useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError]         = useState('')
@@ -104,7 +105,9 @@ function OTPBox({ formData, setShowOTP }) {
     setIsLoading(true); setError('')
     try {
       const res = await api.post('/auth/register/verify', { email: formData.email, otp: code })
-      if (res.status === 201) setTimeout(() => navigate('/login'), 0)
+      if (res.status === 201) {
+        setTimeout(() => navigate('/login', { state: authRedirectState }), 0)
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed. Try again.')
     } finally { setIsLoading(false) }
@@ -200,10 +203,13 @@ export const Signup = () => {
   const [showOTP, setShowOTP]             = useState(false)
   const [showPass, setShowPass]           = useState(false)
   const [githubLoading, setGithubLoading] = useState(false)
+  const location = useLocation()
+  const redirectTo = redirectPathFromState(location.state)
 
   const handleChange = e => setFormData({ ...formData, [e.target.name]: e.target.value })
 
   const handleGithubSignup = () => {
+    storeAuthRedirect(redirectTo)
     setGithubLoading(true)
     setTimeout(() => {
       window.location.href = `${BaseUrl}/auth/github`
@@ -297,7 +303,7 @@ export const Signup = () => {
 
               <p className="text-center text-sm text-gray-600">
                 Already have an account?{' '}
-                <Link to="/login" className="text-[#00e5ff] hover:text-cyan-300 font-medium transition-colors">Sign in</Link>
+                <Link to="/login" state={location.state} className="text-[#00e5ff] hover:text-cyan-300 font-medium transition-colors">Sign in</Link>
               </p>
               <p className="text-center text-xs text-gray-700">
                 By continuing, you agree to our{' '}
@@ -307,7 +313,11 @@ export const Signup = () => {
               </p>
             </div>
           ) : (
-            <OTPBox formData={formData} setShowOTP={setShowOTP} />
+            <OTPBox
+              formData={formData}
+              setShowOTP={setShowOTP}
+              authRedirectState={location.state}
+            />
           )}
         </div>
       </div>

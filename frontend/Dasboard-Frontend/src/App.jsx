@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import PublicRoute from "./routes/PublicRoute";
 import Login from "./Pages/Login";
@@ -9,10 +9,13 @@ import PrivateLayout from "./layouts/PrivateLayout";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
+  const location = useLocation();
 
   if (!isAuthReady) return null;
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated
+    ? children
+    : <Navigate to="/login" replace state={{ from: location }} />;
 }
 
 export default function App() {

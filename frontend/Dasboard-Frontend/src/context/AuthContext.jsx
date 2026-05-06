@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, attachInterceptors } from "../api/apiclient";
+import { consumeStoredAuthRedirect } from "../routes/authRedirect";
 
 const AuthContext = createContext();
 
@@ -94,14 +95,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const init = async () => {
       if (!accessTokenRef.current) {
-        await refreshAccessToken();
+        const token = await refreshAccessToken();
+        const redirectTo = token ? consumeStoredAuthRedirect() : null;
+
+        if (redirectTo) {
+          navigate(redirectTo, { replace: true });
+        }
       }
 
       setIsAuthReady(true);
     };
 
     init();
-  }, [refreshAccessToken]);
+  }, [navigate, refreshAccessToken]);
 
   useEffect(() => {
     const eject = attachInterceptors(
@@ -113,7 +119,7 @@ export const AuthProvider = ({ children }) => {
     return eject;
   }, [refreshAccessToken, logoutClean]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, redirectTo = "/") => {
     const res = await api.post("/auth/login", { email, password });
     const token = getTokenFromResponse(res.data);
 
@@ -121,7 +127,7 @@ export const AuthProvider = ({ children }) => {
 
     setToken(token);
     await fetchUser();
-    navigate("/", { replace: true });
+    navigate(redirectTo, { replace: true });
   };
 
   return (

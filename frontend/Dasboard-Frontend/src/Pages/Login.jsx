@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { BaseUrl } from '../api/ApiUrl'
+import { redirectPathFromState, storeAuthRedirect } from '../routes/authRedirect'
 
 const EmailIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,11 +112,14 @@ export const Login = () => {
   const [githubLoading, setGithubLoading] = useState(false)
 
   const { login } = useAuth()
+  const location = useLocation()
+  const redirectTo = redirectPathFromState(location.state)
 
   const handleChange = e =>
     setFormData({ ...formData, [e.target.name]: e.target.value })
 
   const handleGithubLogin = () => {
+    storeAuthRedirect(redirectTo)
     setGithubLoading(true)
     setTimeout(() => {
       window.location.href = `${BaseUrl}/auth/github`
@@ -127,7 +131,7 @@ export const Login = () => {
     setError('')
     setIsLoading(true)
     try {
-      await login(formData.email, formData.password)
+      await login(formData.email, formData.password, redirectTo)
     } catch (err) {
       setError(err?.response?.data?.message || 'Invalid email or password.')
     } finally {
@@ -245,6 +249,7 @@ export const Login = () => {
             <p className="text-center text-sm text-gray-600">
               Don't have an account?{' '}
               <Link to="/signup"
+                state={location.state}
                 className="text-[#00e5ff] hover:text-cyan-300 font-medium transition-colors">
                 Create one free
               </Link>
