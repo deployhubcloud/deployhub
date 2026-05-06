@@ -59,6 +59,9 @@ const userSchema = new mongoose.Schema(
             default: "pending",
             enum: ['pending', 'active', 'suspend']
         },
+        registrationExpiresAt: {
+            type: Date,
+        },
 
 
         loginAttempts: { 
@@ -72,6 +75,14 @@ const userSchema = new mongoose.Schema(
 
     },
     { timestamps: true }
+);
+
+userSchema.index(
+    { registrationExpiresAt: 1 },
+    {
+        expireAfterSeconds: 0,
+        partialFilterExpression: { status: 'pending' },
+    }
 );
 
 

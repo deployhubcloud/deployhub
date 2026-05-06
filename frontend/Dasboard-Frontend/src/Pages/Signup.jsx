@@ -219,7 +219,7 @@ export const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setIsLoading(true)
     try {
-      const res = await api.post('/register/init', formData)
+      const res = await api.post('/auth/register/init', formData)
       if (res.status === 200) setShowOTP(true)
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed. Please try again.')
