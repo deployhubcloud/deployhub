@@ -15,6 +15,7 @@ export const ENV = {
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
     SERVICES_URL: {
         AUTH: process.env.AUTH_SERVICE,
+        PROJECT: process.env.PROJECT_SERVICE
     },
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,

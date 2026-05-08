@@ -2,7 +2,7 @@ import { getRedis } from '../config/redis.js';
 import { logger } from '../config/logger.js';
 
 const CACHE_TTL_SECONDS = 300;
-const KEY_PREFIX = 'secrets:bundle:';
+const KEY_PREFIX = 'deployhub:secrets:bundle:';
 
 
 export async function getCachedBundle(serviceName) {

@@ -11,12 +11,6 @@ const initRabbitMQ = async () => {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
 
-        // Assert queues exist
-        // await channel.assertQueue('useraddonuserservice', { durable: true });
-        // await channel.assertQueue('refreshtokenusercreated', { durable: true });
-        // await channel.assertQueue('adduserdataonchannelservice', { durable: true });
-        // await channel.assertQueue('refresh-token-service.send-refresh-token', { durable: true });
-
         console.log('RabbitMQ connected successfully');
 
         // Handle connection errors

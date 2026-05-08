@@ -47,10 +47,13 @@ export function getSecretsForService(serviceName) {
 
     'project-service': {
       MONGODB_URI: env.PROJECT_SERVICE_MONGODB_URI,
-      REDIS_URL: env.REDIS_URL,
+      REDIS_HOST: env.REDIS_HOST,
+      REDIS_PORT: env.REDIS_PORT,
+      REDIS_PASSWORD: env.REDIS_PASSWORD,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
       RAZORPAY_KEY_ID: env.RAZORPAY_KEY_ID || '',
       RAZORPAY_KEY_SECRET: env.RAZORPAY_KEY_SECRET || '',
+      RABBITMQ_URL: env.RABBITMQ_URL,
     },
 
 

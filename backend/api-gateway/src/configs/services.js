@@ -5,5 +5,10 @@ export const services = {
         url: ENV.SERVICES_URL.AUTH,
         isHealthy: false,
         lastChecked: null
+    },
+    Project: {
+        url: ENV.SERVICES_URL.PROJECT,
+        isHealthy: false,
+        lastChecked: null
     }
 }
