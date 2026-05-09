@@ -13,6 +13,8 @@ import {
     revokeAllSessionsController,
     revokeSessionController,
 } from '../controllers/session.controller.js';
+import { userFullNameValidator } from '../validators/user.js';
+import { userFullNameCOntroller } from '../controllers/user.controller.js';
 
 const indetityServiceRouter = express.Router();
 
@@ -27,6 +29,6 @@ indetityServiceRouter.get('/sessions', verifyJWT, listSessionsController);
 indetityServiceRouter.delete('/sessions/:tokenId', verifyJWT, revokeSessionController);
 indetityServiceRouter.delete('/sessions', verifyJWT, revokeAllSessionsController);
 indetityServiceRouter.get('/user/profile', verifyJWT, meController);
-
+indetityServiceRouter.put('/user/fullname' , userFullNameValidator , userFullNameCOntroller)
 
 export default indetityServiceRouter;
