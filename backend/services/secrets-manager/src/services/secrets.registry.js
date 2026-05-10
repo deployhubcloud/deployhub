@@ -78,12 +78,15 @@ export function getSecretsForService(serviceName) {
       INTERNAL_SECRET: env.INTERNAL_SERVICE_SECRET,
       FRONTEND_URL: env.FRONTEND_URL,
       ACCESS_TOKEN_SECRET: env.ACCESS_TOKEN_SECRET,
-      ACCESS_TOKEN_EXPIRY: env.ACCESS_TOKEN_EXPIRY
-    }
+      ACCESS_TOKEN_EXPIRY: env.ACCESS_TOKEN_EXPIRY,
+      EMAIL_PASS: env.EMAIL_PASS,
+      EMAIL_USER: env.EMAIL_USER,
+      EMAIL_HOST: env.EMAIL_HOST,
+    },
 
   };
 
-  return registry[serviceName] ?? null;
+return registry[serviceName] ?? null;
 }
 
 

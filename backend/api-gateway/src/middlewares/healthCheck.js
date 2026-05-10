@@ -43,13 +43,6 @@ const checkHealth = async () => {
     const total = Object.keys(services).length;
     const up = Object.values(services).filter(s => s.isHealthy === true).length;
     const down = Object.values(services).filter(s => s.isHealthy === false).length;
-
-    logger.info({
-        type: 'services_summary',
-        total,
-        up,
-        down
-    }, 'Services summary');
 };
 
 export const startHealthCheck = () => {

@@ -20,5 +20,8 @@ export const ENV = {
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
     INTERNAL_SECRET: process.env.INTERNAL_SECRET,
-    SERVICE_NAME: process.env.SERVICE_NAME
+    SERVICE_NAME: process.env.SERVICE_NAME,
+    EMAIL_PASS: process.env.EMAIL_PASS,
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_HOST: process.env.EMAIL_HOST,
 }
