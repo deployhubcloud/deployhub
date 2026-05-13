@@ -22,6 +22,19 @@ const extractDevice = (ua = '') => {
 export const hashRefreshToken = (refreshToken) =>
     crypto.createHash('sha256').update(refreshToken).digest('hex');
 
+export const generateRefreshToken = (userId, tokenId) => {
+    return jwt.sign(
+        {
+            _id: userId
+        },
+        AUTH_ENV.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: AUTH_ENV.REFRESH_TOKEN_EXPIRY,
+            jwtid: tokenId
+        }
+    );
+};
+
 export const generateAccessToken = (userId, tokenId) => {
     return jwt.sign(
         {
@@ -39,16 +52,7 @@ export const generateToken = async (userId, req) => {
     const tokenId = crypto.randomUUID();
     const redis = getRedis();
 
-    const refreshToken = jwt.sign(
-        {
-            _id: userId
-        },
-        AUTH_ENV.REFRESH_TOKEN_SECRET,
-        {
-            expiresIn: AUTH_ENV.REFRESH_TOKEN_EXPIRY,
-            jwtid: tokenId
-        }
-    );
+    const refreshToken = generateRefreshToken(userId, tokenId);
 
     await redis.set(
         createSessionKey(userId, tokenId),

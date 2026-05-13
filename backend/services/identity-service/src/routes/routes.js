@@ -12,7 +12,7 @@ import { listSessionsController, revokeAllSessionsController, revokeSessionContr
 import { userFullNameValidator } from '../validators/user.js';
 import { getUserReposController, userFullNameCOntroller , userProfilePicController} from '../controllers/user.controller.js';
 import { profilePicValidator } from '../validators/profilePic.js';
-import upload from '../middleware/multer.middleware.js';
+import upload, { handleUploadError } from '../middleware/multer.middleware.js';
 import { rateLimitMiddleware } from '../middleware/rateLimit.middleware.js';
 
 const indetityServiceRouter = express.Router();
@@ -29,7 +29,7 @@ indetityServiceRouter.delete('/sessions/:tokenId', verifyJWT, revokeSessionContr
 indetityServiceRouter.delete('/sessions', verifyJWT, revokeAllSessionsController);
 indetityServiceRouter.get('/user/profile', verifyJWT, meController);
 indetityServiceRouter.put('/user/fullname', verifyJWT, rateLimitMiddleware('fullName'), userFullNameValidator, userFullNameCOntroller)
-indetityServiceRouter.put('/user/profile-pic', verifyJWT, rateLimitMiddleware('uploadProfilePic'), upload.single('profilePic'), profilePicValidator, userProfilePicController)
+indetityServiceRouter.put('/user/profile-pic', verifyJWT, rateLimitMiddleware('uploadProfilePic'), upload.single('profilePic'), handleUploadError, profilePicValidator, userProfilePicController)
 indetityServiceRouter.get('/user/repos', verifyJWT, getUserReposController);
 
 

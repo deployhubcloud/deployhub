@@ -3,6 +3,9 @@ import { User } from "../models/user.model.js";
 import { deleteFromDevload, uploadOnDevload } from "../utils/devload.js";
 import axios from "axios";
 import { getRedis } from "../core/redis/client.js";
+import { decryptGithubAccessToken } from "../utils/githubTokenCrypto.js";
+
+const GITHUB_REQUEST_TIMEOUT_MS = 10000;
 
 const clearUserCache = async (userId) => {
     const redis = getRedis();
@@ -29,6 +32,9 @@ export const userFullnameService = async (userId, fullName) => {
 export const userProfilePicService = async (userId, file) => {
 
     // here first check if user have previous profile pic, if have then delete that from devload and then upload new one
+    if (!file?.path) {
+        throw new AppError('Profile picture is required', 400);
+    }
 
     const user = await User.findById(userId);
     if (!user) {
@@ -78,20 +84,33 @@ export const getUserRepositories = async (userId) => {
         throw new AppError('GitHub access token not found! Please authenticate with GitHub', 404);
     }
 
-    const reposRes = await axios.get("https://api.github.com/user/repos", {
-        headers: {
-            Authorization: `Bearer ${user.githubAccessToken}`,
-            Accept: "application/vnd.github+json",
-        },
-        params: {
-            visibility: "all",
-            affiliation: "owner,collaborator",
-            per_page: 100,
-        },
-    });
+    const githubAccessToken = decryptGithubAccessToken(user.githubAccessToken);
+    const repositories = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+        const reposRes = await axios.get("https://api.github.com/user/repos", {
+            headers: {
+                Authorization: `Bearer ${githubAccessToken}`,
+                Accept: "application/vnd.github+json",
+            },
+            params: {
+                visibility: "all",
+                affiliation: "owner,collaborator",
+                per_page: 100,
+                page,
+            },
+            timeout: GITHUB_REQUEST_TIMEOUT_MS,
+        });
+
+        repositories.push(...reposRes.data);
+        hasMore = reposRes.data.length === 100;
+        page += 1;
+    }
 
 
-    const repos = reposRes.data.map((repo) => ({
+    const repos = repositories.map((repo) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,

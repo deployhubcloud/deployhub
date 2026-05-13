@@ -4,29 +4,55 @@ import { AUTH_ENV } from '../../lib/env.js';
 const RABBITMQ_URL = AUTH_ENV.RABBITMQ_URL || 'amqp://localhost';
 let channel = null;
 let connection = null;
+let reconnectTimer = null;
+let isShuttingDown = false;
+
+const scheduleReconnect = () => {
+    if (isShuttingDown || reconnectTimer) {
+        return;
+    }
+
+    reconnectTimer = setTimeout(async () => {
+        reconnectTimer = null;
+        await initRabbitMQ({ retryOnFailure: true });
+    }, 5000);
+};
 
 // Initialize RabbitMQ connection
-const initRabbitMQ = async () => {
+const initRabbitMQ = async ({ retryOnFailure = false } = {}) => {
     try {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
+        isShuttingDown = false;
 
         console.log('RabbitMQ connected successfully');
 
         // Handle connection errors
         connection.on('error', (err) => {
             console.error('RabbitMQ connection error:', err);
-            setTimeout(initRabbitMQ, 5000);
         });
 
         connection.on('close', () => {
+            channel = null;
+            connection = null;
+
+            if (isShuttingDown) {
+                return;
+            }
+
             console.log('RabbitMQ connection closed. Reconnecting...');
-            setTimeout(initRabbitMQ, 5000);
+            scheduleReconnect();
         });
 
     } catch (error) {
         console.error('RabbitMQ connection error:', error);
-        setTimeout(initRabbitMQ, 5000);
+
+        if (retryOnFailure) {
+            scheduleReconnect();
+            return;
+        }
+
+        throw error;
     }
 };
 
@@ -59,6 +85,12 @@ const sendToQueue = async (queueName, data) => {
 // Close connection
 const closeRabbitMQ = async () => {
     try {
+        isShuttingDown = true;
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+
         if (channel) await channel.close();
         if (connection) await connection.close();
         console.log('RabbitMQ connection closed');

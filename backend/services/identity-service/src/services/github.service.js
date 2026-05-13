@@ -3,16 +3,29 @@ import axios from "axios";
 import { AUTH_ENV } from "../lib/env.js";
 import { User } from "../models/user.model.js";
 import { AppError } from "../../../../shared/errors/AppError.js";
+import { getRedis } from "../core/redis/client.js";
+import { encryptGithubAccessToken } from "../utils/githubTokenCrypto.js";
 
+const GITHUB_REQUEST_TIMEOUT_MS = 10000;
+const createGithubOAuthStateKey = (state) => `deployhub:githubOAuthState:${state}`;
 
 
 export const githubCallback = async (data) => {
 
-    const { code } = data;
+    const { code, state } = data;
 
     if (!code) {
         throw new AppError('github code missing', 400);
     };
+
+    if (!state) {
+        throw new AppError('GitHub OAuth state missing', 400);
+    }
+
+    const consumedState = await getRedis().del(createGithubOAuthStateKey(state));
+    if (!consumedState) {
+        throw new AppError('Invalid or expired GitHub OAuth state', 400);
+    }
 
     // exange code to access token
     const tokenRes = await axios.post("https://github.com/login/oauth/access_token",
@@ -24,7 +37,8 @@ export const githubCallback = async (data) => {
         {
             headers: {
                 accept: "application/json"
-            }
+            },
+            timeout: GITHUB_REQUEST_TIMEOUT_MS
         }
     );
 
@@ -40,6 +54,7 @@ export const githubCallback = async (data) => {
         headers: {
             Authorization: `Bearer ${githubAccessToken}`,
         },
+        timeout: GITHUB_REQUEST_TIMEOUT_MS,
     });
 
     const githubUser = userRes.data;
@@ -49,15 +64,17 @@ export const githubCallback = async (data) => {
         headers: {
             Authorization: `Bearer ${githubAccessToken}`,
         },
+        timeout: GITHUB_REQUEST_TIMEOUT_MS,
     });
 
-    const primaryEmail = emailRes.data.find(e => e.primary)?.email;
+    const primaryEmail = emailRes.data.find(e => e.primary && e.verified)?.email;
 
     if (!primaryEmail) {
-        throw new AppError('Email not found in GitHub', 400);
+        throw new AppError('Verified primary email not found in GitHub', 400);
     }
 
     let user = await User.findOne({ email: primaryEmail });
+    const encryptedGithubAccessToken = encryptGithubAccessToken(githubAccessToken);
 
     if (!user) {
         user = await User.create({
@@ -66,19 +83,20 @@ export const githubCallback = async (data) => {
             githubId: githubUser.id,
             githubUsername: githubUser.login,
             profilePic: githubUser.avatar_url,
-            githubAccessToken,
+            githubAccessToken: encryptedGithubAccessToken,
             provider: "github",
             status: "active",
             password: null,
         })
-
-        await user.save({ validateBeforeSave: false })
     } else {
-        user.githubAccessToken = githubAccessToken;
+        if (user.provider !== "github") {
+            throw new AppError('Email already registered with password login. Please sign in and link GitHub from account settings.', 409);
+        }
+
+        user.githubAccessToken = encryptedGithubAccessToken;
         user.githubId = githubUser.id;
         user.githubUsername = githubUser.login;
         user.profilePic = githubUser.avatar_url;
-        user.provider = "github";
         user.status = "active";
         await user.save({ validateBeforeSave: false });
     }

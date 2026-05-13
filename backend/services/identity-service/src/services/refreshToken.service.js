@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { AUTH_ENV } from '../lib/env.js';
 import { getRedis } from '../core/redis/client.js';
 import { AppError } from '../../../../shared/errors/AppError.js';
-import { SESSION_TTL_SECONDS, createSessionKey, deleteAllSessions, generateAccessToken, hashRefreshToken, } from './session.service.js';
+import { SESSION_TTL_SECONDS, createSessionKey, deleteAllSessions, generateAccessToken, generateRefreshToken, hashRefreshToken, } from './session.service.js';
 
 export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
 
@@ -45,12 +46,26 @@ export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
         throw new AppError('Token reuse detected. All sessions revoked.', 403);
     };
 
+    const newTokenId = crypto.randomUUID();
+    const newRefreshToken = generateRefreshToken(userId, newTokenId);
+    const newSession = {
+        ...session,
+        hashedToken: hashRefreshToken(newRefreshToken),
+        ip: ip || session.ip || '',
+        userAgent: userAgent || session.userAgent || '',
+        createdAt: session.createdAt || Date.now(),
+        rotatedAt: Date.now(),
+    };
 
-    await redis.expire(sessionKey, SESSION_TTL_SECONDS);
+    await redis
+        .multi()
+        .set(createSessionKey(userId, newTokenId), JSON.stringify(newSession), 'EX', SESSION_TTL_SECONDS)
+        .del(sessionKey)
+        .exec();
 
     return {
-        AccessToken: generateAccessToken(userId, tokenId),
-        RefreshToken: refreshToken,
-        tokenId
+        AccessToken: generateAccessToken(userId, newTokenId),
+        RefreshToken: newRefreshToken,
+        tokenId: newTokenId
     };
 };

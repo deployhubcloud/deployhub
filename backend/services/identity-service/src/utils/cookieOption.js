@@ -19,6 +19,19 @@ export const getRefreshTokenOptions = () => ({
   expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 });
 
+export const getGithubOAuthStateCookieOptions = () => ({
+  ...baseOptions,
+  secure: AUTH_ENV.NODE_ENV === "production",
+  sameSite: "Lax",
+  maxAge: 10 * 60 * 1000
+});
+
+export const getClearGithubOAuthStateCookieOptions = () => ({
+  ...baseOptions,
+  secure: AUTH_ENV.NODE_ENV === "production",
+  sameSite: "Lax"
+});
+
 export const getClearAccessTokenOptions = () => ({
   ...baseOptions,
   secure: AUTH_ENV.NODE_ENV === "production",

@@ -33,7 +33,7 @@ export const registerVerifyValidator = [
     body("otp")
         .notEmpty()
         .withMessage("otp is required")
-        .isLength({ min: 6 })
+        .isLength({ min: 6, max: 6 })
         .isNumeric()
         .withMessage("Otp Length is 6 and should be number"),
 ]
