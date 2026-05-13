@@ -31,4 +31,7 @@ indetityServiceRouter.delete('/sessions', verifyJWT, revokeAllSessionsController
 indetityServiceRouter.get('/user/profile', verifyJWT, meController);
 indetityServiceRouter.put('/user/fullname' , userFullNameValidator , userFullNameCOntroller)
 
+
+
+
 export default indetityServiceRouter;

@@ -2,63 +2,73 @@ import axios from "axios";
 import { services } from "../configs/services.js";
 import { logger } from "../utils/logger.js";
 
-const checkHealth = async () => {
-    for (const [name, service] of Object.entries(services)) {
-        const previousStatus = service.isHealthy;
-        try {
-            await axios.get(`${service.url}/health`, { timeout: 3000 });
-            services[name].isHealthy = true;
+const HEALTH_CHECK_INTERVAL_MS = 30000;
 
-            if (!previousStatus) {
-                logger.info({ service: name }, 'Service is back UP');
+export const checkHealth = async () => {
+    await Promise.all(
+        Object.entries(services).map(async ([name, service]) => {
+            const previousStatus = service.isHealthy;
 
-                logger.info({
-                    service: name,
-                    status: 'up',
-                    type: 'health_check'
-                }, 'Health check');
+            try {
+                await axios.get(`${service.url}/health`, { timeout: 3000 });
+
+                services[name].isHealthy = true;
+                services[name].lastError = null;
+
+                if (!previousStatus) {
+                    logger.info({
+                        service: name,
+                        status: 'up',
+                        type: 'health_check'
+                    }, 'Service is back UP');
+                }
+            } catch (error) {
+                services[name].isHealthy = false;
+                services[name].lastError = error.message;
+
+                if (previousStatus) {
+                    logger.warn({
+                        service: name,
+                        status: 'down',
+                        error: error.message,
+                        type: 'health_check'
+                    }, 'Service went DOWN');
+                }
             }
 
-
-
-        } catch (error) {
-            services[name].isHealthy = false;
-
-            if (previousStatus) {
-                logger.error({ service: name }, 'Service went DOWN');
-
-                logger.warn({
-                    service: name,
-                    status: 'down',
-                    type: 'health_check'
-                }, 'Health check');
-            }
-
-
-        }
-
-        services[name].lastChecked = new Date();
-    }
-
-    const total = Object.keys(services).length;
-    const up = Object.values(services).filter(s => s.isHealthy === true).length;
-    const down = Object.values(services).filter(s => s.isHealthy === false).length;
+            services[name].lastChecked = new Date();
+        })
+    );
 };
 
-export const startHealthCheck = () => {
-    checkHealth();
-    const interval = setInterval(checkHealth, 30000);
+export const startHealthCheck = async () => {
+    await checkHealth();
+    const interval = setInterval(checkHealth, HEALTH_CHECK_INTERVAL_MS);
     return interval;
 }
 
-export const checkHealthMiddleware = async () => {
+export const checkHealthMiddleware = (serviceName) => {
     return async (req, res, next) => {
-        if (!services[serviceName].isHealthy) {
+        const service = services[serviceName];
+
+        if (!service) {
+            logger.error({ service: serviceName }, 'Unknown service configured in route');
+            return res.status(500).json({
+                success: false,
+                message: 'Service is not configured'
+            });
+        }
+
+        if (!service.isHealthy) {
             return res.status(503).json({
-                message: `${serviceName} is currently down`,
-                retryAfter: '30s'
+                success: false,
+                message: `${serviceName} service is currently unavailable`,
+                retryAfter: `${HEALTH_CHECK_INTERVAL_MS / 1000}s`,
+                lastChecked: service.lastChecked,
+                traceId: req.traceId
             })
         }
+
         next();
     }
 }

@@ -12,7 +12,7 @@ export const userFullNameCOntroller = async (req, res) => {
         };
 
         const { fullname } = req.body;
-        const userId = req.user._Id;
+        const userId = req.user._id;
 
         await userFullnameService(userId, fullname);
 

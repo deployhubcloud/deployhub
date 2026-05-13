@@ -20,17 +20,20 @@ import { traceMiddleware } from './src/middlewares/trace.middleware.js';
 app.use(traceMiddleware);
 
 
+// trust proxy for rate limiting and real ip
+app.set("trust proxy", 1); 
+
+
 // health
 app.get('/gateway/status', (req, res) => {
     res.json(services);
 });
-
 app.use('/api', routes);
 
 
 export default async function startApp() {
     await connectRedis();
-    const interval = startHealthCheck();
+    const interval = await startHealthCheck();
 
     const server = app.listen(ENV.PORT, () => {
         console.log(`Api Gateway is running on port ${ENV.PORT}`);

@@ -14,7 +14,7 @@ const limits = {
 const rateLimit = async (serviceName, req, res, windowSeconds, limit, inputMessage) => {
     const redis = getRedis();
     const requester = req.user?._id || req.ip;
-    const redisKey = `Deployhub:RateLimit:${requester}:service:${serviceName}`;
+    const redisKey = `deployhub:RateLimit:${requester}:service:${serviceName}`;
 
     const count = await redis.incr(redisKey);
 
