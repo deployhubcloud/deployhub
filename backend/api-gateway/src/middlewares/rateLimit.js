@@ -4,7 +4,7 @@ const limits = {
     auth: {
         time: 60,
         limit: 100
-    },
+    },  
     project: {
         time: 60,
         limit: 100

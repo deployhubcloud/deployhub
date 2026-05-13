@@ -10,7 +10,7 @@ import { verifyJWT } from '../middleware/auth.middleware.js';
 import { meController } from '../controllers/me.controller.js';
 import { listSessionsController, revokeAllSessionsController, revokeSessionController, } from '../controllers/session.controller.js';
 import { userFullNameValidator } from '../validators/user.js';
-import { getUserReposController, userFullNameCOntroller } from '../controllers/user.controller.js';
+import { userFullNameCOntroller } from '../controllers/user.controller.js';
 import { profilePicValidator } from '../validators/profilePic.js';
 import { userProfilePicController } from '../controllers/user.controller.js';
 import upload from '../middleware/multer.middleware.js';
@@ -29,8 +29,8 @@ indetityServiceRouter.get('/sessions', verifyJWT, listSessionsController);
 indetityServiceRouter.delete('/sessions/:tokenId', verifyJWT, revokeSessionController);
 indetityServiceRouter.delete('/sessions', verifyJWT, revokeAllSessionsController);
 indetityServiceRouter.get('/user/profile', verifyJWT, meController);
-indetityServiceRouter.put('/user/fullname', verifyJWT, userFullNameValidator, userFullNameCOntroller)
-indetityServiceRouter.put('/user/profile-pic', verifyJWT, upload.single('profilePic'), profilePicValidator, userProfilePicController)
+indetityServiceRouter.put('/user/fullname', verifyJWT, rateLimitMiddleware('fullName'), userFullNameValidator, userFullNameCOntroller)
+indetityServiceRouter.put('/user/profile-pic', verifyJWT, rateLimitMiddleware('uploadProfilePic'), upload.single('profilePic'), profilePicValidator, userProfilePicController)
 indetityServiceRouter.get('/user/repos', verifyJWT, getUserReposController);
 
 
