@@ -28,9 +28,7 @@ app.use(traceMiddleware);
 app.set("trust proxy", 1);
 
 
-// body parser and compression
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+//compression
 app.use(compression());
 
 
