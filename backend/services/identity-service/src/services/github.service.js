@@ -83,3 +83,4 @@ export const githubCallback = async (data) => {
 
     return user;
 }
+

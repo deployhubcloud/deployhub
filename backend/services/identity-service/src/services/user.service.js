@@ -1,6 +1,8 @@
 import { AppError } from "../../../../shared/errors/AppError.js";
 import { User } from "../models/user.model.js";
 import { deleteFromDevload, uploadOnDevload } from "../utils/devload.js";
+import axios from "axios";
+import { AUTH_ENV } from "../lib/env.js";
 
 export const userFullnameService = async (userId, fullName) => {
 
@@ -41,4 +43,47 @@ export const userProfilePicService = async (userId, file) => {
     }
 
     return true
+}
+
+
+export const getUserRepositories = async (userId) => {
+    const user = await User.findById(userId);
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+
+    if (user.provider !== 'github') {
+        throw new AppError('User is not authenticated with GitHub', 400);
+    };
+
+    if (!user.githubAccessToken) {
+        throw new AppError('GitHub access token not found! Please authenticate with GitHub', 404);
+    }
+
+    const reposRes = await axios.get("https://api.github.com/user/repos", {
+        headers: {
+            Authorization: `Bearer ${user.githubAccessToken}`,
+            Accept: "application/vnd.github+json",
+        },
+        params: {
+            visibility: "all",
+            affiliation: "owner,collaborator",
+            per_page: 100,
+        },
+    });
+
+
+    const repos = reposRes.data.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        private: repo.private,
+        html_url: repo.html_url,
+        description: repo.description,
+        default_branch: repo.default_branch,
+    }));
+
+    return repos;
 }

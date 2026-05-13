@@ -1,5 +1,5 @@
 import { validationResult } from "express-validator";
-import { userFullnameService, userProfilePicService } from "../services/user.service.js";
+import { getUserRepositories, userFullnameService, userProfilePicService } from "../services/user.service.js";
 
 export const userFullNameCOntroller = async (req, res) => {
     try {
@@ -47,6 +47,25 @@ export const userProfilePicController = async (req, res) => {
         return res.status(200).json({
             message: "Profile Picture Updated",
             success: true
+        })
+
+    } catch (error) {
+        res.status(error.status || 500).json({
+            error: error.message || 'internal server Error'
+        })
+    }
+}
+
+
+export const getUserReposController = async (req, res) => {
+    try {
+
+        const userId = req.user._id;
+
+        const repositories = await getUserRepositories(userId);
+
+        return res.status(200).json({
+            repositories
         })
 
     } catch (error) {
