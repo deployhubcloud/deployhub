@@ -21,13 +21,17 @@ const limit = {
 const rateLimit = async (req, res, apiType) => {
 
     const redis = await getRedis();
-    const requester = req.userId || req.ip;
-    const redisKey = `depolyhub:identity-service:rate-limit:user:${requester}`;
+    const requester = req.user._id || req.ip;
 
     const limitConfig = limit[apiType];
     if (!limitConfig) {
         throw new Error('Invalid API type for rate limiting');
     }
+
+
+
+    const redisKey = `deployhub:identity-service:rate-limit:${apiType}:user:${requester}`;
+
 
     await redis.incr(redisKey);
 

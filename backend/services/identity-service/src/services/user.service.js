@@ -14,7 +14,7 @@ export const userFullnameService = async (userId, fullName) => {
     const updatedUser = await User.findOneAndUpdate(
         { _id: userId, provider: 'local' },
         { fullName: fullName },
-        { new: true, runValidators: true });
+        { returnDocument: 'after', runValidators: true });
 
     if (!updatedUser) {
         throw new AppError('You cannot update fullname, you logged in with GitHub', 409)
@@ -49,7 +49,7 @@ export const userProfilePicService = async (userId, file) => {
     const updateUser = await User.findOneAndUpdate(
         { _id: userId },
         { profilePic: uplaodResult.publicurl, profileFileId: uplaodResult.fileid },
-        { new: true, upsert: false }
+        { returnDocument: 'after', upsert: false }
     );
 
     await clearUserCache(userId);
