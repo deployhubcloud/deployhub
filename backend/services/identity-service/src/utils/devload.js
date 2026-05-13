@@ -12,16 +12,16 @@ export const uploadOnDevload = async (filePath) => {
 
         return uploadResult;
     } catch (error) {
-        throw new AppError('upload Filed! Please Try Again Later', error?.message)
+        throw new AppError('upload Filed! Please Try Again Later', 500)
     }
 
 }
 
 export const deleteFromDevload = async (fileId) => {
     try {
-        const deleteResult = await devload.deleteFile(fileid);
+        const deleteResult = await devload.deleteFile(fileId);
         console.log('File deleted:', deleteResult);
     } catch (error) {
-        throw new AppError('Delete Failed', error?.message)
+        throw new AppError('Delete Failed', 500)
     }
 }
