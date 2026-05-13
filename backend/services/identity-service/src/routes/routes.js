@@ -10,11 +10,10 @@ import { verifyJWT } from '../middleware/auth.middleware.js';
 import { meController } from '../controllers/me.controller.js';
 import { listSessionsController, revokeAllSessionsController, revokeSessionController, } from '../controllers/session.controller.js';
 import { userFullNameValidator } from '../validators/user.js';
-import { userFullNameCOntroller } from '../controllers/user.controller.js';
+import { getUserReposController, userFullNameCOntroller , userProfilePicController} from '../controllers/user.controller.js';
 import { profilePicValidator } from '../validators/profilePic.js';
-import { userProfilePicController } from '../controllers/user.controller.js';
 import upload from '../middleware/multer.middleware.js';
-
+import { rateLimitMiddleware } from '../middleware/rateLimit.middleware.js';
 
 const indetityServiceRouter = express.Router();
 

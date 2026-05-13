@@ -1,10 +1,10 @@
-import { getRedis } from "../core/redis/client";
+import { getRedis } from "../core/redis/client.js";
 
 const limit = {
     fullName: {
         max: 2,
         time: 60 * 60 * 1000, // 1 hours
-        message: 'you update on 5 times per hours.'
+        message: 'you update on 2 times per hours.'
     },
     email: {
         max: 5,
@@ -18,10 +18,9 @@ const limit = {
     }
 }
 
-const rateLimit = (req, res, apiType,) => {
+const rateLimit = async (req, res, apiType) => {
 
     const redis = await getRedis();
-    const apiType = apiType;
     const requester = req.userId || req.ip;
     const redisKey = `depolyhub:identity-service:rate-limit:user:${requester}`;
 
