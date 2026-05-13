@@ -51,7 +51,8 @@ const schema = z.object({
   FRONTEND_URL: z.string(),
 
   RABBITMQ_URL: z.string(),
-  AUTH_SERVICE: z.string().optional()
+  AUTH_SERVICE: z.string().optional(),
+  PROJECT_SERVICE: z.string().optional()
 })
 
 const parsed = schema.safeParse(process.env);

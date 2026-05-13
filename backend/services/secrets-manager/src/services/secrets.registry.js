@@ -75,6 +75,7 @@ export function getSecretsForService(serviceName) {
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
       AUTH_SERVICE: env.AUTH_SERVICE || '',
+      PROJECT_SERVICE: env.PROJECT_SERVICE || '',
       INTERNAL_SECRET: env.INTERNAL_SERVICE_SECRET,
       FRONTEND_URL: env.FRONTEND_URL,
       ACCESS_TOKEN_SECRET: env.ACCESS_TOKEN_SECRET,
@@ -82,6 +83,7 @@ export function getSecretsForService(serviceName) {
       EMAIL_PASS: env.EMAIL_PASS,
       EMAIL_USER: env.EMAIL_USER,
       EMAIL_HOST: env.EMAIL_HOST,
+      EMAIL_PORT: String(env.EMAIL_PORT),
     },
 
   };
