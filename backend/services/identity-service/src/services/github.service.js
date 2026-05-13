@@ -65,6 +65,7 @@ export const githubCallback = async (data) => {
             fullName: githubUser.name || githubUser.login,
             githubId: githubUser.id,
             githubUsername: githubUser.login,
+            profilePic: githubUser.avatar_url,
             githubAccessToken,
             provider: "github",
             status: "active",
@@ -76,6 +77,7 @@ export const githubCallback = async (data) => {
         user.githubAccessToken = githubAccessToken;
         user.githubId = githubUser.id;
         user.githubUsername = githubUser.login;
+        user.profilePic = githubUser.avatar_url;
         user.provider = "github";
         user.status = "active";
         await user.save({ validateBeforeSave: false });
