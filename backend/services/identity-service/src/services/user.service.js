@@ -63,7 +63,7 @@ export const userProfilePicService = async (userId, file) => {
 
 
 export const getUserRepositories = async (userId) => {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select('+githubAccessToken');
 
     if (!user) {
         throw new AppError('User not found', 404);
