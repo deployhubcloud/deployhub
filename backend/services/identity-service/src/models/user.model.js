@@ -64,12 +64,12 @@ const userSchema = new mongoose.Schema(
         },
 
 
-        loginAttempts: { 
-            type: Number, 
-            default: 0 
+        loginAttempts: {
+            type: Number,
+            default: 0
         },
-        lockUntil: { 
-            type: Date 
+        lockUntil: {
+            type: Date
         },
 
 

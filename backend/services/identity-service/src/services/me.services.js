@@ -21,7 +21,7 @@ export const meServices = async (data) => {
     }
 
     if (!cacheUserData) {
-        const userdata = await User.findById(userId).select('fullName provider email profilePic').lean();
+        const userdata = await User.findById(userId).select('fullName provider email profilePic createdAt updatedAt').lean();
 
         if (!userdata) {
             throw new AppError('Invalid User', 401);

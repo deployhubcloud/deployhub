@@ -6,6 +6,7 @@ import Signup from "./Pages/Signup";
 import Home from "./Pages/Home";
 import Sessions from "./Pages/Sessions";
 import PrivateLayout from "./layouts/PrivateLayout";
+import Profile from "./Pages/Profile";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
@@ -27,6 +28,7 @@ export default function App() {
       <Route element={<Protected><PrivateLayout /></Protected>}>
         <Route path="/" element={<Home />} />
         <Route path="/settings/sessions" element={<Sessions />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       <Route

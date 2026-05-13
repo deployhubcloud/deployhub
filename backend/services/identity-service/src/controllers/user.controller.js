@@ -14,11 +14,20 @@ export const userFullNameCOntroller = async (req, res) => {
         const { fullname } = req.body;
         const userId = req.user._id;
 
-        await userFullnameService(userId, fullname);
+        const user = await userFullnameService(userId, fullname);
+
 
         return res.status(200).json({
             message: "FullName Updated",
-            success: true
+            success: true,
+            userData: {
+                fullName: user.fullName,
+                email: user.email,
+                provider: user.provider,
+                profilePic: user.profilePic,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            }
         })
 
     } catch (error) {
@@ -33,7 +42,7 @@ export const userProfilePicController = async (req, res) => {
     try {
 
         const errors = validationResult(req);
-        if (errors.isEmpty()) {
+        if (!errors.isEmpty()) {
             return res.status(400).json({
                 message: errors.array()[0].msg
             })
@@ -42,11 +51,19 @@ export const userProfilePicController = async (req, res) => {
         const userid = req.user._id;
         const profilePic = req.file;
 
-        await userProfilePicService(userid, profilePic);
+        const user = await userProfilePicService(userid, profilePic);
 
         return res.status(200).json({
             message: "Profile Picture Updated",
-            success: true
+            success: true,
+            userData: {
+                fullName: user.fullName,
+                email: user.email,
+                provider: user.provider,
+                profilePic: user.profilePic,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            }
         })
 
     } catch (error) {

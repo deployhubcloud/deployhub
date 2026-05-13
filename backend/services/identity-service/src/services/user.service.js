@@ -2,7 +2,12 @@ import { AppError } from "../../../../shared/errors/AppError.js";
 import { User } from "../models/user.model.js";
 import { deleteFromDevload, uploadOnDevload } from "../utils/devload.js";
 import axios from "axios";
-import { AUTH_ENV } from "../lib/env.js";
+import { getRedis } from "../core/redis/client.js";
+
+const clearUserCache = async (userId) => {
+    const redis = getRedis();
+    await redis.del(`deployhub:userData:${userId}`);
+};
 
 export const userFullnameService = async (userId, fullName) => {
 
@@ -15,7 +20,9 @@ export const userFullnameService = async (userId, fullName) => {
         throw new AppError('You cannot update fullname, you logged in with GitHub', 409)
     }
 
-    return true
+    await clearUserCache(userId);
+
+    return updatedUser
 
 }
 
@@ -24,6 +31,13 @@ export const userProfilePicService = async (userId, file) => {
     // here first check if user have previous profile pic, if have then delete that from devload and then upload new one
 
     const user = await User.findById(userId);
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    if (user.provider !== 'local') {
+        throw new AppError('You cannot update profile picture, you logged in with GitHub', 409)
+    }
 
     if (user?.profileFileId) {
         await deleteFromDevload(user.profileFileId);
@@ -33,16 +47,14 @@ export const userProfilePicService = async (userId, file) => {
     const uplaodResult = await uploadOnDevload(file.path);
 
     const updateUser = await User.findOneAndUpdate(
-        { _id: userId, provider: 'local' },
+        { _id: userId },
         { profilePic: uplaodResult.publicurl, profileFileId: uplaodResult.fileid },
         { new: true, upsert: false }
     );
 
-    if (!updateUser) {
-        throw new AppError('You cannot update profile picture, you logged in with GitHub', 409)
-    }
+    await clearUserCache(userId);
 
-    return true
+    return updateUser
 }
 
 
