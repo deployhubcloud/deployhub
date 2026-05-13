@@ -33,12 +33,10 @@ const rateLimit = async (req, res, apiType) => {
     const redisKey = `deployhub:identity-service:rate-limit:${apiType}:user:${requester}`;
 
 
-    await redis.incr(redisKey);
-
-    const count = await redis.get(redisKey);
+    const count = Number(await redis.incr(redisKey));
 
     if (count === 1) {
-        await redis.expire(redisKey, limitConfig.time / 1000);
+        await redis.expire(redisKey, Math.ceil(limitConfig.time / 1000));
     }
 
     if (count > limitConfig.max) {

@@ -5,7 +5,11 @@ import { services } from './src/configs/services.js';
 import { createShutdownHandler } from '../shared/utils/gracefulShutdown.js';
 import express from 'express';
 import routes from './src/routes/index.js';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 
+
+// create express app
 const app = express();
 
 
@@ -21,7 +25,18 @@ app.use(traceMiddleware);
 
 
 // trust proxy for rate limiting and real ip
-app.set("trust proxy", 1); 
+app.set("trust proxy", 1);
+
+
+// body parser and compression
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(compression());
+
+
+// cookie parser
+app.use(cookieParser());
+
 
 
 // health

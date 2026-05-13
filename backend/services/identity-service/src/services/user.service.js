@@ -39,9 +39,8 @@ export const userProfilePicService = async (userId, file) => {
         throw new AppError('You cannot update profile picture, you logged in with GitHub', 409)
     }
 
-    if (user?.profileFileId) {
-        await deleteFromDevload(user.profileFileId);
-    }
+
+    const oldProfilePicFileId = user?.profileFileId;
 
 
     const uplaodResult = await uploadOnDevload(file.path);
@@ -51,6 +50,11 @@ export const userProfilePicService = async (userId, file) => {
         { profilePic: uplaodResult.publicurl, profileFileId: uplaodResult.fileid },
         { returnDocument: 'after', upsert: false }
     );
+
+    if (oldProfilePicFileId) {
+        await deleteFromDevload(oldProfilePicFileId);
+    }
+
 
     await clearUserCache(userId);
 
