@@ -26,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // health
 app.get('/health', (req, res) => {
+    console.log(req.user)
     res.status(200).json({
         success: true,
         date: new Date().toLocaleTimeString()
@@ -39,6 +40,10 @@ app.use(createInternalAUthMiddleware({
     logger: console,
     header: 'x-internal-secret'
 }));
+
+
+import userContext from '../../shared/middlewares/userContext.js';
+app.use(userContext);
 
 
 // routes
