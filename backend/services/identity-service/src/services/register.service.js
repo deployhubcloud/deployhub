@@ -30,7 +30,7 @@ export const initRegister = async (data) => {
         existingUser.status = "pending";
         existingUser.registrationExpiresAt = getRegistrationExpiry();
 
-        await existingUser.save();
+        await existingUser.save({ validateBeforeSave: false });
         await sendRegistrationOtp(email);
 
         return existingUser;
@@ -44,7 +44,7 @@ export const initRegister = async (data) => {
         registrationExpiresAt: getRegistrationExpiry()
     })
 
-    await user.save();
+    await user.save({ validateBeforeSave: false });
     await sendRegistrationOtp(email);
 
     return user;
@@ -85,7 +85,8 @@ export const verifyRegister = async (data) => {
         {
             $set: { status: "active", networkName: networkName },
             $unset: { registrationExpiresAt: "" }
-        }
+        },
+        { new: true }
     );
 
     return true
