@@ -33,13 +33,19 @@ app.get('/health', (req, res) => {
 })
 
 
+//internal Auth
+app.use(createInternalAUthMiddleware({
+    secret: project_env.INTERNAL_SERVICE_SECRET,
+    logger: console,
+    header: 'x-internal-secret'
+}));
 
-// internal Auth
-// app.use(createInternalAUthMiddleware({
-//     secret: 'fuck',
-//     logger: console,
-//     header: 'x-internal-secret'
-// }));
+
+// routes
+import projectRouter from './src/routes/router.js';
+app.use('/', projectRouter);
+
+
 
 export default async function startUp(params) {
     const PORT = project_env.PORT;
@@ -55,7 +61,7 @@ export default async function startUp(params) {
     const shutDown = createShutdownHandler({
         server,
         logger: console,
-        closeResources: [closeDb , closeRabbitMQ]
+        closeResources: [closeDb, closeRabbitMQ]
     })
 
     process.on('SIGINT', shutDown)
