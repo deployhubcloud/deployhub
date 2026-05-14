@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import { AppError } from "../../../../shared/errors/AppError.js";
 import { getRedis } from "../core/redis/client.js";
 import { encryptGithubAccessToken } from "../utils/githubTokenCrypto.js";
+import { generateNetworkName } from "../utils/netwrokName.js";
 
 const GITHUB_REQUEST_TIMEOUT_MS = 10000;
 const createGithubOAuthStateKey = (state) => `deployhub:githubOAuthState:${state}`;
@@ -77,7 +78,10 @@ export const githubCallback = async (data) => {
     const encryptedGithubAccessToken = encryptGithubAccessToken(githubAccessToken);
 
     if (!user) {
-        user = await User.create({
+
+
+
+        user = new User({
             email: primaryEmail,
             fullName: githubUser.name || githubUser.login,
             githubId: githubUser.id,
@@ -87,7 +91,12 @@ export const githubCallback = async (data) => {
             provider: "github",
             status: "active",
             password: null,
-        })
+        });
+
+        const networkName = generateNetworkName(user._id);
+
+        user.networkName = networkName;
+        await user.save();
     } else {
         if (user.provider !== "github") {
             throw new AppError('Email already registered with password login. Please sign in and link GitHub from account settings.', 409);

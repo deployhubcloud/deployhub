@@ -1,6 +1,7 @@
 import { User } from "../models/user.model.js";
 import { AppError } from "../../../../shared/errors/AppError.js";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "./otp.service.js";
+import { generateNetworkName } from "../utils/netwrokName.js";
 
 const REGISTRATION_EXPIRY_MS = 10 * 60 * 1000;
 
@@ -77,10 +78,12 @@ export const verifyRegister = async (data) => {
 
     await verifyRegistrationOtp(email, otp);
 
+    const networkName = generateNetworkName(user._id);
+
     await User.findOneAndUpdate(
         { _id: user._id, status: "pending" },
         {
-            $set: { status: "active" },
+            $set: { status: "active", networkName: networkName },
             $unset: { registrationExpiresAt: "" }
         }
     );
