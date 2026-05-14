@@ -94,6 +94,30 @@ const projectschema = new mongoose.Schema({
             type: Number,
             default: 0
         }
+    },
+    totalBuilds: {
+        type: Number,
+        default: 0
+    },
+    buildId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Build"
+    },
+
+    plan: {
+        type: String,
+        enum: ["free", "pro"],
+        default: "free"
+    },
+    startDate: {
+        type: Date
+    },
+    endDate: {
+        type: Date
+    },
+    paymentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "CompletedOrder"
     }
 }, { timestamps: true });
 
