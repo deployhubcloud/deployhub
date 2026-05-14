@@ -1,27 +1,43 @@
 import mongoose from "mongoose";
 
 const pendingorderschema = new mongoose.Schema({
-    userid: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        required: true,
+        index: true
     },
-    oderid : {
+    orderId: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
+        index: true
     },
-    months : {
+    projectId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Project",
+        required: true,
+        index: true
+    },
+    months: {
         type: Number,
-        required: true
+        required: true,
+        min: 1
     },
-    amount : {
-        type: Number
+    amount: {
+        type: Number,
+        required: true,
+        min: 0
     },
     plan: {
         type: String,
+        enum: ["pro"],
+        default: "pro"
     },
     status: {
         type: String,
-        enum: ["pending" , 'completed']
+        enum: ["pending", "completed", "failed", "expired"],
+        default: "pending",
+        index: true
     },
     createdAt: {
         type: Date,
@@ -31,4 +47,12 @@ const pendingorderschema = new mongoose.Schema({
 })
 
 
-export const PendingOrder = new mongoose.model('PendingOrder' , pendingorderschema)
+pendingorderschema.virtual('userid')
+    .get(function () { return this.userId; })
+    .set(function (value) { this.userId = value; });
+
+pendingorderschema.virtual('oderid')
+    .get(function () { return this.orderId; })
+    .set(function (value) { this.orderId = value; });
+
+export const PendingOrder = mongoose.model('PendingOrder', pendingorderschema)

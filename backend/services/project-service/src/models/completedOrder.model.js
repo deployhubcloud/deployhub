@@ -1,32 +1,63 @@
 import mongoose from "mongoose";
 
 const completedorderschema = new mongoose.Schema({
-    userid: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        required: true,
+        index: true
     },
-    orderid: {
+    orderId: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
+        index: true
+    },
+    razorpayPaymentId: {
+        type: String,
+        index: true
+    },
+    razorpaySignature: {
+        type: String
     },
     months: {
         type: Number,
-        required: true
+        required: true,
+        min: 1
     },
     amount: {
-        type: Number
+        type: Number,
+        required: true,
+        min: 0
     },
     plan: {
         type: String,
+        enum: ["pro"],
+        default: "pro"
     },
     status: {
         type: String,
+        enum: ["completed", "refunded", "failed"],
+        default: "completed"
     },
-    projectid: {
-         type: mongoose.Schema.Types.ObjectId,
+    projectId: {
+        type: mongoose.Schema.Types.ObjectId,
         ref: "Project",
+        required: true,
+        index: true
     }
 }, { timestamps: true})
 
 
-export const CompletedOrder = new mongoose.model('CompletedOrder', completedorderschema)
+completedorderschema.virtual('userid')
+    .get(function () { return this.userId; })
+    .set(function (value) { this.userId = value; });
+
+completedorderschema.virtual('orderid')
+    .get(function () { return this.orderId; })
+    .set(function (value) { this.orderId = value; });
+
+completedorderschema.virtual('projectid')
+    .get(function () { return this.projectId; })
+    .set(function (value) { this.projectId = value; });
+
+export const CompletedOrder = mongoose.model('CompletedOrder', completedorderschema)

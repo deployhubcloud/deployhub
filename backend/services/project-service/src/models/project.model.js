@@ -18,7 +18,7 @@ const projectschema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['queued', 'building', 'running', 'failed', 'stopped'],
+        enum: ['draft', 'queued', 'building', 'running', 'failed', 'stopped'],
         default: 'queued'
     },
     repoUrl: {
@@ -109,6 +109,12 @@ const projectschema = new mongoose.Schema({
         enum: ["free", "pro"],
         default: "free"
     },
+    paymentStatus: {
+        type: String,
+        enum: ['not_required', 'pending', 'paid', 'failed', 'expired'],
+        default: 'not_required',
+        index: true
+    },
     startDate: {
         type: Date
     },
@@ -122,5 +128,7 @@ const projectschema = new mongoose.Schema({
 }, { timestamps: true });
 
 projectschema.index({ userId: 1, dockerContainerName: 1 }, { unique: true });
+projectschema.index({ userId: 1, paymentStatus: 1, createdAt: -1 });
 
 
+export const Project = mongoose.model("Project", projectschema);
