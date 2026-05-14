@@ -5,6 +5,47 @@ import { getRedis } from '../core/redis/client.js';
 import { AppError } from '../../../../shared/errors/AppError.js';
 import { SESSION_TTL_SECONDS, createSessionKey, deleteAllSessions, generateAccessToken, generateRefreshToken, hashRefreshToken, } from './session.service.js';
 
+const REFRESH_ROTATION_GRACE_SECONDS = 10;
+const REFRESH_LOCK_SECONDS = 5;
+const createRefreshLockKey = (userId, tokenId) => `deployhub:refreshLock:${userId}:${tokenId}`;
+const createRefreshRotationKey = (userId, tokenId) => `deployhub:refreshRotation:${userId}:${tokenId}`;
+
+const readRotationResult = async ({ redis, userId, tokenId, incomingHash, userAgent }) => {
+    const rotationData = await redis.get(createRefreshRotationKey(userId, tokenId));
+    if (!rotationData) {
+        return null;
+    }
+
+    const rotation = JSON.parse(rotationData);
+    if (rotation.oldHash !== incomingHash) {
+        await deleteAllSessions(redis, userId);
+        throw new AppError('Token reuse detected. All sessions revoked.', 403);
+    }
+
+    if (rotation.userAgent && userAgent && rotation.userAgent !== userAgent) {
+        await deleteAllSessions(redis, userId);
+        throw new AppError('Token reuse detected. All sessions revoked.', 403);
+    }
+
+    return {
+        AccessToken: rotation.AccessToken,
+        RefreshToken: rotation.RefreshToken,
+        tokenId: rotation.tokenId,
+    };
+};
+
+const waitForRotationResult = async ({ redis, userId, tokenId, incomingHash, userAgent }) => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+        const result = await readRotationResult({ redis, userId, tokenId, incomingHash, userAgent });
+        if (result) {
+            return result;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    return null;
+};
+
 export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
 
     const redis = getRedis();
@@ -32,14 +73,29 @@ export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
     }
 
     const sessionKey = createSessionKey(userId, tokenId);
+    const incommingHash = hashRefreshToken(refreshToken);
     const sessionData = await redis.get(sessionKey);
     if (!sessionData) {
+        const rotationResult = await readRotationResult({ redis, userId, tokenId, incomingHash: incommingHash, userAgent });
+        if (rotationResult) {
+            return rotationResult;
+        }
+
         throw new AppError('Invalid Sessions', 401);
     }
 
-    const session = JSON.parse(sessionData);
+    const lockKey = createRefreshLockKey(userId, tokenId);
+    const lockAcquired = await redis.set(lockKey, '1', 'EX', REFRESH_LOCK_SECONDS, 'NX');
+    if (!lockAcquired) {
+        const rotationResult = await waitForRotationResult({ redis, userId, tokenId, incomingHash: incommingHash, userAgent });
+        if (rotationResult) {
+            return rotationResult;
+        }
 
-    const incommingHash = hashRefreshToken(refreshToken);
+        throw new AppError('Refresh token rotation in progress. Please retry.', 409);
+    }
+
+    const session = JSON.parse(sessionData);
 
     if (incommingHash !== session.hashedToken) {
         await deleteAllSessions(redis, userId);
@@ -57,14 +113,25 @@ export const refreshTokenService = async ({ refreshToken, ip, userAgent }) => {
         rotatedAt: Date.now(),
     };
 
+    const AccessToken = generateAccessToken(userId, newTokenId);
+    const rotationResult = {
+        oldHash: incommingHash,
+        userAgent: userAgent || session.userAgent || '',
+        AccessToken,
+        RefreshToken: newRefreshToken,
+        tokenId: newTokenId,
+    };
+
     await redis
         .multi()
         .set(createSessionKey(userId, newTokenId), JSON.stringify(newSession), 'EX', SESSION_TTL_SECONDS)
+        .set(createRefreshRotationKey(userId, tokenId), JSON.stringify(rotationResult), 'EX', REFRESH_ROTATION_GRACE_SECONDS)
         .del(sessionKey)
+        .del(lockKey)
         .exec();
 
     return {
-        AccessToken: generateAccessToken(userId, newTokenId),
+        AccessToken,
         RefreshToken: newRefreshToken,
         tokenId: newTokenId
     };
