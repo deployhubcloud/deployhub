@@ -80,7 +80,7 @@ const projectschema = new mongoose.Schema({
     monitor: {
         enabled: {
             type: Boolean,
-            default: true
+            default: false
         },
         intervalSeconds: {
             type: Number,
@@ -101,12 +101,11 @@ const projectschema = new mongoose.Schema({
     },
     buildId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Build"
     },
 
     plan: {
         type: String,
-        enum: ["free", "pro"],
+        enum: ["free", "starter", "pro"],
         default: "free"
     },
     paymentStatus: {
