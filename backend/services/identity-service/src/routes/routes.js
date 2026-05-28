@@ -32,7 +32,7 @@ indetityServiceRouter.get('/user/profile', verifyJWT, meController);
 indetityServiceRouter.put('/user/fullname', verifyJWT, rateLimitMiddleware('fullName'), userFullNameValidator, userFullNameCOntroller)
 indetityServiceRouter.put('/user/profile-pic', verifyJWT, rateLimitMiddleware('uploadProfilePic'), upload.single('profilePic'), handleUploadError, profilePicValidator, userProfilePicController)
 indetityServiceRouter.get('/user/repos', verifyJWT, getUserReposController);
-indetityServiceRouter.get('/user/network-name', internalApiCallMiddleware({ secret: process.env.INTERNAL_SERVICE_TALKING_SECRET }), getUserNetworkNameController);
+indetityServiceRouter.get('/user/:userId/network-name', internalApiCallMiddleware({ secret: process.env.INTERNAL_SERVICE_TALKING_SECRET }), getUserNetworkNameController);
 
 
 export default indetityServiceRouter;

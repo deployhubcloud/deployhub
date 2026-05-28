@@ -106,7 +106,7 @@ export const getUserReposController = async (req, res) => {
 export const getUserNetworkNameController = async (req, res) => {
     try {
 
-        const userId = req.body.userId;
+        const userId = req.params.userId;
         const networkName = await getUSerNetworkName(userId);
         return res.status(200).json({
             networkName
