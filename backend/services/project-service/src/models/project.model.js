@@ -14,7 +14,7 @@ const projectschema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["static", "node", 'java']
+        enum: ["static", "node"]
     },
     status: {
         type: String,
