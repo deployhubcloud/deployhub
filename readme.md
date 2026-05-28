@@ -23,6 +23,7 @@ Start each service **in order**, in separate terminal windows.
 
 ```bash
 cd backend/secrets-manager
+npm ci
 npm run start
 ```
 
@@ -32,6 +33,7 @@ npm run start
 
 ```bash
 cd backend/api-gateway
+npm ci
 npm run start
 ```
 
@@ -41,6 +43,7 @@ npm run start
 
 ```bash
 cd backend/identity-service
+npm ci
 npm run start
 ```
 
@@ -50,6 +53,7 @@ npm run start
 
 ```bash
 cd frontend/Dashboard-Frontend
+npm ci
 npm run dev
 ```
 
