@@ -35,6 +35,8 @@ export function getSecretsForService(serviceName) {
       RABBITMQ_URL: env.RABBITMQ_URL,
 
       FRONTEND_URL: env.FRONTEND_URL,
+
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     },
 
 
@@ -42,6 +44,7 @@ export function getSecretsForService(serviceName) {
       MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
       REDIS_URL: env.REDIS_URL,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     },
 
 
@@ -54,6 +57,7 @@ export function getSecretsForService(serviceName) {
       RAZORPAY_KEY_ID: env.RAZORPAY_KEY_ID || '',
       RAZORPAY_KEY_SECRET: env.RAZORPAY_KEY_SECRET || '',
       RABBITMQ_URL: env.RABBITMQ_URL,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     },
 
 
@@ -61,6 +65,7 @@ export function getSecretsForService(serviceName) {
       MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
       REDIS_URL: env.REDIS_URL,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     },
 
 
@@ -68,6 +73,7 @@ export function getSecretsForService(serviceName) {
       MONGODB_URI: env.PROJECT_SERVICE_MONGODB_URI,
       REDIS_URL: env.REDIS_URL,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     },
 
     'api-gateway': {
