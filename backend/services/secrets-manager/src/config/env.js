@@ -53,6 +53,7 @@ const schema = z.object({
   RABBITMQ_URL: z.string(),
   AUTH_SERVICE: z.string().optional(),
   PROJECT_SERVICE: z.string().optional(),
+  MONITORING_SERVICE: z.string().optional(),
 
   INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
 
