@@ -8,15 +8,15 @@ const devFormat = combine(
     timestamp({ format: 'HH:mm:ss' }),
     printf(({ level, message, timestamp, ...meta }) => {
         const extras = Object.keys(meta).length ? JSON.stringify(meta) : '';
-        return `${timestamp} [${env.SERVICE_NAME}] [${level}] ${message} ${extras}`;
+        return `${timestamp} [${AUTH_ENV.SERVICE_NAME}] [${level}] ${message} ${extras}`;
     })
 );
 
 const prodFormat = combine(timestamp(), json());
 
 export const logger = winston.createLogger({
-    level: env.NODE_ENV === 'production' ? 'info' : 'debug',
-    defaultMeta: { service: env.SERVICE_NAME },
-    format: env.NODE_ENV === 'production' ? prodFormat : devFormat,
+    level: AUTH_ENV.NODE_ENV === 'production' ? 'info' : 'debug',
+    defaultMeta: { service: AUTH_ENV.SERVICE_NAME },
+    format: AUTH_ENV.NODE_ENV === 'production' ? prodFormat : devFormat,
     transports: [new winston.transports.Console()],
 });
