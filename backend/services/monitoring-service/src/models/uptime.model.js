@@ -18,6 +18,10 @@ const uptimeSchema = new mongoose.Schema({
         enum: ['up', 'down'],
         required: true
     },
+    interval: {
+        type: Number,
+        required: true
+    },
     lastChecked: {
         type: Date
     },
