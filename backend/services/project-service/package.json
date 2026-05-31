@@ -13,7 +13,7 @@
   "type": "module",
   "dependencies": {
     "amqplib": "^1.0.6",
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.76.6",
     "dotenv": "^17.4.2",
