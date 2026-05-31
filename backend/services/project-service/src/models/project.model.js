@@ -14,12 +14,16 @@ const projectschema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["static", "node"]
+        enum: ["static", "node",],
     },
     status: {
         type: String,
         enum: ['draft', 'queued', 'building', 'running', 'failed', 'stopped'],
         default: 'queued'
+    },
+    isMicroservice: {
+        type: Boolean,
+        default: false
     },
     repoUrl: {
         type: String,
@@ -51,6 +55,10 @@ const projectschema = new mongoose.Schema({
         unique: true,
         index: true
     },
+    internalUrl: {
+        type: String, 
+        sparse: true
+    },
     dockerContainerName: {
         type: String,
         unique: true,
@@ -66,7 +74,7 @@ const projectschema = new mongoose.Schema({
     },
     subdomain: {
         type: String,
-        required: true,
+        sparse: true,
         unique: true,
         lowercase: true,
         trim: true
