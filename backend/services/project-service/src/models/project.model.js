@@ -40,6 +40,10 @@ const projectschema = new mongoose.Schema({
     buildCommand: {
         type: String
     },
+    publishDir: {
+        type: String,
+        sparse: true
+    },
     startCommand: {
         type: String
     },
@@ -56,7 +60,7 @@ const projectschema = new mongoose.Schema({
         index: true
     },
     internalUrl: {
-        type: String, 
+        type: String,
         sparse: true
     },
     dockerContainerName: {
