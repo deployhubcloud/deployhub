@@ -12,5 +12,11 @@ export const services = {
         isHealthy: false,
         lastChecked: null,
         lastError: null
+    },
+    Monitoring: {
+        url: ENV.SERVICES_URL.MONITORING,
+        isHealthy: false,
+        lastChecked: null,
+        lastError: null
     }
 }
