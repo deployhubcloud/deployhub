@@ -92,9 +92,23 @@ export function getSecretsForService(serviceName) {
       EMAIL_PORT: String(env.EMAIL_PORT),
     },
 
+    'monitoring-service': {
+      MONITORING_MONGODB_URI: env.MONITORING_MONGODB_URI,
+      INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET,
+      EMAIL_PASS: env.EMAIL_PASS,
+      EMAIL_USER: env.EMAIL_USER,
+      EMAIL_HOST: env.EMAIL_HOST,
+      EMAIL_PORT: String(env.EMAIL_PORT),
+      REDIS_HOST: env.REDIS_HOST,
+      REDIS_PORT: env.REDIS_PORT,
+      REDIS_PASSWORD: env.REDIS_PASSWORD,
+      RABBITMQ_URL: env.RABBITMQ_URL,
+    }
+
   };
 
-return registry[serviceName] ?? null;
+  return registry[serviceName] ?? null;
 }
 
 
@@ -106,5 +120,6 @@ export function getRegisteredServices() {
     'deploy-service',
     'domain-service',
     'api-gateway',
+    'monitoring-service'
   ];
 }

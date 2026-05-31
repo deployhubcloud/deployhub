@@ -54,7 +54,9 @@ const schema = z.object({
   AUTH_SERVICE: z.string().optional(),
   PROJECT_SERVICE: z.string().optional(),
 
-  INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32)
+  INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
+
+  MONITORING_MONGODB_URI: z.string().min(1)
 })
 
 const parsed = schema.safeParse(process.env);
