@@ -1,4 +1,4 @@
-export const free = {
+const free = {
     name: 'free',
     price: 0,
     deployment_Type: ['static'],
@@ -10,7 +10,7 @@ export const free = {
     uptime_monitoring: false,
 }
 
-export const starter = {
+const starter = {
     name: 'starter',
     price: 9.99,
     deployment_Type: ['static', 'node', 'go', 'python'],
@@ -27,7 +27,7 @@ export const starter = {
     }
 }
 
-export const pro = {
+const pro = {
     name: 'pro',
     price: 29.99,
     deployment_Type: ['static', 'node', 'go', 'python', 'java'],
@@ -42,4 +42,10 @@ export const pro = {
         cpu: '1',
         storage: '10240'
     }
+}
+
+export const plans = {
+    free,
+    starter,
+    pro
 }
