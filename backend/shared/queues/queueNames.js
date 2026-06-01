@@ -1,6 +1,7 @@
 export const QUEUE_NAMES = {
-    BUILD: 'build',
-    DEPLOY: 'deploy',
-    MONITOR: 'monitor', 
-    ALERT: 'alert',
+    WELCOME: 'deployhub-WelcomeMessage',
+    BUILD: 'deployhub-BuildProject',
+    DEPLOY: 'deployhub-DeployProject',
+    MONITOR: 'deployhub-MonitorProject',
+    ALERT: 'deployhub-Alert',
 }
