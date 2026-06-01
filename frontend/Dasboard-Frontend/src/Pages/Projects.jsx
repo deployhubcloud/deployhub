@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 const TYPES = [
@@ -43,59 +44,82 @@ const TYPES = [
   },
 ];
 
-function Icon({ path }) {
+function Icon({ path, className = "h-5 w-5" }) {
   return (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={path} />
     </svg>
   );
 }
 
 export default function Projects() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="mx-auto max-w-7xl space-y-7">
-      <section className="relative overflow-hidden rounded-3xl border border-white/[0.07] bg-[#070b12] px-6 py-8 shadow-2xl shadow-black/25 sm:px-8">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00e5ff]/50 to-transparent" />
-        <div className="max-w-3xl">
-          <div className="mb-3 inline-flex rounded-full border border-[#00e5ff]/15 bg-[#00e5ff]/5 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#00e5ff]">
-            Deployment Studio
-          </div>
-          <h1 className="font-syne text-3xl font-black text-white sm:text-4xl">
-            What are you shipping today?
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-gray-500">
-            Choose the runtime first. The next screen will lock the right project type, plan rules, and payment flow for that deployment.
-          </p>
-        </div>
-      </section>
+      {/* Single Button - Right Side */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00e5ff] to-[#00b8d4] px-6 py-3 font-bold text-black transition hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/25"
+        >
+          <Icon path="M12 4v16m8-8H4" className="h-5 w-5" />
+          New Deployment
+        </button>
+      </div>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {TYPES.map((type) => (
-          <Link
-            key={type.key}
-            to={`/projects/new/${type.key}`}
-            className="group relative min-h-56 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#080c12] p-5 transition-all hover:-translate-y-1 hover:border-white/15 hover:shadow-2xl hover:shadow-black/30"
-          >
-            <div className="absolute inset-x-0 top-0 h-px opacity-60 transition-opacity group-hover:opacity-100" style={{ background: type.color }} />
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border" style={{ color: type.color, background: `${type.color}12`, borderColor: `${type.color}35` }}>
-                <Icon path={type.icon} />
-              </div>
-              <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-bold text-gray-400">
-                {type.plan}
-              </span>
+      {/* Modal Popup */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setIsModalOpen(false)}
+          />
+          {/* Modal Content */}
+          <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0a0e17] p-6 shadow-2xl">
+            {/* Modal Header */}
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Select deployment type</h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-full p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="mt-6">
-              <h2 className="font-syne text-xl font-black text-white">{type.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-gray-500">{type.desc}</p>
+            {/* Options Grid */}
+            <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-1 sm:grid-cols-2">
+              {TYPES.map((type) => (
+                <Link
+                  key={type.key}
+                  to={`/projects/new/${type.key}`}
+                  onClick={() => setIsModalOpen(false)}
+                  className="group flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10"
+                >
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{ color: type.color, background: `${type.color}15`, borderColor: `${type.color}30` }}
+                  >
+                    <Icon path={type.icon} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-white">{type.title}</h3>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-gray-400">
+                        {type.plan}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">{type.desc}</p>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between text-sm font-bold" style={{ color: type.color }}>
-              Configure project
-              <span className="transition-transform group-hover:translate-x-1">-&gt;</span>
-            </div>
-          </Link>
-        ))}
-      </section>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
