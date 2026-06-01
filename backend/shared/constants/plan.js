@@ -5,6 +5,11 @@ const free = {
     subdomain: true,
     customDomain: false,
     ssl: true,
+    alerts: {
+        email: true,
+        discord: true,
+        telegram: true
+    },
     github_Ci_Cd: false,
     ai_dignostics: false,
     uptime_monitoring: false,
@@ -17,6 +22,11 @@ const starter = {
     subdomain: true,
     customDomain: true,
     ssl: true,
+    alerts: {
+        email: true,
+        discord: true,
+        telegram: true
+    },
     github_Ci_Cd: true,
     ai_dignostics: false,
     uptime_monitoring: false,
@@ -34,6 +44,11 @@ const pro = {
     subdomain: true,
     customDomain: true,
     ssl: true,
+    alerts: {
+        email: true,
+        discord: true,
+        telegram: true
+    },
     github_Ci_Cd: true,
     ai_dignostics: true,
     uptime_monitoring: true,
