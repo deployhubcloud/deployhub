@@ -56,8 +56,7 @@ const projectschema = new mongoose.Schema({
     },
     containerId: {
         type: String,
-        unique: true,
-        index: true
+        sparse: true
     },
     internalUrl: {
         type: String,

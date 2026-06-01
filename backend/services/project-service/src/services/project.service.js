@@ -10,11 +10,12 @@ import { Project } from '../models/project.model.js';
 import { PendingOrder } from '../models/PendingOrder.js';
 import { CompletedOrder } from '../models/completedOrder.model.js';
 import { buildQueue } from '../utils/queues.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const PAID_PLANS = Object.keys(plans).filter((plan) => plan !== 'free');
 
 const dockerContainerName = (projectId) => {
-    return `cnt_${projectId.toString().substring(0, 6)}_${Math.random().toString(36).substring(2, 8)}`;
+    return `cnt${projectId.toString().substring(15, 24)}${uuidv4().substring(0, 9).slice(0, 8)}`;
 };
 
 const getProjectType = (body) => body.projectType || body.type;
@@ -58,8 +59,8 @@ const normalizeProjectBody = (body) => {
     const isMicroservice = projectType === 'static'
         ? false
         : typeof body.isMicroservice === 'boolean'
-        ? body.isMicroservice
-        : false;
+            ? body.isMicroservice
+            : false;
 
     return {
         projectName: body.projectName || body.name,
@@ -221,7 +222,8 @@ export const createProjectForPlan = async (userId, body, {
         axios,
         project_env.IDENTITY_SERVICE_URL,
         userId,
-        project_env.INTERNAL_SERVICE_TALKING_SECRET
+        project_env.INTERNAL_SERVICE_TALKING_SECRET,
+        project_env.INTERNAL_SERVICE_SECRET
     );
 
     const finalSubdomain = normalized.isMicroservice
@@ -262,7 +264,7 @@ export const createProjectForPlan = async (userId, body, {
         notifications: normalizeNotifications(normalized.notifications),
     });
 
-    project.dockerContainerName = normalized.isMicroservice ? dockerContainerName(project._id) : null;
+    project.dockerContainerName = dockerContainerName(project._id);
     await project.save({ validateBeforeSave: false });
 
     if (!normalized.isMicroservice) {

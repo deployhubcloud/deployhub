@@ -23,6 +23,7 @@
     "hpp": "^0.2.3",
     "ioredis": "^5.10.1",
     "mongo-sanitize": "^1.1.0",
-    "mongoose": "^9.6.1"
+    "mongoose": "^9.6.1",
+    "uuid": "^14.0.0"
   }
 }
