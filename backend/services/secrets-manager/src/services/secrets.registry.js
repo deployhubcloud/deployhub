@@ -7,6 +7,9 @@ export function getSecretsForService(serviceName) {
 
 
     'identity-service': {
+
+      PORT: env.IDENTITY_SERVICE_PORT,
+
       MONGODB_URI: env.IDENTITY_SERVICE_MONGODB_URI,
 
       REDIS_HOST: env.REDIS_HOST,
@@ -36,11 +39,14 @@ export function getSecretsForService(serviceName) {
 
       FRONTEND_URL: env.FRONTEND_URL,
 
-      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET,
+
+      BCRYPT_ROUNDS: env.BCRYPT_ROUNDS || '10'
     },
 
 
     'build-service': {
+      PORT: env.BUILD_SERVICE_PORT,
       MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
       REDIS_URL: env.REDIS_URL,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
@@ -49,6 +55,7 @@ export function getSecretsForService(serviceName) {
 
 
     'project-service': {
+      PORT: env.PROJECT_SERVICE_PORT,
       MONGODB_URI: env.PROJECT_SERVICE_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
@@ -63,6 +70,7 @@ export function getSecretsForService(serviceName) {
 
 
     'deploy-service': {
+      PORT: env.DEPLOY_SERVICE_PORT,
       MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
       REDIS_URL: env.REDIS_URL,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
@@ -71,6 +79,7 @@ export function getSecretsForService(serviceName) {
 
 
     'domain-service': {
+      PORT: env.DOMAIN_SERVICE_PORT,
       MONGODB_URI: env.PROJECT_SERVICE_MONGODB_URI,
       REDIS_URL: env.REDIS_URL,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
@@ -78,6 +87,7 @@ export function getSecretsForService(serviceName) {
     },
 
     'api-gateway': {
+      PORT: env.API_GATEWAY_PORT,
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
@@ -95,6 +105,7 @@ export function getSecretsForService(serviceName) {
     },
 
     'monitoring-service': {
+      PORT: env.MONITORING_SERVICE_PORT,
       MONITORING_MONGODB_URI: env.MONITORING_MONGODB_URI,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
       INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET,

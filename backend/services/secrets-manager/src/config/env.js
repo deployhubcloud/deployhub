@@ -8,6 +8,18 @@ dotenv.config({
 })
 
 const schema = z.object({
+
+  //port of all services
+  API_GATEWAY_PORT: z.coerce.number().default(4000),
+  IDENTITY_SERVICE_PORT: z.coerce.number().default(4001),
+  PROJECT_SERVICE_PORT: z.coerce.number().default(4002),
+  BUILD_SERVICE_PORT: z.coerce.number().default(4003),
+  DEPLOY_SERVICE_PORT: z.coerce.number().default(4004),
+  DOMAIN_SERVICE_PORT: z.coerce.number().default(4005),
+  NOTIFICATION_SERVICE_PORT: z.coerce.number().default(4006),
+  MONITORING_SERVICE_PORT: z.coerce.number().default(4007),
+
+
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
   SERVICE_NAME: z.string().default('secrets-manager'),
@@ -40,7 +52,10 @@ const schema = z.object({
 
   IDENTITY_SERVICE_MONGODB_URI: z.string().min(1),
   BUILD_SERVICE_MONGODB_URI: z.string().min(1),
+  DEPLOY_SERVICE_MONGODB_URI: z.string().min(1),
   PROJECT_SERVICE_MONGODB_URI: z.string().min(1),
+  MONITORING_MONGODB_URI: z.string().min(1),
+  NOTIFICATION_MONGODB_URI: z.string().min(1),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
@@ -51,13 +66,18 @@ const schema = z.object({
   FRONTEND_URL: z.string(),
 
   RABBITMQ_URL: z.string(),
-  AUTH_SERVICE: z.string().optional(),
-  PROJECT_SERVICE: z.string().optional(),
-  MONITORING_SERVICE: z.string().optional(),
+
+  // url of other services for internal comms — optional because not all services need to know about each other
+  IDENTITY_SERVICE_URL: z.string().optional(),
+  PROJECT_SERVICE_URL: z.string().optional(),
+  MONITORING_SERVICE_URL: z.string().optional(),
+  BUILD_SERVICE_URL: z.string().optional(),
+  DEPLOY_SERVICE_URL: z.string().optional(),
+  DOMAIN_SERVICE_URL: z.string().optional(),
 
   INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
 
-  MONITORING_MONGODB_URI: z.string().min(1)
+  BCRYPT_ROUNDS: z.coerce.number().default(10)
 })
 
 const parsed = schema.safeParse(process.env);
