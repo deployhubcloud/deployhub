@@ -1,5 +1,8 @@
 import { validationResult } from "express-validator"
 import { initRegister, verifyRegister } from "../services/register.service.js"
+import { getRedis } from '../core/redis/client.js';
+import { welcomeQueue } from "../utils/queues.js";
+
 
 export const initRegisterController = async (req, res) => {
     try {
@@ -35,7 +38,19 @@ export const verifyRegisterController = async (req, res) => {
             })
         }
 
-        await verifyRegister(req.body);
+        const user = await verifyRegister(req.body);
+
+        await welcomeQueue.add('sendWelcomeMessage', {
+            fullname: user.fullName,
+            email: user.email,
+            userId: user._id
+        }, {
+            attempts: 3,
+            backoff: {
+                type: 'exponential',
+                delay: 5000,
+            },
+        });
 
         res.status(201).json({
             message: "Registration Success",

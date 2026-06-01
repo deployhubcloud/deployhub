@@ -80,7 +80,7 @@ export const verifyRegister = async (data) => {
 
     const networkName = generateNetworkName(user._id);
 
-    await User.findOneAndUpdate(
+    const user = await User.findOneAndUpdate(
         { _id: user._id, status: "pending" },
         {
             $set: { status: "active", networkName: networkName },
@@ -89,6 +89,6 @@ export const verifyRegister = async (data) => {
         { new: true }
     );
 
-    return true
+    return user;
 
 }

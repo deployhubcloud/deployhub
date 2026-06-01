@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { AUTH_ENV } from "../lib/env.js";
 import { User } from "../models/user.model.js";
@@ -6,6 +5,9 @@ import { AppError } from "../../../../shared/errors/AppError.js";
 import { getRedis } from "../core/redis/client.js";
 import { encryptGithubAccessToken } from "../utils/githubTokenCrypto.js";
 import { generateNetworkName } from "../utils/netwrokName.js";
+import { getRedis } from '../core/redis/client.js';
+import { welcomeQueue } from "../utils/queues.js";
+
 
 const GITHUB_REQUEST_TIMEOUT_MS = 10000;
 const createGithubOAuthStateKey = (state) => `deployhub:githubOAuthState:${state}`;
@@ -97,6 +99,18 @@ export const githubCallback = async (data) => {
 
         user.networkName = networkName;
         await user.save();
+
+        await welcomeQueue.add('sendWelcomeMessage', {
+            fullname: user.fullName,
+            email: user.email,
+            userId: user._id
+        }, {
+            attempts: 3,
+            backoff: {
+                type: 'exponential',
+                delay: 5000,
+            },
+        });
     } else {
         if (user.provider !== "github") {
             throw new AppError('Email already registered with password login. Please sign in and link GitHub from account settings.', 409);
