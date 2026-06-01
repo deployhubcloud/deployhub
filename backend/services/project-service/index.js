@@ -51,15 +51,14 @@ app.use('/', projectRouter);
 
 
 
-export default async function startUp(params) {
-    const PORT = project_env.PORT;
+export default async function startUp(port) {
 
     await connectDb();
     await connectRedis();
     await initRabbitMQ()
 
-    const server = app.listen(PORT, async () => {
-        console.log(`Project-Service is Running on Localhost:${PORT}`)
+    const server = app.listen(port, async () => {
+        console.log(`Project-Service is Running on Localhost:${port}`)
     });
 
     const shutDown = createShutdownHandler({
