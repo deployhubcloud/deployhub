@@ -2,7 +2,7 @@
 import express from "express";
 import helmet from "helmet";
 import hpp from "hpp";
-import { AUTH_ENV } from "./lib/env.js";
+import { NOTIFICATION_ENV } from "./lib/env.js";
 import { closeDb, connectDb } from "./core/db/mongo.js";
 import { connectRedis } from "./core/redis/client.js";
 import { initRabbitMQ, closeRabbitMQ } from "./core/messageBroker/rabbitMq.js";
@@ -31,7 +31,7 @@ app.get('/health', (_req, res) => {
 
 // internal auth
 app.use(createInternalAUthMiddleware({
-    secret: AUTH_ENV.INTERNAL_SECRET,
+    secret: NOTIFICATION_ENV.INTERNAL_SECRET,
     logger: console,
     header: "x-internal-secret",
 }));

@@ -6,6 +6,9 @@ const required = [
     'INTERNAL_SECRET',
     'INTERNAL_SERVICE_TALKING_SECRET',
     'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASS',
+    'PROJECT_SERVICE_URL',
+    'BUILD_SERVICE_URL',
+    'DEPLOY_SERVICE_URL'
 ]
 
 for (const key of required) {
@@ -14,7 +17,7 @@ for (const key of required) {
     }
 };
 
-export const AUTH_ENV = {
+export const NOTIFICATION_ENV = {
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT,
     MONGODB_URI: process.env.MONGODB_URI,
@@ -27,5 +30,7 @@ export const AUTH_ENV = {
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_PASS: process.env.EMAIL_PASS,
     INTERNAL_SERVICE_TALKING_SECRET: process.env.INTERNAL_SERVICE_TALKING_SECRET,
-    SERVICE_NAME: process.env.SERVICE_NAME
+    PROJECT_SERVICE_URL: process.env.PROJECT_SERVICE_URL,
+    BUILD_SERVICE_URL: process.env.BUILD_SERVICE_URL,
+    DEPLOY_SERVICE_URL: process.env.DEPLOY_SERVICE_URL,
 }

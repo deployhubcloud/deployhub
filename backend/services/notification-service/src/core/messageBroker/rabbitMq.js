@@ -1,7 +1,7 @@
 import amqp from 'amqplib';
-import { AUTH_ENV } from '../../lib/env.js';
+import { NOTIFICATION_ENV } from '../../lib/env.js';
 
-const RABBITMQ_URL = AUTH_ENV.RABBITMQ_URL || 'amqp://localhost';
+const RABBITMQ_URL = NOTIFICATION_ENV.RABBITMQ_URL || 'amqp://localhost';
 let channel = null;
 let connection = null;
 let reconnectTimer = null;
