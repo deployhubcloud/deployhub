@@ -43,13 +43,13 @@ app.use(createInternalAUthMiddleware({
 app.use('/', identityRouter);
 
 
-export default async function startApp() {
+export default async function startApp(port) {
     await connectDb();
     await initRabbitMQ();
     await connectRedis();
 
-    const server = app.listen(AUTH_ENV.PORT, () => {
-        console.log(`Auth server running on port ${AUTH_ENV.PORT}`);
+    const server = app.listen(port, () => {
+        console.log(`Auth server running on port ${port}`);
     });
 
     const shutdown = createShutdownHandler({
