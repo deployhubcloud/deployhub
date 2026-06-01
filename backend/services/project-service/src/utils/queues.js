@@ -1,8 +1,13 @@
 // project-service/src/utils/queues.js
 import { Queue } from 'bullmq';
-import { getRedis } from '../core/redis/client.js';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
+import { project_env } from '../lib/env.js';
 
-const connection = getRedis();
+const connection = {
+    host: project_env.REDIS_HOST,
+    port: Number(project_env.REDIS_PORT),
+    password: project_env.REDIS_PASSWORD,
+    maxRetriesPerRequest: null,
+};
 
 export const buildQueue = new Queue(QUEUE_NAMES.BUILD, { connection });

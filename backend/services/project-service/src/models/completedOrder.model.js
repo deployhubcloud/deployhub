@@ -31,8 +31,8 @@ const completedorderschema = new mongoose.Schema({
     },
     plan: {
         type: String,
-        enum: ["pro"],
-        default: "pro"
+        enum: ["starter", "pro"],
+        required: true
     },
     status: {
         type: String,
@@ -45,7 +45,7 @@ const completedorderschema = new mongoose.Schema({
         required: true,
         index: true
     }
-}, { timestamps: true})
+}, { timestamps: true })
 
 
 completedorderschema.virtual('userid')

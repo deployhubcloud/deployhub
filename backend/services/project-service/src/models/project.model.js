@@ -14,7 +14,7 @@ const projectschema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["static", "node",],
+        enum: ["static", "node", "go", "python", "java"],
     },
     status: {
         type: String,
@@ -107,7 +107,22 @@ const projectschema = new mongoose.Schema({
         },
         failedTries: {
             type: Number,
-            default: 0
+            default: 2
+        }
+    },
+    notifications: {
+        discord: {
+            enabled: Boolean,
+            webhookUrl: String
+        },
+        telegram: {
+            enabled: Boolean,
+            botToken: String,
+            chatId: String
+        },
+        email: {
+            enabled: Boolean,
+            emailAddress: String
         }
     },
     totalBuilds: {
@@ -141,7 +156,15 @@ const projectschema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-projectschema.index({ userId: 1, dockerContainerName: 1 }, { unique: true });
+projectschema.index(
+    { userId: 1, dockerContainerName: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            dockerContainerName: { $type: 'string' }
+        }
+    }
+);
 projectschema.index({ userId: 1, paymentStatus: 1, createdAt: -1 });
 
 

@@ -15,8 +15,11 @@ const pendingorderschema = new mongoose.Schema({
     projectId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Project",
-        required: true,
         index: true
+    },
+    projectData: {
+        type: mongoose.Schema.Types.Mixed,
+        required: true
     },
     months: {
         type: Number,
@@ -30,8 +33,8 @@ const pendingorderschema = new mongoose.Schema({
     },
     plan: {
         type: String,
-        enum: ["pro"],
-        default: "pro"
+        enum: ["starter", "pro"],
+        required: true
     },
     status: {
         type: String,
