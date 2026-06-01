@@ -5,7 +5,6 @@ const required = [
     'RABBITMQ_URL',
     'INTERNAL_SECRET',
     'INTERNAL_SERVICE_TALKING_SECRET',
-    'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASS',
 ]
 
 for (const key of required) {
@@ -23,9 +22,6 @@ export const AUTH_ENV = {
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
     INTERNAL_SECRET: process.env.INTERNAL_SECRET,
     RABBITMQ_URL: process.env.RABBITMQ_URL,
-    EMAIL_HOST: process.env.EMAIL_HOST,
-    EMAIL_USER: process.env.EMAIL_USER,
-    EMAIL_PASS: process.env.EMAIL_PASS,
     INTERNAL_SERVICE_TALKING_SECRET: process.env.INTERNAL_SERVICE_TALKING_SECRET,
     SERVICE_NAME: process.env.SERVICE_NAME
 }
