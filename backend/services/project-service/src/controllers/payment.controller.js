@@ -42,6 +42,14 @@ export const paymentInitController = async (req, res) => {
 
 export const paymentVerifyController = async (req, res) => {
     try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: errors.array()[0].msg,
+            });
+        }
+
         const { project, order } = await verifyPaidProjectPayment(req.user._id, req.body);
 
         return res.status(201).json({

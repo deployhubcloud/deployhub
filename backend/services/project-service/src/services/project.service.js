@@ -9,7 +9,6 @@ import { getRedis } from '../core/redis/client.js';
 import { Project } from '../models/project.model.js';
 import { PendingOrder } from '../models/PendingOrder.js';
 import { CompletedOrder } from '../models/completedOrder.model.js';
-import { generateSubdomain } from '../utils/generateSubdomain.js';
 import { buildQueue } from '../utils/queues.js';
 
 const PAID_PLANS = Object.keys(plans).filter((plan) => plan !== 'free');
@@ -19,12 +18,48 @@ const dockerContainerName = (projectId) => {
 };
 
 const getProjectType = (body) => body.projectType || body.type;
+const normalizeSubdomain = (subdomain) => (
+    typeof subdomain === 'string' ? subdomain.trim() : subdomain
+);
+
+const assertIncomingProjectConsistency = (body) => {
+    const projectType = getProjectType(body);
+    const subdomain = normalizeSubdomain(body.subdomain);
+
+    if (projectType === 'static' && body.isMicroservice === true) {
+        throw new AppError('Static projects cannot be microservices', 400);
+    }
+
+    const isMicroservice = body.isMicroservice === true;
+
+    if (isMicroservice && subdomain) {
+        throw new AppError('Microservice projects cannot have a public subdomain', 400);
+    }
+
+    if (!isMicroservice && !subdomain) {
+        throw new AppError('Subdomain is required when microservice mode is off', 400);
+    }
+
+    if (subdomain && (typeof subdomain !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(subdomain))) {
+        throw new AppError('Subdomain can only contain lowercase letters, numbers, and hyphens', 400);
+    }
+
+    if (projectType === 'static' && body.startCommand) {
+        throw new AppError('Static projects cannot have a start command', 400);
+    }
+
+    if (projectType !== 'static' && (body.buildCommand || body.publishDir)) {
+        throw new AppError(`${projectType} projects cannot have static build output settings`, 400);
+    }
+};
 
 const normalizeProjectBody = (body) => {
     const projectType = getProjectType(body);
-    const isMicroservice = typeof body.isMicroservice === 'boolean'
+    const isMicroservice = projectType === 'static'
+        ? false
+        : typeof body.isMicroservice === 'boolean'
         ? body.isMicroservice
-        : projectType !== 'static';
+        : false;
 
     return {
         projectName: body.projectName || body.name,
@@ -37,11 +72,37 @@ const normalizeProjectBody = (body) => {
         publishDir: body.publishDir,
         startCommand: body.startCommand,
         port: Number(body.port || 3000),
-        subdomain: body.subdomain,
+        subdomain: normalizeSubdomain(body.subdomain),
         env: body.env,
         notifications: body.notifications || {},
         monitor: body.monitor || {},
     };
+};
+
+const assertProjectConsistency = (project) => {
+    if (project.projectType === 'static' && project.isMicroservice) {
+        throw new AppError('Static projects cannot be microservices', 400);
+    }
+
+    if (project.isMicroservice && project.subdomain) {
+        throw new AppError('Microservice projects cannot have a public subdomain', 400);
+    }
+
+    if (!project.isMicroservice && !project.subdomain) {
+        throw new AppError('Subdomain is required when microservice mode is off', 400);
+    }
+
+    if (project.subdomain && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(project.subdomain)) {
+        throw new AppError('Subdomain can only contain lowercase letters, numbers, and hyphens', 400);
+    }
+
+    if (project.projectType === 'static' && project.startCommand) {
+        throw new AppError('Static projects cannot have a start command', 400);
+    }
+
+    if (project.projectType !== 'static' && (project.buildCommand || project.publishDir)) {
+        throw new AppError(`${project.projectType} projects cannot have static build output settings`, 400);
+    }
 };
 
 const assertPlanAllowsProject = (planName, projectType) => {
@@ -150,7 +211,9 @@ export const createProjectForPlan = async (userId, body, {
     months = null,
     paymentId = null,
 } = {}) => {
+    assertIncomingProjectConsistency(body);
     const normalized = normalizeProjectBody(body);
+    assertProjectConsistency(normalized);
     assertPlanAllowsProject(planName, normalized.projectType);
 
     const redisclient = getRedis();
@@ -163,7 +226,7 @@ export const createProjectForPlan = async (userId, body, {
 
     const finalSubdomain = normalized.isMicroservice
         ? null
-        : normalized.subdomain || await generateSubdomain(Project, normalized.projectName);
+        : normalized.subdomain;
 
     const assignedPort = await allocatePort(redisclient, userId);
     const now = new Date();
@@ -225,7 +288,9 @@ export const createFreeProject = async (userId, body) => {
 export const initPaidProjectPayment = async (userId, body) => {
     const planName = body.plan;
     const months = Number(body.months || 1);
+    assertIncomingProjectConsistency(body);
     const normalized = normalizeProjectBody(body);
+    assertProjectConsistency(normalized);
 
     if (!PAID_PLANS.includes(planName)) {
         throw new AppError(`Paid project plan must be one of: ${PAID_PLANS.join(', ')}`, 400);

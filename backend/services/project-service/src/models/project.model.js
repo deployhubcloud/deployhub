@@ -78,10 +78,20 @@ const projectschema = new mongoose.Schema({
     },
     subdomain: {
         type: String,
+        required: function () {
+            return !this.isMicroservice;
+        },
         sparse: true,
         unique: true,
         lowercase: true,
-        trim: true
+        trim: true,
+        validate: {
+            validator: function (value) {
+                if (this.isMicroservice) return !value;
+                return Boolean(value) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value);
+            },
+            message: 'Subdomain is required when microservice mode is off and must use lowercase letters, numbers, and hyphens'
+        }
     },
     customDomains: [{
         type: String,

@@ -15,6 +15,17 @@ const getRootDirectory = (body) => {
     return '.';
 };
 
+const isValidUrl = (value) => {
+    try {
+        new URL(value);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
 export const createProjectValidator = [
     body('plan')
         .optional()
@@ -45,9 +56,7 @@ export const createProjectValidator = [
         if (!repoUrl || typeof repoUrl !== 'string') {
             throw new Error('Repo URL is required');
         }
-        try {
-            new URL(repoUrl);
-        } catch {
+        if (!isValidUrl(repoUrl)) {
             throw new Error('Repo URL must be a valid URL');
         }
 
@@ -62,6 +71,9 @@ export const createProjectValidator = [
         }
 
         if (projectType === 'static') {
+            if (req.body.isMicroservice === true) {
+                throw new Error('Static projects cannot be microservices');
+            }
             if (!req.body.buildCommand || typeof req.body.buildCommand !== 'string') {
                 throw new Error('Build command is required for static project');
             }
@@ -82,7 +94,24 @@ export const createProjectValidator = [
             }
         }
 
-        if (req.body.subdomain && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(req.body.subdomain)) {
+        if (typeof req.body.isMicroservice !== 'undefined' && typeof req.body.isMicroservice !== 'boolean') {
+            throw new Error('isMicroservice must be a boolean');
+        }
+
+        const isMicroservice = req.body.isMicroservice === true;
+        const subdomain = typeof req.body.subdomain === 'string'
+            ? req.body.subdomain.trim()
+            : req.body.subdomain;
+
+        if (isMicroservice && subdomain) {
+            throw new Error('Microservice projects cannot have a public subdomain');
+        }
+
+        if (!isMicroservice && !subdomain) {
+            throw new Error('Subdomain is required when microservice mode is off');
+        }
+
+        if (subdomain && (typeof subdomain !== 'string' || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(subdomain))) {
             throw new Error('Subdomain can only contain lowercase letters, numbers, and hyphens');
         }
 
@@ -91,14 +120,31 @@ export const createProjectValidator = [
         }
 
         const notifications = req.body.notifications || {};
-        if (notifications.discord?.enabled && !notifications.discord.webhookUrl) {
-            throw new Error('Discord webhook URL required');
+        if (notifications.email?.enabled) {
+            if (!notifications.email.emailAddress) {
+                throw new Error('Email address required');
+            }
+            if (!isValidEmail(notifications.email.emailAddress)) {
+                throw new Error('Email address must be valid');
+            }
         }
-        if (notifications.telegram?.enabled && (!notifications.telegram.botToken || !notifications.telegram.chatId)) {
-            throw new Error('Telegram bot token and chat ID required');
+
+        if (notifications.discord?.enabled) {
+            if (!notifications.discord.webhookUrl) {
+                throw new Error('Discord webhook URL required');
+            }
+            if (!isValidUrl(notifications.discord.webhookUrl)) {
+                throw new Error('Discord webhook URL must be valid');
+            }
         }
-        if (notifications.email?.enabled && !notifications.email.emailAddress) {
-            throw new Error('Email address required');
+
+        if (notifications.telegram?.enabled) {
+            if (!notifications.telegram.botToken || !notifications.telegram.chatId) {
+                throw new Error('Telegram bot token and chat ID required');
+            }
+            if (typeof notifications.telegram.botToken !== 'string' || typeof notifications.telegram.chatId !== 'string') {
+                throw new Error('Telegram bot token and chat ID must be strings');
+            }
         }
 
         return true;
@@ -111,4 +157,22 @@ export const paymentInitValidator = [
         .optional()
         .isInt({ min: 1, max: 24 })
         .withMessage('Months must be between 1 and 24'),
+];
+
+export const paymentVerifyValidator = [
+    body('razorpay_order_id')
+        .notEmpty()
+        .withMessage('Razorpay order id is required')
+        .isString()
+        .withMessage('Razorpay order id must be a string'),
+    body('razorpay_payment_id')
+        .notEmpty()
+        .withMessage('Razorpay payment id is required')
+        .isString()
+        .withMessage('Razorpay payment id must be a string'),
+    body('razorpay_signature')
+        .notEmpty()
+        .withMessage('Razorpay signature is required')
+        .isString()
+        .withMessage('Razorpay signature must be a string'),
 ];
