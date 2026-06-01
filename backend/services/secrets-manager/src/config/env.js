@@ -10,7 +10,7 @@ dotenv.config({
 const schema = z.object({
 
   //port of all services
-  API_GATEWAY_PORT: z.coerce.number().default(4000),
+  API_GATEWAY_PORT: z.coerce.number().default(4999),
   IDENTITY_SERVICE_PORT: z.coerce.number().default(4001),
   PROJECT_SERVICE_PORT: z.coerce.number().default(4002),
   BUILD_SERVICE_PORT: z.coerce.number().default(4003),
@@ -67,8 +67,8 @@ const schema = z.object({
 
   RABBITMQ_URL: z.string(),
 
-  // url of other services for internal comms — optional because not all services need to know about each other
-  IDENTITY_SERVICE_URL: z.string().optional(),
+  // url of services
+  IDENTITY_SERVICE_URL: z.string(),
   PROJECT_SERVICE_URL: z.string().optional(),
   MONITORING_SERVICE_URL: z.string().optional(),
   BUILD_SERVICE_URL: z.string().optional(),
