@@ -5,7 +5,6 @@ import { AppError } from "../../../../shared/errors/AppError.js";
 import { getRedis } from "../core/redis/client.js";
 import { encryptGithubAccessToken } from "../utils/githubTokenCrypto.js";
 import { generateNetworkName } from "../utils/netwrokName.js";
-import { getRedis } from '../core/redis/client.js';
 import { welcomeQueue } from "../utils/queues.js";
 
 

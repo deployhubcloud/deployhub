@@ -153,14 +153,3 @@ export const getUserGIthubToken = async (userId) => {
     return decryptGithubAccessToken(user.githubAccessToken);
 
 }
-
-export const getUserNotificationSettings = async (userId) => {
-
-    const user = await User.findById(userId).select('+notifications');
-
-    if (!user) {
-        throw new AppError('User not found', 404);
-    }
-
-    return user.notifications;
-}

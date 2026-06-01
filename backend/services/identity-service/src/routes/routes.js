@@ -10,7 +10,7 @@ import { verifyJWT } from '../middleware/auth.middleware.js';
 import { meController } from '../controllers/me.controller.js';
 import { listSessionsController, revokeAllSessionsController, revokeSessionController, } from '../controllers/session.controller.js';
 import { userFullNameValidator } from '../validators/user.js';
-import { getUserNetworkNameController, getUserNotificationSettingsController, getUserReposController, githubAccessTokenController, userFullNameCOntroller, userProfilePicController } from '../controllers/user.controller.js';
+import { getUserNetworkNameController, getUserReposController, githubAccessTokenController, userFullNameCOntroller, userProfilePicController } from '../controllers/user.controller.js';
 import { profilePicValidator } from '../validators/profilePic.js';
 import upload, { handleUploadError } from '../middleware/multer.middleware.js';
 import { rateLimitMiddleware } from '../middleware/rateLimit.middleware.js';
@@ -35,7 +35,6 @@ indetityServiceRouter.put('/user/profile-pic', verifyJWT, rateLimitMiddleware('u
 indetityServiceRouter.get('/user/repos', verifyJWT, getUserReposController);
 indetityServiceRouter.get('/user/:userId/network-name', internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET }), getUserNetworkNameController);
 indetityServiceRouter.get('/users/:userId/github-access-token', internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET }), githubAccessTokenController)
-identityServiceRouter.get('/user/:userId/notification-settings', internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET }), getUserNotificationSettingsController)
 
 
 export default indetityServiceRouter;
