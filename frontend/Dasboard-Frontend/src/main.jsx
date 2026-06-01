@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import AuthGate from "./components/AuthGate";
+import RateLimitNotice from "./components/RateLimitNotice";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -12,6 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuthGate>
         <App />
       </AuthGate>
+      <RateLimitNotice />
     </AuthProvider>
   </BrowserRouter>
 );

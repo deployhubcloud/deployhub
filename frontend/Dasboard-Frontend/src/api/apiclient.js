@@ -8,6 +8,10 @@ export const api = axios.create({
 
 let isRefreshing = false;
 let refreshSubscribers = [];
+let lastRateLimitNoticeAt = 0;
+
+const RATE_LIMIT_NOTICE_COOLDOWN_MS = 3000;
+const RATE_LIMIT_EVENT = "deployhub:rate-limit";
 
 function subscribeTokenRefresh(callback) {
   refreshSubscribers.push(callback);
@@ -28,6 +32,49 @@ const skipRefreshUrls = [
 
 const shouldSkipRefresh = (url = "") =>
   skipRefreshUrls.some((skipUrl) => url.includes(skipUrl));
+
+const getRateLimitMessage = (error) => {
+  const retryAfter = error.response?.headers?.["retry-after"];
+  const serverMessage =
+    error.response?.data?.message ||
+    error.response?.data?.error ||
+    error.response?.data?.errors?.[0]?.msg;
+
+  if (serverMessage) return serverMessage;
+  if (retryAfter) return `Too many requests. Try again in ${retryAfter}s.`;
+
+  return "Too many requests. Please wait a moment and try again.";
+};
+
+const notifyRateLimit = (error) => {
+  if (error.config?.skipRateLimitNotice || error.config?.skipRateLimitToast) {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastRateLimitNoticeAt < RATE_LIMIT_NOTICE_COOLDOWN_MS) return;
+
+  lastRateLimitNoticeAt = now;
+  window.dispatchEvent(
+    new CustomEvent(RATE_LIMIT_EVENT, {
+      detail: {
+        message: getRateLimitMessage(error),
+        retryAfter: error.response?.headers?.["retry-after"] || null,
+      },
+    })
+  );
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 429) {
+      notifyRateLimit(error);
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const attachInterceptors = (getToken, refreshToken, logout) => {
   const requestInterceptor = api.interceptors.request.use(
