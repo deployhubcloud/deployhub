@@ -2,7 +2,7 @@ import { AppError } from "../errors/AppError.js";
 
 
 
-export const getUserNetworkName = async (axios, identityServiceUrl, userId, internalServiceSecret) => {
+export const getUserNetworkName = async (axios, identityServiceUrl, userId, microservicetalkingsecret, internalServiceSecret) => {
 
     const indentityServiceUrl = identityServiceUrl;
 
@@ -10,12 +10,15 @@ export const getUserNetworkName = async (axios, identityServiceUrl, userId, inte
         throw new AppError("Identity service URL is not defined in environment variables", 500);
     }
 
-    const response = await axios.get(`${indentityServiceUrl}/users/${userId}/network-name`, {
-        headers: {
-            "Content-Type": "application/json",
-            "x-microservice-secret": internalServiceSecret
+    const response = await axios.get(`${indentityServiceUrl}/users/${userId}/network-name`,
+        {
+            headers: {
+                content: "application/json",
+                'x-microservice-secret': microservicetalkingsecret,
+                'x-internal-secret': internalServiceSecret,
+            }
         }
-    });
+    );
     if (response.status !== 200) {
         throw new AppError("Failed to fetch user network name from identity service", response.status);
     }

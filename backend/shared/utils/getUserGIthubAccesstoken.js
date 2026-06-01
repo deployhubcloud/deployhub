@@ -1,12 +1,15 @@
-export const getUserGithubAccessToken = async (axios, identityServiceUrl, userId, internalServiceTalkingSecret) => {
+export const getUserGithubAccessToken = async (axios, identityServiceUrl, userId, microservicetalkingsecret, internalServiceSecret) => {
     try {
 
-        const response = await axios.get(`${identityServiceUrl}/users/${userId}/github-access-token`, {
-            headers: {
-                "Content-Type": "application/json",
-                "x-microservice-secret": internalServiceTalkingSecret
+        const response = await axios.get(`${identityServiceUrl}/users/${userId}/github-access-token`,
+            {
+                headers: {
+                    content: "application/json",
+                    'x-microservice-secret': microservicetalkingsecret,
+                    'x-internal-secret': internalServiceSecret,
+                }
             }
-        });
+        );
 
         return response.data.githubAccessToken;
 
