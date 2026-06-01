@@ -48,10 +48,6 @@ export function getSecretsForService(serviceName) {
     'build-service': {
       PORT: env.BUILD_SERVICE_PORT,
       MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
-      EMAIL_HOST: env.EMAIL_HOST,
-      EMAIL_PORT: String(env.EMAIL_PORT),
-      EMAIL_USER: env.EMAIL_USER,
-      EMAIL_PASS: env.EMAIL_PASS,
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
@@ -116,14 +112,25 @@ export function getSecretsForService(serviceName) {
       MONITORING_MONGODB_URI: env.MONITORING_MONGODB_URI,
       INTERNAL_SERVICE_SECRET: env.INTERNAL_SERVICE_SECRET,
       INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET,
-      EMAIL_PASS: env.EMAIL_PASS,
-      EMAIL_USER: env.EMAIL_USER,
-      EMAIL_HOST: env.EMAIL_HOST,
-      EMAIL_PORT: String(env.EMAIL_PORT),
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
       RABBITMQ_URL: env.RABBITMQ_URL,
+    },
+
+    'notification-service': {
+      PORT: env.NOTIFICATION_SERVICE_PORT,
+      MONGODB_URI: env.NOTIFICATION_MONGODB_URI,
+      REDIS_HOST: env.REDIS_HOST,
+      REDIS_PORT: env.REDIS_PORT,
+      REDIS_PASSWORD: env.REDIS_PASSWORD,
+      INTERNAL_SECRET: env.INTERNAL_SERVICE_SECRET,
+      RABBITMQ_URL: env.RABBITMQ_URL,
+      EMAIL_HOST: env.EMAIL_HOST,
+      EMAIL_PORT: String(env.EMAIL_PORT),
+      EMAIL_USER: env.EMAIL_USER,
+      EMAIL_PASS: env.EMAIL_PASS,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     }
 
   };
@@ -140,6 +147,7 @@ export function getRegisteredServices() {
     'deploy-service',
     'domain-service',
     'api-gateway',
-    'monitoring-service'
+    'monitoring-service',
+    'notification-service'
   ];
 }
