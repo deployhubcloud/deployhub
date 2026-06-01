@@ -133,3 +133,34 @@ export const getUSerNetworkName = async (userId) => {
 
     return user.networkName;
 }
+
+export const getUserGIthubToken = async (userId) => {
+
+    const user = await User.findById(userId).select('+githubAccessToken');
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    if (user.provider !== 'github') {
+        throw new AppError('User is not authenticated with GitHub', 400);
+    };
+
+    if (!user.githubAccessToken) {
+        throw new AppError('GitHub access token not found! Please authenticate with GitHub', 404);
+    }
+
+    return decryptGithubAccessToken(user.githubAccessToken);
+
+}
+
+export const getUserNotificationSettings = async (userId) => {
+
+    const user = await User.findById(userId).select('+notifications');
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    return user.notifications;
+}

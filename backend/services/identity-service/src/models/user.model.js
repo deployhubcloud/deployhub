@@ -79,6 +79,35 @@ const userSchema = new mongoose.Schema(
             required: true,
             index: true
         },
+
+        notifications: {
+            discord: {
+                enabled: {
+                    type: Boolean,
+                    default: false
+                },
+                webhookUrl: {
+                    type: String,
+                    default: null,
+                    select: false
+                }
+            },
+            telegram: {
+                enabled: {
+                    type: Boolean,
+                    default: false
+                },
+                botToken: {
+                    type: String,
+                    default: null,
+                    select: false
+                },
+                chatId: {
+                    type: String,
+                    default: null
+                }
+            }
+        }
     },
     { timestamps: true }
 );
