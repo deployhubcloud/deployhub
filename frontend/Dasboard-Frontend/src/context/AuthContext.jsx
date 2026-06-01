@@ -43,10 +43,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, [setToken]);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async ({ skipAuthRefresh = false } = {}) => {
     try {
-      const res = await api.get("/auth/user/profile");
-      const profile = res.data?.userData || res.data?.data || null;
+      const res = await api.get("/auth/user/profile", { skipAuthRefresh });
+      const profile =
+        res.data?.userData || res.data?.data || res.data?.user || null;
       setUser(normalizeUser(profile));
       return profile;
     } catch {
@@ -63,12 +64,18 @@ export const AuthProvider = ({ children }) => {
       if (!token) throw new Error("No token returned");
 
       setToken(token);
-      await fetchUser();
+      const profile = await fetchUser({ skipAuthRefresh: true });
+      if (!profile) {
+        clearAuth();
+        return null;
+      }
+
       return token;
     } catch {
+      clearAuth();
       return null;
     }
-  }, [fetchUser, setToken]);
+  }, [clearAuth, fetchUser, setToken]);
 
   const logoutClean = useCallback(() => {
     if (isLoggingOut.current) return;
@@ -126,14 +133,19 @@ export const AuthProvider = ({ children }) => {
     if (!token) throw new Error("Login failed");
 
     setToken(token);
-    await fetchUser();
+    const profile = await fetchUser();
+    if (!profile) {
+      clearAuth();
+      throw new Error("Could not load user profile");
+    }
+
     navigate(redirectTo, { replace: true });
   };
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated: Boolean(accessToken),
+        isAuthenticated: Boolean(accessToken && user),
         isAuthReady,
         user,
         fetchUser,

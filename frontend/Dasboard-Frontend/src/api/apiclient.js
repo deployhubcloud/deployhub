@@ -52,6 +52,10 @@ export const attachInterceptors = (getToken, refreshToken, logout) => {
         return Promise.reject(error);
       }
 
+      if (originalRequest.skipAuthRefresh) {
+        return Promise.reject(error);
+      }
+
       if (shouldSkipRefresh(originalRequest.url)) {
         return Promise.reject(error);
       }
