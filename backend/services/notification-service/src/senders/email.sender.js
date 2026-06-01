@@ -1,14 +1,23 @@
 import { NOTIFICATION_ENV } from "../lib/env.js";
 import { transporter } from "../utils/transporter.js";
 
+const normalizeEmailArgs = (toOrOptions, subject, html) => {
+    if (toOrOptions && typeof toOrOptions === 'object') {
+        return toOrOptions;
+    }
 
-export const sendEmail = async (to, subject, html) => {
+    return { to: toOrOptions, subject, html };
+};
+
+export const sendEmail = async (toOrOptions, subject, html) => {
+    const mail = normalizeEmailArgs(toOrOptions, subject, html);
+
     try {
         const info = await transporter.sendMail({
             from: `DeployHub ${NOTIFICATION_ENV.EMAIL_USER}`,
-            to,
-            subject,
-            html,
+            to: mail.to,
+            subject: mail.subject,
+            html: mail.html,
         });
         console.log("Email sent: ", info.messageId);
     } catch (error) {

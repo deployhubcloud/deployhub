@@ -3,16 +3,28 @@ import fs from 'fs';
 import Handlebars from "handlebars";
 import { mailTempletHtmlPath } from "../email/mailTempletPath.js";
 import { sendEmail } from "../senders/email.sender.js";
-import { connection } from "../utils/connection.js";
+import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
+import { NOTIFICATION_ENV } from "../lib/env.js";
 
 
 const filePath = mailTempletHtmlPath('welcome.html')
 const emailTemplet = fs.readFileSync(filePath, 'utf-8')
 const compiledEmailTemplet = Handlebars.compile(emailTemplet)
 
-export const worker = new Worker("deployhub-WelcomeMessage", async (job) => {
+const connection = {
+    host: NOTIFICATION_ENV.REDIS_HOST,
+    port: Number(NOTIFICATION_ENV.REDIS_PORT),
+    password: NOTIFICATION_ENV.REDIS_PASSWORD,
+    maxRetriesPerRequest: null,
+};
+
+export const worker = new Worker(QUEUE_NAMES.WELCOME, async (job) => {
     try {
-        const { fullname, email, userId } = job.data.data;
+        const { fullname, email, userId } = job.data || {};
+
+        if (!fullname || !email || !userId) {
+            throw new Error(`Invalid welcome job payload: ${JSON.stringify(job.data)}`);
+        }
 
         const emailHtml = compiledEmailTemplet({ fullname, email });
 
@@ -24,7 +36,11 @@ export const worker = new Worker("deployhub-WelcomeMessage", async (job) => {
         });
 
     } catch (error) {
-        console.log("Error while sending welcome message", job.data.data?.fullname);
+        console.error("Error while sending welcome message", {
+            fullname: job.data?.fullname,
+            email: job.data?.email,
+            error: error?.message || error,
+        });
         throw error;
     }
 }, {
@@ -37,9 +53,13 @@ export const worker = new Worker("deployhub-WelcomeMessage", async (job) => {
 });
 
 worker.on('completed', (job) => {
-    console.log('Welcome email sent to user', job.data.data?.fullname)
+    console.log('Welcome email sent to user', job.data?.fullname)
 });
 
-worker.on('failed', (job) => {
-    console.log('Error while sending welcome email', job.data.data?.fullname)
+worker.on('failed', (job, error) => {
+    console.error('Error while sending welcome email', {
+        fullname: job?.data?.fullname,
+        email: job?.data?.email,
+        error: error?.message || error,
+    })
 });
