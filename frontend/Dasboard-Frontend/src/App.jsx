@@ -7,6 +7,8 @@ import Home from "./Pages/Home";
 import Sessions from "./Pages/Sessions";
 import PrivateLayout from "./layouts/PrivateLayout";
 import Profile from "./Pages/Profile";
+import Projects from "./Pages/Projects";
+import NewProject from "./Pages/NewProject";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
@@ -27,6 +29,8 @@ export default function App() {
 
       <Route element={<Protected><PrivateLayout /></Protected>}>
         <Route path="/" element={<Home />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/new/:type" element={<NewProject />} />
         <Route path="/settings/sessions" element={<Sessions />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
