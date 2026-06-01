@@ -6,7 +6,7 @@ const requiredEnv = [
     'ACCESS_TOKEN_SECRET', 'ACCESS_TOKEN_EXPIRY',
     'INTERNAL_SECRET',
     'SERVICE_NAME',
-    'AUTH_SERVICE', 'PROJECT_SERVICE', 'MONITORING_SERVICE',
+    'IDENTITY_SERVICE_URL', 'PROJECT_SERVICE_URL', 'MONITORING_SERVICE_URL',
     'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASS']
 
 for (const key of requiredEnv) {
@@ -23,9 +23,9 @@ export const ENV = {
     REDIS_PORT: process.env.REDIS_PORT,
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
     SERVICES_URL: {
-        AUTH: process.env.AUTH_SERVICE,
-        PROJECT: process.env.PROJECT_SERVICE,
-        MONITORING: process.env.MONITORING_SERVICE
+        AUTH: process.env.IDENTITY_SERVICE_URL,
+        PROJECT: process.env.PROJECT_SERVICE_URL,
+        MONITORING: process.env.MONITORING_SERVICE_URL
     },
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,

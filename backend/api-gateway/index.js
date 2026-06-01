@@ -44,12 +44,12 @@ app.get('/gateway/status', (req, res) => {
 app.use('/api', routes);
 
 
-export default async function startApp() {
+export default async function startApp(port) {
     await connectRedis();
     const interval = await startHealthCheck();
 
-    const server = app.listen(ENV.PORT, () => {
-        console.log(`Api Gateway is running on port ${ENV.PORT}`);
+    const server = app.listen(port, () => {
+        console.log(`Api Gateway is running on port ${port}`);
     });
 
     const shutdown = createShutdownHandler({

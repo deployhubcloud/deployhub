@@ -4,7 +4,8 @@ import { loadSecrets } from "./src/configs/secretsloader.js";
 // load secrets
 await loadSecrets();
 
+const { ENV } = await import('./src/lib/env.js');
 
 // start app
 const { default: startApp } = await import("./index.js");
-await startApp();
+await startApp(ENV.PORT);
