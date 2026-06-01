@@ -1,5 +1,5 @@
 import { validationResult } from "express-validator";
-import { getUserGIthubToken, getUSerNetworkName, getUserNotificationSettings, getUserRepositories, userFullnameService, userProfilePicService } from "../services/user.service.js";
+import { getUserGIthubToken, getUSerNetworkName, getUserRepositories, userFullnameService, userProfilePicService } from "../services/user.service.js";
 import fs from 'fs/promises';
 
 
