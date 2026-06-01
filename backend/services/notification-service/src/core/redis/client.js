@@ -11,12 +11,12 @@ export const connectRedis = async () => {
         Redis,
         logger: console,
         options: {
-        host: NOTIFICATION_ENV.REDIS_HOST,
-        port: NOTIFICATION_ENV.REDIS_PORT,
-        password: NOTIFICATION_ENV.REDIS_PASSWORD,
-        maxRetriesPerRequest: 3,
-        enableReadyCheck: true,
-        lazyConnect: true
+            host: NOTIFICATION_ENV.REDIS_HOST,
+            port: NOTIFICATION_ENV.REDIS_PORT,
+            password: NOTIFICATION_ENV.REDIS_PASSWORD,
+            maxRetriesPerRequest: 3,
+            enableReadyCheck: true,
+            lazyConnect: true
         }
     });
 
@@ -26,8 +26,8 @@ export const connectRedis = async () => {
 }
 
 
-export function getRedis(){
-    if(!redisClient){
+export function getRedis() {
+    if (!redisClient) {
         throw new Error('redis not initialised')
     }
     return redisClient;

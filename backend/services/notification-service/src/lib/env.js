@@ -20,6 +20,7 @@ for (const key of required) {
 export const NOTIFICATION_ENV = {
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT,
+    SERVICE_NAME: process.env.SERVICE_NAME,
     MONGODB_URI: process.env.MONGODB_URI,
     REDIS_HOST: process.env.REDIS_HOST,
     REDIS_PORT: process.env.REDIS_PORT,
