@@ -5,7 +5,7 @@ const required = [
     'RABBITMQ_URL',
     'INTERNAL_SECRET',
     'INTERNAL_SERVICE_TALKING_SECRET',
-    'PROJECT_SERVICE_URL'
+    'PROJECT_SERVICE_URL', 'IDENTITY_SERVICE_URL'
 ]
 
 for (const key of required) {
@@ -26,4 +26,5 @@ export const buildEnv = {
     INTERNAL_SERVICE_TALKING_SECRET: process.env.INTERNAL_SERVICE_TALKING_SECRET,
     SERVICE_NAME: process.env.SERVICE_NAME,
     PROJECT_SERVICE_URL: process.env.PROJECT_SERVICE_URL,
+    IDENTITY_SERVICE_URL: process.env.IDENTITY_SERVICE_URL
 }
