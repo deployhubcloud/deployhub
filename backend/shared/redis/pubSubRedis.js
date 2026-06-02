@@ -1,4 +1,4 @@
-class RedisConfig {
+class RedisPubSub {
     constructor(Redis, options = {}) {
         this.publisher = new Redis(options);
         this.subscriber = new Redis(options);
