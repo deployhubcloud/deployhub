@@ -275,7 +275,12 @@ export const createProjectForPlan = async (userId, body, {
         });
     }
 
-    await queueProjectBuild(project);
+    const queueData = {
+        projectId: project._id,
+        plan: project.plan
+    }
+
+    await queueProjectBuild(queueData);
 
     return { project };
 };
