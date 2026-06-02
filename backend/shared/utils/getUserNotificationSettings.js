@@ -1,6 +1,6 @@
-export const getUserNotificationSettings = async (axios, projectServiceUrl, userId, microservicetalkingsecret, internalServiceSecret) => {
+export const getUserNotificationSettings = async (axios, projectServiceUrl, projectId, microservicetalkingsecret, internalServiceSecret) => {
     const res = await axios.get(
-        `${projectServiceUrl}/internal/user/${userId}/notification-settings`,
+        `${projectServiceUrl}/for-other-service/${projectId}/notification-settings`,
         {
             headers: {
                 content: "application/json",
