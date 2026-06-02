@@ -10,7 +10,7 @@ export const getUserNetworkName = async (axios, identityServiceUrl, userId, micr
         throw new AppError("Identity service URL is not defined in environment variables", 500);
     }
 
-    const response = await axios.get(`${indentityServiceUrl}/users/${userId}/network-name`,
+    const response = await axios.get(`${indentityServiceUrl}/user/${userId}/network-name`,
         {
             headers: {
                 content: "application/json",

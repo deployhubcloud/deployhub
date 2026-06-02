@@ -13,7 +13,11 @@ export const getNotificationSettings = async (userId) => {
 
 
     const settings = await getUserNotificationSettings(
-        axios, NOTIFICATION_ENV.PROJECT_SERVICE_URL, userId, NOTIFICATION_ENV.INTERNAL_SECRET
+        axios,
+        NOTIFICATION_ENV.PROJECT_SERVICE_URL,
+        userId,
+        NOTIFICATION_ENV.INTERNAL_SERVICE_TALKING_SECRET,
+        NOTIFICATION_ENV.INTERNAL_SECRET
     );
 
     await redis.setex(
