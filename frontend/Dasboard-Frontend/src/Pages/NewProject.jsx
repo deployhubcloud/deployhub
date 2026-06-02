@@ -36,6 +36,7 @@ const TYPE_LABELS = {
 };
 
 const MONTHS = [1, 3, 6, 12];
+const REPO_PAGE_SIZE = 12;
 
 function useRazorpay() {
   const [loaded, setLoaded] = useState(() => Boolean(window.Razorpay));
@@ -126,6 +127,7 @@ export default function NewProject() {
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [useManualRepo, setUseManualRepo] = useState(false);
   const [repoQuery, setRepoQuery] = useState("");
+  const [visibleRepoCount, setVisibleRepoCount] = useState(REPO_PAGE_SIZE);
 
   const [form, setForm] = useState({
     projectName: "",
@@ -177,14 +179,18 @@ export default function NewProject() {
   const isGitHubUser = user && user.provider === 'github';
   const filteredRepos = useMemo(() => {
     const query = repoQuery.trim().toLowerCase();
-    if (!query) return repos.slice(0, 8);
+    if (!query) return repos;
     return repos
       .filter((repo) => {
         const searchable = `${repo.full_name || ""} ${repo.description || ""}`.toLowerCase();
         return searchable.includes(query);
-      })
-      .slice(0, 8);
+      });
   }, [repoQuery, repos]);
+  const visibleRepos = useMemo(
+    () => filteredRepos.slice(0, visibleRepoCount),
+    [filteredRepos, visibleRepoCount]
+  );
+  const hasMoreRepos = visibleRepoCount < filteredRepos.length;
 
   // Build payload with repo metadata if a GitHub repo was selected
   const previewPayload = useMemo(
@@ -197,6 +203,10 @@ export default function NewProject() {
       setForm((prev) => ({ ...prev, isMicroservice: false }));
     }
   }, [form.isMicroservice, isStatic]);
+
+  useEffect(() => {
+    setVisibleRepoCount(REPO_PAGE_SIZE);
+  }, [repoQuery, repos]);
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -244,6 +254,12 @@ export default function NewProject() {
     } finally {
       setLoadingRepos(false);
     }
+  };
+
+  const handleRepoListScroll = (event) => {
+    const { scrollTop, clientHeight, scrollHeight } = event.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight > 80 || !hasMoreRepos) return;
+    setVisibleRepoCount((count) => Math.min(count + REPO_PAGE_SIZE, filteredRepos.length));
   };
 
   const validate = () => {
@@ -468,8 +484,15 @@ export default function NewProject() {
                             </div>
                           )}
 
-                          <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-                            {filteredRepos.map((repo) => {
+                          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-400">
+                            <span>
+                              Showing {visibleRepos.length} of {filteredRepos.length} repositories
+                            </span>
+                            {hasMoreRepos && <span>Scroll to load more</span>}
+                          </div>
+
+                          <div onScroll={handleRepoListScroll} className="mt-2 grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                            {visibleRepos.map((repo) => {
                               const selected = selectedRepo?.id === repo.id;
                               return (
                                 <button
@@ -497,6 +520,15 @@ export default function NewProject() {
                           </div>
                           {filteredRepos.length === 0 && (
                             <p className="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">No repository matches your search.</p>
+                          )}
+                          {hasMoreRepos && filteredRepos.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setVisibleRepoCount((count) => Math.min(count + REPO_PAGE_SIZE, filteredRepos.length))}
+                              className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-violet-200 transition hover:bg-white/10"
+                            >
+                              Load more repositories
+                            </button>
                           )}
                         </div>
                       )}
