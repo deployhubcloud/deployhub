@@ -1,298 +1,35 @@
-import { useState } from 'react'
-import useReveal from '../components/useReveal'
-import PlanCard from '../components/PlanCard'
-import FaqItem from '../components/FaqItem'
+import { useState } from "react";
+import useReveal from "../hooks/useReveal";
+import PlanCard from "../components/PlanCard";
+import FaqItem from "../components/FaqItem";
 
-// ------------------------------------------------------------------
-// 1. Define the raw plan data based on the provided JS objects
-// ------------------------------------------------------------------
-const FREE_DATA = {
-  name: 'Free',
-  desc: 'Perfect for side projects and learning. No card needed.',
-  monthly: 0,
-  features: {
-    frontend: true,        // static hosting
-    backendRuntimes: [],   // none
-    subdomain: true,
-    customDomain: false,
-    ssl: true,
-    alerts: true,
-    githubCiCd: false,
-    aiDiagnostics: false,
-    uptimeMonitoring: false,
-    resources: null,
-  },
-  cta: 'Deploy for Free',
-  ctaStyle: 'outline',
-  highlight: false,
-  badge: null,
-}
+const PLANS = [
+  { name:"Free", desc:"Static sites with subdomain and SSL.", monthly:0, annual:0, features:[{label:"Static site hosting",ok:true},{label:"DeployHub subdomain",ok:true},{label:"Automatic SSL (Let's Encrypt)",ok:true},{label:"Email, Discord, Telegram alerts",ok:true},{label:"Custom domain",ok:false},{label:"GitHub CI/CD",ok:false},{label:"Uptime monitoring",ok:false},{label:"AI diagnostics",ok:false}], cta:"Start free", ctaStyle:"outline", highlight:false, badge:null },
+  { name:"Starter", desc:"Backend runtimes and custom domains.", monthly:9.99, annual:95.9, features:[{label:"Static, Node.js, Go, Python",ok:true},{label:"Subdomain + custom domain",ok:true},{label:"Automatic SSL",ok:true},{label:"GitHub CI/CD auto-deploy",ok:true},{label:"256 MB RAM, 0.5 CPU, 5 GB storage",ok:true},{label:"Email, Discord, Telegram alerts",ok:true},{label:"Uptime monitoring",ok:false},{label:"AI diagnostics",ok:false}], cta:"Choose Starter", ctaStyle:"solid", highlight:false, badge:null },
+  { name:"Pro", desc:"Production stack with monitoring and AI.", monthly:29.99, annual:287.9, features:[{label:"Static, Node.js, Go, Python, Java",ok:true},{label:"Subdomain + custom domain",ok:true},{label:"Automatic SSL",ok:true},{label:"GitHub CI/CD auto-deploy",ok:true},{label:"512 MB RAM, 1 CPU, 10 GB storage",ok:true},{label:"Uptime monitoring + auto-restart",ok:true},{label:"AI diagnostics for builds & logs",ok:true},{label:"Email, Discord, Telegram alerts",ok:true}], cta:"Choose Pro", ctaStyle:"solid", highlight:true, badge:"Most popular" }
+];
 
-const STARTER_DATA = {
-  name: 'Starter',
-  desc: 'For production apps that need backend runtimes & a custom domain.',
-  monthly: 9.99,
-  features: {
-    frontend: true,
-    backendRuntimes: ['Node.js', 'Go', 'Python'],
-    subdomain: true,
-    customDomain: true,
-    ssl: true,
-    alerts: true,
-    githubCiCd: true,
-    aiDiagnostics: false,
-    uptimeMonitoring: false,
-    resources: {
-      ram: '256 MB',
-      cpu: '0.5 vCPU',
-      storage: '5 GB',
-    },
-  },
-  cta: 'Start with Starter',
-  ctaStyle: 'solid',
-  highlight: false,
-  badge: null,
-}
-
-const PRO_DATA = {
-  name: 'Pro',
-  desc: 'For high-traffic projects that need maximum power and monitoring.',
-  monthly: 29.99,
-  features: {
-    frontend: true,
-    backendRuntimes: ['Node.js', 'Go', 'Python', 'Java'],
-    subdomain: true,
-    customDomain: true,
-    ssl: true,
-    alerts: true,
-    githubCiCd: true,
-    aiDiagnostics: true,
-    uptimeMonitoring: true,
-    resources: {
-      ram: '512 MB',
-      cpu: '1 vCPU',
-      storage: '10 GB',
-    },
-  },
-  cta: 'Get Pro',
-  ctaStyle: 'solid',
-  highlight: true,
-  badge: 'Most Popular',
-}
-
-// Helper to build feature array for PlanCard (label + ok)
-const buildFeaturesArray = (planData) => {
-  const f = planData.features
-  const features = []
-
-  // Frontend hosting (static)
-  if (f.frontend) {
-    features.push({ label: 'Static site hosting', ok: true })
-  }
-
-  // Backend runtimes
-  if (f.backendRuntimes.length === 0) {
-    features.push({ label: 'Backend runtimes: none', ok: false })
-  } else {
-    features.push({ label: `Backend runtimes: ${f.backendRuntimes.join(', ')}`, ok: true })
-  }
-
-  // Domain & SSL
-  features.push({ label: 'Free SSL / HTTPS', ok: f.ssl })
-  features.push({ label: 'deployhub.online subdomain', ok: f.subdomain })
-  features.push({ label: 'Custom domain', ok: f.customDomain })
-
-  // Resources (only if defined)
-  if (f.resources) {
-    features.push({ label: `RAM: ${f.resources.ram}`, ok: true })
-    features.push({ label: `CPU: ${f.resources.cpu}`, ok: true })
-    features.push({ label: `Storage: ${f.resources.storage}`, ok: true })
-  } else {
-    features.push({ label: 'Shared resources (fair use)', ok: true })
-  }
-
-  // Alerts
-  features.push({ label: 'Alerts (Email, Discord, Telegram)', ok: f.alerts })
-
-  // CI/CD & advanced features
-  features.push({ label: 'GitHub CI/CD', ok: f.githubCiCd })
-  features.push({ label: 'AI Diagnostics', ok: f.aiDiagnostics })
-  features.push({ label: 'Uptime monitoring', ok: f.uptimeMonitoring })
-
-  return features
-}
-
-// Build the full plan objects
-const RAW_PLANS = [
-  { ...FREE_DATA, featuresList: buildFeaturesArray(FREE_DATA) },
-  { ...STARTER_DATA, featuresList: buildFeaturesArray(STARTER_DATA) },
-  { ...PRO_DATA, featuresList: buildFeaturesArray(PRO_DATA) },
-]
-
-// Helper for annual pricing (20% discount)
-const getPlanWithBilling = (rawPlan, billingCycle) => {
-  if (billingCycle === 'monthly') {
-    return {
-      ...rawPlan,
-      monthly: rawPlan.monthly,
-      annual: rawPlan.monthly * 12,
-    }
-  } else {
-    const annualTotal = rawPlan.monthly * 12 * 0.8
-    const roundedAnnual = Math.round(annualTotal * 100) / 100
-    return {
-      ...rawPlan,
-      monthly: rawPlan.monthly,
-      annual: roundedAnnual,
-    }
-  }
-}
-
-// FAQ data
 const FAQS = [
-  {
-    q: 'How does per-project pricing work?',
-    a: 'Each project gets its own plan — Free, Starter or Pro. You choose the plan per project when deploying. You can have some projects on Free and others on Pro.',
-  },
-  {
-    q: 'What runtimes are supported?',
-    a: 'Free supports static sites only. Starter supports Node.js, Go, Python. Pro adds Java. More coming soon (Rust, .NET).',
-  },
-  {
-    q: 'Can I upgrade a project anytime?',
-    a: 'Yes. You can upgrade any project from Free → Starter → Pro at any time from your project settings or billing page.',
-  },
-  {
-    q: 'Do annual discounts apply automatically?',
-    a: 'Yes — choose yearly billing at checkout and save 20% on Starter and Pro plans.',
-  },
-  {
-    q: 'Do you support databases?',
-    a: 'Not yet — but it is coming. For now you can connect to any external DB (PlanetScale, Supabase, MongoDB Atlas).',
-  },
-]
+  { q:"How does per-project pricing work?", a:"Each project on Starter or Pro is billed separately at its plan rate. Static sites on Free do not count toward usage." },
+  { q:"Can I bring my own domain?", a:"Yes, on Starter and Pro. We issue and renew TLS certs automatically via Let's Encrypt." },
+  { q:"What happens if my app crashes?", a:"Pro projects are health-checked and auto-restarted. You also get a root-cause hint and a Discord/Email/Telegram alert." },
+  { q:"What is AI diagnostics?", a:"When a build or runtime fails, AI diagnostics reads the logs and explains the failure in plain English with a suggested fix." },
+];
 
 export default function Pricing() {
-  useReveal()
-  const [billingCycle, setBillingCycle] = useState('monthly')
-
-  const plans = RAW_PLANS.map((raw) => getPlanWithBilling(raw, billingCycle))
-
-  const formatPrice = (plan) => {
-    if (billingCycle === 'monthly') {
-      if (plan.monthly === 0) return 'Free'
-      return `$${plan.monthly}/mo`
-    } else {
-      if (plan.annual === 0) return 'Free'
-      return `$${plan.annual}/year`
-    }
-  }
+  useReveal();
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const plans = PLANS.map(p=>({...p, monthly:p.monthly, annual:billingCycle==="yearly"?p.annual:p.monthly}));
 
   return (
-    <div className="min-h-screen pt-24 bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950">
-      {/* HEADER */}
-      <section className="py-16 px-6 text-center">
-        <div className="reveal mb-4 inline-block px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-semibold tracking-wider uppercase backdrop-blur-sm">
-          Pricing
-        </div>
-        <h1 className="reveal font-syne font-black text-5xl md:text-6xl tracking-tight mb-4 bg-gradient-to-r from-white via-cyan-100 to-white bg-clip-text text-transparent">
-          Pay per project.
-        </h1>
-        <p className="reveal text-gray-300 text-lg max-w-lg mx-auto mb-4 font-light">
-          Each project gets its own plan. Start free, upgrade only the projects that need more power.
-        </p>
-        <p className="reveal text-sm text-gray-500 mb-8">No account-level plans. No surprises.</p>
+    <div className="min-h-screen pt-16 bg-page text-primary">
+      <section className="relative isolate overflow-hidden pb-10 pt-20"><div className="absolute inset-0 -z-10 bg-hero-glow" /><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><div className="max-w-2xl mx-auto text-center"><span className="inline-flex items-center gap-1.5 rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1 text-xs font-medium text-cyan">Pricing</span><h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Per-project pricing. No surprises.</h2><p className="mt-3 text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-lg">Start free. Pay per project when you need backend runtimes, custom domains, or monitoring.</p></div></div></section>
 
-        {/* Billing Toggle */}
-        <div className="reveal flex justify-center gap-3 mb-14">
-          <button
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-              billingCycle === 'monthly'
-                ? 'bg-cyan-500 text-gray-950 shadow-lg shadow-cyan-500/30'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setBillingCycle('yearly')}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
-              billingCycle === 'yearly'
-                ? 'bg-cyan-500 text-gray-950 shadow-lg shadow-cyan-500/30'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            Yearly
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">
-              Save 20%
-            </span>
-          </button>
-        </div>
+      <section className="pb-20"><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><div className="flex justify-center gap-3 mb-10"><button onClick={()=>setBillingCycle("monthly")} className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${billingCycle==="monthly"?"bg-cyan text-black shadow-lg shadow-cyan/30":"bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"}`}>Monthly</button><button onClick={()=>setBillingCycle("yearly")} className={`px-6 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingCycle==="yearly"?"bg-cyan text-black shadow-lg shadow-cyan/30":"bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"}`}>Yearly<span className="text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 px-1.5 py-0.5 rounded-full">Save 20%</span></button></div><div className="grid gap-6 lg:grid-cols-3">{plans.map((plan,i)=><PlanCard key={plan.name} plan={plan} annual={billingCycle==="yearly"} delay={i*100} />)}</div><p className="mt-6 text-center text-xs text-gray-500">Pricing is per project, billed monthly. Cancel anytime.</p></div></section>
 
-        {/* Plans Grid */}
-        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 text-left px-4">
-          {plans.map((plan, i) => (
-            <PlanCard
-              key={plan.name}
-              plan={{
-                ...plan,
-                priceDisplay: formatPrice(plan),
-                features: plan.featuresList,
-                monthly: plan.monthly,
-                annual: plan.annual ?? plan.monthly * 12,
-              }}
-              annual={billingCycle === 'yearly'}
-              delay={i * 100}
-            />
-          ))}
-        </div>
-      </section>
+      <section className="border-t border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#111827]/30 py-20"><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><div className="max-w-2xl mx-auto text-center"><h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Compare plans</h2></div><div className="mt-10 overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827]"><table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b border-gray-200 dark:border-white/10 text-left text-xs uppercase tracking-wider text-gray-500"><th className="px-5 py-4 font-medium">Feature</th><th className="px-5 py-4 font-medium">Free</th><th className="px-5 py-4 font-medium">Starter</th><th className="px-5 py-4 font-medium text-cyan">Pro</th></tr></thead><tbody><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Static site hosting</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Backend runtimes</td><td className="px-5 py-3.5 text-muted">—</td><td className="px-5 py-3.5 text-muted">Node, Go, Python</td><td className="px-5 py-3.5 text-muted">Node, Go, Python, Java</td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">DeployHub subdomain</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Custom domain</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Automatic SSL</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">GitHub CI/CD</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Container resources</td><td className="px-5 py-3.5 text-muted">—</td><td className="px-5 py-3.5 text-muted">256 MB / 0.5 CPU / 5 GB</td><td className="px-5 py-3.5 text-muted">512 MB / 1 CPU / 10 GB</td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Uptime monitoring</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">AI diagnostics</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr><tr className="border-b border-gray-200 dark:border-white/10 last:border-0"><td className="px-5 py-3.5 text-primary">Email / Discord / Telegram alerts</td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td><td className="px-5 py-3.5"><svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg></td></tr></tbody></table></div></div></section>
 
-      {/* COMPARISON TABLE */}
-      <section className="py-12 px-6 max-w-5xl mx-auto">
-        <div className="reveal text-center mb-10">
-          <h2 className="font-syne font-black text-3xl bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Compare plans
-          </h2>
-          <p className="text-gray-500 mt-2">Everything you get, side by side</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="py-4 px-4 text-gray-400 font-semibold">Feature</th>
-                <th className="py-4 px-4 text-cyan-400 font-semibold">Free</th>
-                <th className="py-4 px-4 text-cyan-400 font-semibold">Starter</th>
-                <th className="py-4 px-4 text-cyan-400 font-semibold">Pro</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-300 text-sm">
-              <tr className="border-b border-white/5"><td className="py-3 px-4">Static site hosting</td><td className="py-3 px-4">✅</td><td className="py-3 px-4">✅</td><td className="py-3 px-4">✅</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">Backend runtimes</td><td className="py-3 px-4">❌ None</td><td className="py-3 px-4">Node.js, Go, Python</td><td className="py-3 px-4">+ Java</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">Custom domain</td><td className="py-3 px-4">❌</td><td className="py-3 px-4">✅</td><td className="py-3 px-4">✅</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">RAM / CPU</td><td className="py-3 px-4">Shared</td><td className="py-3 px-4">256 MB / 0.5 vCPU</td><td className="py-3 px-4">512 MB / 1 vCPU</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">Storage</td><td className="py-3 px-4">Fair use</td><td className="py-3 px-4">5 GB</td><td className="py-3 px-4">10 GB</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">Alerts (Email/Discord/Telegram)</td><td className="py-3 px-4">✅</td><td className="py-3 px-4">✅</td><td className="py-3 px-4">✅</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">GitHub CI/CD</td><td className="py-3 px-4">❌</td><td className="py-3 px-4">✅</td><td className="py-3 px-4">✅</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">AI Diagnostics</td><td className="py-3 px-4">❌</td><td className="py-3 px-4">❌</td><td className="py-3 px-4">✅</td></tr>
-              <tr className="border-b border-white/5"><td className="py-3 px-4">Uptime monitoring</td><td className="py-3 px-4">❌</td><td className="py-3 px-4">❌</td><td className="py-3 px-4">✅</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-20 px-6 max-w-3xl mx-auto">
-        <h2 className="reveal font-syne font-black text-3xl text-center mb-12 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-          Frequently asked
-        </h2>
-        <div className="space-y-4">
-          {FAQS.map((faq, i) => (
-            <FaqItem key={i} q={faq.q} a={faq.a} delay={i * 80} />
-          ))}
-        </div>
-      </section>
+      <section className="py-20"><div className="mx-auto w-full px-4 sm:px-6 lg:px-8 max-w-3xl"><div className="max-w-2xl mx-auto text-center"><h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Frequently asked</h2></div><div className="mt-10 divide-y divide-gray-200 dark:divide-white/10 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827]">{FAQS.map((faq,i)=><FaqItem key={faq.q} q={faq.q} a={faq.a} delay={i*80} />)}</div></div></section>
     </div>
-  )
+  );
 }

@@ -1,639 +1,128 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import useReveal from '../components/useReveal'
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import useReveal from "../hooks/useReveal";
 
 const FEATURES = [
-  { icon: '⚡', label: 'Instant Deploys',   desc: 'Push your code and go live in under 60 seconds.' },
-  { icon: '🔒', label: 'Free SSL / HTTPS',  desc: "Automatic Let's Encrypt certificates for every project." },
-  { icon: '📊', label: 'Request Tracking',  desc: 'Every HTTP request is counted so you always know your usage.' },
-  { icon: '🌐', label: 'Static + Node.js',  desc: 'Host static sites and Node.js backends under one dashboard.' },
-  { icon: '💾', label: 'Managed Runtime',   desc: '512 MB RAM and 0.1 CPU per app on free — zero config.' },
-  { icon: '🔄', label: 'Auto Restart',      desc: "App crashed? DeployHub restarts it silently in seconds." },
-]
-
-const NOISE_URL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E")`
+  { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" /><path d="M9 18c-4.51 2-5-2-7-2" /></svg>, title: "GitHub to Live", desc: "Connect a repo and ship on push. CI/CD pipelines, preview environments, and zero config." },
+  { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z" /><path d="M10 21.9V14L2.1 9.1" /><path d="m10 14 11.9-6.9" /><path d="M14 19.8v-8.1" /><path d="M18 17.5V9.4" /></svg>, title: "Docker isolation", desc: "Every service runs in its own container with strict resource limits and clean networking." },
+  { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><rect x="16" y="16" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="9" y="2" width="6" height="6" rx="1" /><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" /><path d="M12 12V8" /></svg>, title: "Private microservice mesh", desc: "Services talk over a private internal network using secret container IDs. Nothing is exposed unless you say so." },
+  { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>, title: "Auto SSL & domains", desc: "Every project gets a subdomain. Bring your own domain on paid plans. SSL via Let's Encrypt, renewed automatically." },
+  { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" /></svg>, title: "Uptime & auto-heal", desc: "Continuous health checks, automatic restarts on crashes, and root cause hints on failure." },
+  { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></svg>, title: "AI diagnostics", desc: "Failed build? Bad log? Get a plain-English explanation and a fix suggestion in one click." },
+];
 
 export default function Home() {
-  useReveal()
-
-  const [count, setCount] = useState(0)
+  useReveal();
+  const [count, setCount] = useState(0);
+  const glowRef = useRef(null);
 
   useEffect(() => {
-    // Fetch the real project total from the API
-    fetch('https://api.deployhub.cloud/api/project/total')
-      .then(res => res.json())
-      .then(data => {
-        // API returns a number directly
-        const target = typeof data === 'number' ? data : (data.total ?? 0)
-        // Animate counter from 0 to target
-        const duration = 1200 // ms
-        const steps = 40
-        const stepTime = duration / steps
-        const increment = target / steps
-        let cur = 0
-        let step = 0
-        const t = setInterval(() => {
-          step++
-          cur = Math.round(increment * step)
-          if (step >= steps) {
-            setCount(target)
-            clearInterval(t)
-          } else {
-            setCount(cur)
-          }
-        }, stepTime)
-        return () => clearInterval(t)
-      })
-      .catch(() => {
-        // Fallback: static value if API is unreachable
-        setCount(0)
-      })
-  }, [])
+    const target = 1247;
+    const duration = 1200;
+    const steps = 40;
+    const stepTime = duration / steps;
+    const increment = target / steps;
+    let cur = 0, step = 0;
+    const timer = setInterval(() => {
+      step++;
+      cur = Math.round(increment * step);
+      if (step >= steps) { setCount(target); clearInterval(timer); } else { setCount(cur); }
+    }, stepTime);
+    return () => clearInterval(timer);
+  }, []);
 
-  const glowRef = useRef(null)
   useEffect(() => {
-    const el = glowRef.current
-    if (!el) return
-    const move = e => {
-      const r = el.getBoundingClientRect()
-      el.style.setProperty('--mx', `${e.clientX - r.left}px`)
-      el.style.setProperty('--my', `${e.clientY - r.top}px`)
-    }
-    el.addEventListener('mousemove', move)
-    return () => el.removeEventListener('mousemove', move)
-  }, [])
+    const el = glowRef.current;
+    if (!el) return;
+    const move = (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', `${e.clientX - r.left}px`); el.style.setProperty('--my', `${e.clientY - r.top}px`); };
+    el.addEventListener('mousemove', move);
+    return () => el.removeEventListener('mousemove', move);
+  }, []);
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap');
-
-        :root {
-          --bg:     #080c10;
-          --bg2:    #0d1117;
-          --bg3:    #111827;
-          --cyan:   #00e5ff;
-          --cyan2:  #33eeff;
-          --violet: #7c3aed;
-          --white:  #f0f6ff;
-          --muted:  #6b7280;
-          --line:   rgba(0,229,255,.08);
-          --line2:  rgba(255,255,255,.06);
-          --serif:  'DM Serif Display', Georgia, serif;
-          --sans:   'DM Sans', system-ui, sans-serif;
-        }
-
-        /* ── Base ── */
-        .dh-root *, .dh-root *::before, .dh-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        .dh-root { font-family: var(--sans); background: var(--bg); color: var(--white); overflow-x: hidden; }
-
-        /* ── Cursor glow ── */
-        .hero-glow { position: relative; overflow: hidden; }
-        .hero-glow::before {
-          content: '';
-          position: absolute;
-          width: 600px; height: 600px;
-          background: radial-gradient(circle, rgba(0,229,255,.07) 0%, transparent 70%);
-          top: calc(var(--my, 40%) - 300px);
-          left: calc(var(--mx, 50%) - 300px);
-          pointer-events: none;
-          transition: top .1s, left .1s;
-          z-index: 0;
-        }
-
-        /* ── Noise / dot-grid ── */
-        .noise::after {
-          content: '';
-          position: absolute; inset: 0;
-          background-image: ${NOISE_URL};
-          pointer-events: none;
-          z-index: 1;
-        }
-        .dot-grid {
-          background-image: radial-gradient(rgba(0,229,255,.12) 1px, transparent 1px);
-          background-size: 32px 32px;
-        }
-
-        /* ── Animations ── */
-        @keyframes slip    { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:none } }
-        @keyframes marquee { from { transform:translateX(0) }               to { transform:translateX(-50%) } }
-        @keyframes pulse   { 0%,100%{opacity:1;transform:scale(1)}          50%{opacity:.4;transform:scale(.75)} }
-        @keyframes shine   { 0%{left:-100%} 60%,100%{left:150%} }
-
-        .slip      { opacity:0; animation: slip .7s cubic-bezier(.22,1,.36,1) forwards; }
-        .slip-1    { animation-delay:.05s }
-        .slip-2    { animation-delay:.15s }
-        .slip-3    { animation-delay:.25s }
-        .slip-4    { animation-delay:.38s }
-        .slip-5    { animation-delay:.52s }
-        .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
-
-        /* ── Marquee ── */
-        .marquee-inner {
-          display: flex;
-          animation: marquee 28s linear infinite;
-          width: max-content;
-        }
-        .marquee-inner:hover { animation-play-state: paused; }
-
-        /* ── Hero layout ── */
-        .hero-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          align-items: center;
-          gap: 4rem;
-          padding: 8rem 6vw 6rem;
-          min-height: 100vh;
-          position: relative;
-        }
-
-        /* ── Badge ── */
-        .hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: .4rem;
-          background: rgba(0,229,255,.08);
-          border: 1px solid rgba(0,229,255,.2);
-          border-radius: 100px;
-          padding: .3rem .9rem;
-          font-size: .68rem;
-          font-weight: 500;
-          letter-spacing: .12em;
-          text-transform: uppercase;
-          color: var(--cyan);
-          margin-bottom: 1.75rem;
-        }
-        .badge-dot {
-          width: 6px; height: 6px;
-          border-radius: 50%;
-          background: var(--cyan);
-          display: inline-block;
-        }
-
-        /* ── Hero heading ── */
-        .hero-h1 {
-          font-family: var(--serif);
-          font-size: clamp(2.8rem, 5vw, 5.2rem);
-          line-height: 1.05;
-          letter-spacing: -.01em;
-          margin-bottom: 1.5rem;
-        }
-        .hero-sub {
-          font-size: 1.05rem;
-          font-weight: 300;
-          color: var(--muted);
-          line-height: 1.8;
-          max-width: 40ch;
-          margin-bottom: 2.5rem;
-        }
-
-        /* ── Buttons ── */
-        .btn-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-
-        .btn-primary {
-          display: inline-flex; align-items: center; gap: .4rem;
-          background: var(--cyan); color: #080c10;
-          font-family: var(--sans); font-size: .8rem; font-weight: 500;
-          letter-spacing: .06em; text-transform: uppercase;
-          padding: .9rem 2rem; border: none; cursor: pointer;
-          text-decoration: none; border-radius: 2px;
-          transition: background .2s, box-shadow .2s, transform .15s;
-          white-space: nowrap;
-        }
-        .btn-primary:hover {
-          background: var(--cyan2);
-          box-shadow: 0 0 24px rgba(0,229,255,.35), 3px 3px 0 rgba(0,229,255,.3);
-          transform: translate(-1px,-1px);
-        }
-        .btn-outline {
-          display: inline-flex; align-items: center; gap: .4rem;
-          background: transparent; color: var(--white);
-          font-family: var(--sans); font-size: .8rem; font-weight: 500;
-          letter-spacing: .06em; text-transform: uppercase;
-          padding: .9rem 2rem;
-          border: 1px solid rgba(255,255,255,.15);
-          cursor: pointer; text-decoration: none; border-radius: 2px;
-          transition: border-color .2s, background .2s, box-shadow .2s, transform .15s;
-          white-space: nowrap;
-        }
-        .btn-outline:hover {
-          border-color: rgba(0,229,255,.4);
-          background: rgba(0,229,255,.04);
-          box-shadow: 3px 3px 0 rgba(0,229,255,.15);
-          transform: translate(-1px,-1px);
-        }
-
-        /* ── Hero right: stacked cards ── */
-        .hero-right { position: relative; z-index: 2; }
-        .stack-wrap { position: relative; margin-bottom: 2.5rem; }
-        .stack-back {
-          position: absolute; top: 14px; left: 14px; right: -14px; height: 192px;
-          background: rgba(124,58,237,.06);
-          border: 1px solid rgba(124,58,237,.12);
-          border-radius: 2px;
-        }
-        .stack-mid {
-          position: absolute; top: 7px; left: 7px; right: -7px; height: 192px;
-          background: rgba(0,229,255,.04);
-          border: 1px solid rgba(0,229,255,.08);
-          border-radius: 2px;
-        }
-        .card-shine {
-          background: var(--bg3);
-          border: 1px solid rgba(0,229,255,.12);
-          border-radius: 2px;
-          padding: 1.75rem 2rem;
-          position: relative;
-          overflow: hidden;
-        }
-        .card-shine::before {
-          content: '';
-          position: absolute; top: 0; left: -100%;
-          width: 60%; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(0,229,255,.03), transparent);
-          animation: shine 4s ease-in-out infinite;
-        }
-        .card-label {
-          font-size: .65rem; font-weight: 500; letter-spacing: .12em;
-          text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
-        }
-        .proj-row {
-          display: flex; align-items: center; gap: .75rem; margin-bottom: .85rem;
-        }
-        .proj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .proj-name { font-size: .88rem; }
-        .proj-status { color: var(--muted); font-weight: 300; }
-
-        /* ── Stats ── */
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1rem;
-        }
-        .stat-item { border-top: 1px solid rgba(0,229,255,.2); padding-top: .75rem; }
-        .stat-num {
-          font-family: var(--serif);
-          font-size: 2rem;
-          color: var(--cyan);
-          line-height: 1.1;
-          margin-bottom: .2rem;
-        }
-        .stat-label {
-          font-size: .68rem; font-weight: 400;
-          color: var(--muted); letter-spacing: .06em; text-transform: uppercase;
-        }
-
-        /* ── Eyebrow ── */
-        .eyebrow {
-          font-family: var(--sans); font-size: .68rem; font-weight: 500;
-          letter-spacing: .16em; text-transform: uppercase;
-          color: var(--cyan);
-        }
-
-        /* ── Features ── */
-        .features-header {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          margin-bottom: 3.5rem;
-          flex-wrap: wrap;
-          gap: 1.5rem;
-        }
-        .features-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1px;
-          background: rgba(255,255,255,.05);
-          border: 1px solid rgba(255,255,255,.05);
-        }
-        .feat-card {
-          background: var(--bg3);
-          border: 1px solid var(--line2);
-          border-radius: 2px;
-          padding: 2rem 1.75rem;
-          transition: box-shadow .25s, transform .25s, border-color .25s;
-          position: relative;
-          overflow: hidden;
-        }
-        .feat-card::before {
-          content: '';
-          position: absolute;
-          bottom: 0; left: 0; right: 0; height: 2px;
-          background: var(--cyan);
-          transform: scaleX(0);
-          transform-origin: left;
-          transition: transform .35s cubic-bezier(.22,1,.36,1);
-        }
-        .feat-card:hover {
-          box-shadow: 0 0 0 1px rgba(0,229,255,.25), 4px 4px 0 rgba(0,229,255,.2);
-          border-color: rgba(0,229,255,.2);
-          transform: translate(-2px,-2px);
-        }
-        .feat-card:hover::before { transform: scaleX(1); }
-        .feat-icon {
-          width: 44px; height: 44px; border-radius: 2px;
-          background: rgba(0,229,255,.08);
-          border: 1px solid rgba(0,229,255,.12);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 1.2rem; margin-bottom: 1.25rem;
-        }
-
-        /* ── CTA block ── */
-        .cta-block {
-          border: 1px solid rgba(0,229,255,.15);
-          border-radius: 2px;
-          padding: 4.5rem 3.5rem;
-          background: linear-gradient(135deg, rgba(0,229,255,.05) 0%, rgba(124,58,237,.08) 50%, rgba(0,229,255,.04) 100%);
-          position: relative;
-          overflow: hidden;
-        }
-        .cta-block::before {
-          content: 'DEPLOY';
-          position: absolute; right: -1rem; bottom: -2.5rem;
-          font-family: var(--serif); font-size: 10rem;
-          color: rgba(0,229,255,.04);
-          pointer-events: none; line-height: 1; user-select: none;
-          letter-spacing: -.02em;
-        }
-        .cta-block::after {
-          content: '';
-          position: absolute; width: 400px; height: 400px;
-          background: radial-gradient(circle, rgba(124,58,237,.12) 0%, transparent 70%);
-          top: -100px; right: -50px; pointer-events: none;
-        }
-
-        /* ── Quote section ── */
-        .quote-section {
-          background: var(--bg2);
-          border-top: 1px solid var(--line2);
-          border-bottom: 1px solid var(--line2);
-        }
-
-        /* ════════════════════════════════════════
-           RESPONSIVE BREAKPOINTS
-        ════════════════════════════════════════ */
-
-        /* ── Tablet (≤900px): stack hero ── */
-        @media (max-width: 900px) {
-          .hero-grid {
-            grid-template-columns: 1fr;
-            padding: 7rem 5vw 4rem;
-            gap: 3rem;
-            min-height: unset;
-          }
-          .hero-h1 { font-size: clamp(2.4rem, 7vw, 3.8rem); }
-          .hero-sub { max-width: 100%; font-size: 1rem; }
-
-          /* hide stacked card on tablet, show only stats */
-          .stack-wrap { display: none; }
-          .stats-grid {
-            grid-template-columns: repeat(3, 1fr);
-            margin-top: 0;
-          }
-
-          .features-header { flex-direction: column; align-items: flex-start; }
-
-          .cta-block { padding: 3rem 2rem; }
-          .cta-block::before { font-size: 6rem; }
-        }
-
-        /* ── Mobile (≤600px) ── */
-        @media (max-width: 600px) {
-          .hero-grid { padding: 6rem 1.25rem 3rem; gap: 2rem; }
-
-          .hero-badge { font-size: .62rem; }
-          .hero-h1 { font-size: clamp(2rem, 9vw, 3rem); }
-          .hero-sub { font-size: .95rem; margin-bottom: 2rem; }
-
-          /* buttons go full width on very small screens */
-          .btn-row { flex-direction: column; }
-          .btn-primary, .btn-outline { justify-content: center; width: 100%; }
-
-          /* stats: 1 column on narrow, 3 on wide-ish mobile */
-          .stats-grid { grid-template-columns: repeat(3, 1fr); gap: .6rem; }
-          .stat-num { font-size: 1.4rem; }
-          .stat-label { font-size: .6rem; }
-
-          /* features: single column, full width */
-          .features-grid { grid-template-columns: 1fr; }
-          .feat-card { padding: 1.5rem 1.25rem; }
-          .feat-card:hover { transform: none; box-shadow: none; }
-
-          /* sections */
-          .features-section { padding: 4rem 1.25rem !important; }
-          .quote-section-inner { padding: 3.5rem 1.25rem !important; }
-          .cta-section { padding: 4rem 1.25rem !important; }
-
-          .cta-block { padding: 2.5rem 1.5rem; }
-          .cta-block::before { display: none; }
-          .cta-block::after { display: none; }
-        }
-
-        /* ── Very small (≤380px) ── */
-        @media (max-width: 380px) {
-          .hero-h1 { font-size: 1.9rem; }
-          .stats-grid { grid-template-columns: 1fr 1fr; }
-        }
-      `}</style>
-
-      <div className="dh-root">
-
-        {/* ── HERO ───────────────────────────────────────── */}
-        <section ref={glowRef} className="hero-glow noise dot-grid">
-          <div className="hero-grid">
-
-            {/* Left copy */}
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              <div className="slip slip-1">
-                <span className="hero-badge">
-                  <span className="badge-dot pulse-dot" />
-                  Early Access — Join Free
-                </span>
-              </div>
-
-              <h1 className="hero-h1 slip slip-2">
-                Host your<br />
-                projects.<br />
-                <em style={{ color: 'var(--cyan)', fontStyle: 'italic' }}>No BS.</em><br />
-                Just works.
-              </h1>
-
-              <p className="hero-sub slip slip-3">
-                Deploy static sites &amp; Node.js apps in seconds.
-                Free tier forever — no credit card, no complicated dashboards.
-              </p>
-
-              <div className="btn-row slip slip-4">
-                <Link to="/pricing" className="btn-primary">Deploy for Free →</Link>
-                <Link to="/about"   className="btn-outline">How it works</Link>
-              </div>
+    <div className="bg-page text-primary">
+      {/* Hero Section */}
+      <section ref={glowRef} className="relative isolate overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-hero-glow" />
+        <div className="absolute inset-0 -z-10 dot-grid opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-20 pt-20 sm:pt-28">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 backdrop-blur reveal">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
+              New: AI diagnostics for failed builds
             </div>
+            <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-6xl reveal">
+              Deploy from GitHub. <span className="grad-text">Live in seconds.</span>
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-lg reveal">
+              Ship static sites and backend services with Docker isolation, automatic SSL, real-time logs, uptime monitoring, and AI diagnostics — out of the box.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 reveal">
+              <a href="#" className="inline-flex items-center gap-2 rounded-md bg-cyan px-5 py-2.5 text-sm font-medium text-black shadow-[0_0_40px_-10px_#00e5ff] transition-transform hover:scale-[1.02]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" /><path d="M9 18c-4.51 2-5-2-7-2" /></svg>
+                Start deploying
+              </a>
+              <Link to="/pricing" className="inline-flex items-center gap-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#111827]/60 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-white hover:border-cyan/40">View pricing <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg></Link>
+            </div>
+          </div>
 
-            {/* Right: mockup + stats */}
-            <div className="hero-right slip slip-5">
-              {/* Stacked card mockup */}
-              <div className="stack-wrap">
-                <div className="stack-back" />
-                <div className="stack-mid" />
-                <div className="card-shine">
-                  <p className="card-label">dashboard · projects</p>
-                  {[
-                    { color: '#22c55e', name: 'my-portfolio', status: 'deployed 3s ago' },
-                    { color: '#22c55e', name: 'api-server',   status: 'running · 14d' },
-                    { color: '#f59e0b', name: 'landing-v2',   status: 'building…', pulse: true },
-                  ].map(p => (
-                    <div key={p.name} className="proj-row">
-                      <div
-                        className={`proj-dot${p.pulse ? ' pulse-dot' : ''}`}
-                        style={{ background: p.color }}
-                      />
-                      <span className="proj-name">
-                        {p.name}{' '}
-                        <span className="proj-status">{p.status}</span>
-                      </span>
+          {/* Dashboard Mockup */}
+          <div className="mx-auto mt-16 max-w-5xl reveal">
+            <div className="relative">
+              <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-cyan/20 via-violet/10 to-transparent blur-2xl" />
+              <div className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-[#111827]/80 shadow-2xl backdrop-blur">
+                <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-[#080c10]/50 px-4 py-2.5">
+                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500/70" /><span className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" /><span className="h-2.5 w-2.5 rounded-full bg-green-500/80" /></div>
+                  <div className="flex items-center gap-2 rounded-md border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#080c10] px-2.5 py-1 text-xs text-gray-500 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>api-gateway.deployhub.app</div>
+                  <div className="w-12" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-5">
+                  <aside className="hidden border-r border-gray-200 dark:border-white/10 bg-gray-50/40 dark:bg-[#080c10]/40 p-4 lg:col-span-2 lg:block">
+                    <p className="px-1 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500">Projects</p>
+                    <ul className="mt-3 space-y-1.5">
+                      {[{ name: "api-gateway", branch: "main", status: "success" }, { name: "marketing-site", branch: "main", status: "success" }, { name: "worker-jobs", branch: "feat/queue", status: "warning" }, { name: "auth-service", branch: "main", status: "success" }].map(p => (
+                        <li key={p.name} className="flex items-center justify-between rounded-md border border-transparent px-2.5 py-2 text-sm hover:border-gray-200 dark:hover:border-white/10 hover:bg-white dark:hover:bg-[#111827]">
+                          <div className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${p.status === "warning" ? "animate-pulse bg-yellow-500" : "bg-green-500"}`} /><span className="text-gray-900 dark:text-white">{p.name}</span></div>
+                          <span className="flex items-center gap-1 text-xs text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3"><path d="M15 6a9 9 0 0 0-9 9V3" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /></svg>{p.branch}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </aside>
+                  <div className="lg:col-span-3">
+                    <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#080c10]/30 px-4 py-2.5">
+                      <div className="flex items-center gap-2 text-xs text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 animate-spin text-cyan"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg><span className="font-medium text-gray-900 dark:text-white">api-gateway</span><span>· build #284</span></div>
+                      <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-500 ring-1 ring-green-500/30">deploying</span>
                     </div>
-                  ))}
+                    <pre className="overflow-hidden p-4 font-mono text-[12px] leading-relaxed text-gray-600 dark:text-gray-500">
+                      {`> docker build -t api-gateway:284 .`}<br /><span className="text-green-500">[+] pulling node:20-alpine ........ ok</span><br /><span className="text-green-500">[+] installing dependencies ...... 142 pkg</span><br /><span className="text-green-500">[+] compiling typescript ......... ok</span><br /><span className="text-cyan">[*] pushing image to registry .... 14.2 MB</span><br /><span className="text-cyan">[*] provisioning container ....... a8f31c</span><br /><span className="text-gray-900 dark:text-white">[*] attaching nginx reverse proxy</span><br /><span className="text-gray-900 dark:text-white">[*] issuing tls cert via lets-encrypt</span><br /><span className="text-green-500 flex items-center gap-1">[ok] live at https://api-gateway.deployhub.app</span>
+                    </pre>
+                    <div className="grid grid-cols-3 gap-3 border-t border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#080c10]/30 p-4">
+                      <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#111827]/60 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-500">Uptime</p><p className="mt-1 text-base font-semibold text-green-500">99.98%</p></div>
+                      <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#111827]/60 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-500">p95 latency</p><p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">142 ms</p></div>
+                      <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#111827]/60 p-3"><p className="text-[10px] uppercase tracking-wider text-gray-500">Requests/min</p><p className="mt-1 text-base font-semibold text-violet">1.2k</p></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Stats */}
-              <div className="stats-grid">
-                {[
-                  { num: count > 0 ? `${count.toLocaleString()}+` : '…', label: 'Projects Deployed' },
-                  { num: '99.9%',                                         label: 'Uptime SLA' },
-                  { num: '<1s',                                            label: 'Deploy Time' },
-                ].map(s => (
-                  <div key={s.label} className="stat-item">
-                    <div className="stat-num">{s.num}</div>
-                    <div className="stat-label">{s.label}</div>
-                  </div>
-                ))}
-              </div>
             </div>
-
-          </div>
-        </section>
-
-        {/* ── MARQUEE ────────────────────────────────────── */}
-        <div style={{
-          borderTop: '1px solid rgba(0,229,255,.1)',
-          borderBottom: '1px solid rgba(0,229,255,.1)',
-          padding: '.65rem 0', overflow: 'hidden',
-          background: 'rgba(0,229,255,.03)',
-        }}>
-          <div className="marquee-inner">
-            {Array(8).fill('⚡ Instant Deploys  ·  🔒 Free SSL  ·  🌐 Node.js + Static  ·  📊 Request Tracking  ·  ').map((t, i) => (
-              <span key={i} style={{
-                fontSize: '.72rem', fontWeight: 400, letterSpacing: '.1em',
-                textTransform: 'uppercase', paddingRight: '3rem',
-                whiteSpace: 'nowrap', color: 'var(--cyan)', opacity: .6,
-              }}>
-                {t}
-              </span>
-            ))}
           </div>
         </div>
+      </section>
 
-        {/* ── FEATURES ───────────────────────────────────── */}
-        <section className="features-section" style={{ padding: '7rem 6vw', maxWidth: 1400, margin: '0 auto' }}>
-          <div className="features-header">
-            <div>
-              <p className="eyebrow reveal" style={{ marginBottom: '.6rem' }}>Everything You Need</p>
-              <h2 className="reveal" style={{
-                fontFamily: 'var(--serif)',
-                fontSize: 'clamp(2rem, 3.5vw, 3.5rem)',
-                lineHeight: 1.1,
-              }}>
-                Built for real projects.
-              </h2>
-            </div>
-            <p className="reveal" style={{
-              fontSize: '.9rem', color: 'var(--muted)',
-              maxWidth: '36ch', lineHeight: 1.75, fontWeight: 300,
-            }}>
-              Everything you need to ship and scale — without the enterprise pricing or the enterprise BS.
-            </p>
-          </div>
+      {/* Stack Logos */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10"><p className="text-center text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500">Built for the stack you already use</p><div className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-600 dark:text-gray-500/80">{["Node.js", "Go", "Python", "Java", "Docker", "Nginx", "GitHub", "Let's Encrypt"].map(tech => <span key={tech} className="font-medium">{tech}</span>)}</div></div>
 
-          <div className="features-grid">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.label}
-                className="feat-card reveal"
-                style={{ transitionDelay: `${i * 60}ms` }}
-              >
-                <div className="feat-icon">{f.icon}</div>
-                <h3 style={{
-                  fontFamily: 'var(--serif)',
-                  fontSize: '1.15rem',
-                  marginBottom: '.5rem',
-                  letterSpacing: '-.01em',
-                }}>
-                  {f.label}
-                </h3>
-                <p style={{ fontSize: '.875rem', color: 'var(--muted)', lineHeight: 1.7, fontWeight: 300 }}>
-                  {f.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* Features Grid */}
+      <section className="relative py-24"><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><div className="max-w-2xl mx-auto text-center"><span className="inline-flex items-center gap-1.5 rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1 text-xs font-medium text-cyan">Platform</span><h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Everything you need to ship and operate.</h2><p className="mt-3 text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-lg">A focused toolkit for developers — no dashboards full of features you'll never use.</p></div><div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{FEATURES.map((feature, i) => (<div key={feature.title} className="feat-card group relative overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] p-6 transition-colors hover:border-cyan/40"><div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-cyan/10 text-cyan ring-1 ring-cyan/20">{feature.icon}</div><h3 className="text-base font-semibold text-gray-900 dark:text-white">{feature.title}</h3><p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-500">{feature.desc}</p><div className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition-opacity group-hover:opacity-100" style={{ background: "radial-gradient(400px circle at var(--x,50%) var(--y,50%), color-mix(in oklab, #00e5ff 12%, transparent), transparent 40%)" }} /></div>))}</div></div></section>
 
-        {/* ── QUOTE ──────────────────────────────────────── */}
-        <section className="quote-section">
-          <div className="quote-section-inner" style={{ padding: '5.5rem 6vw', maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-            <p className="reveal eyebrow" style={{ marginBottom: '1.5rem' }}>From the devs</p>
-            <blockquote className="reveal" style={{
-              fontFamily: 'var(--serif)',
-              fontSize: 'clamp(1.3rem, 3vw, 2.4rem)',
-              lineHeight: 1.35, letterSpacing: '-.01em',
-              fontStyle: 'italic', color: 'var(--white)',
-            }}>
-              "We went from staging to production in under 30 seconds.
-              That's not a feature —{' '}
-              <span style={{ color: 'var(--cyan)' }}>that's witchcraft.</span>"
-            </blockquote>
-            <p className="reveal" style={{
-              marginTop: '1.5rem', fontSize: '.72rem',
-              color: 'var(--muted)', letterSpacing: '.1em',
-              textTransform: 'uppercase', fontWeight: 500,
-            }}>
-              — Priya S., Full-Stack Developer
-            </p>
-          </div>
-        </section>
+      {/* How It Works */}
+      <section className="relative border-y border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#111827]/30 py-24"><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><div className="max-w-2xl mx-auto text-center"><span className="inline-flex items-center gap-1.5 rounded-full border border-cyan/30 bg-cyan/10 px-3 py-1 text-xs font-medium text-cyan">How it works</span><h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Five steps from commit to production.</h2><p className="mt-3 text-pretty text-base text-gray-600 dark:text-gray-400 sm:text-lg">The pipeline is opinionated where it should be, configurable where it matters.</p></div><ol className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-5">{[{ icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M15 6a9 9 0 0 0-9 9V3" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /></svg>, title: "Connect repository", desc: "OAuth into GitHub and pick a repo. We detect the runtime automatically." }, { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M12 19h8" /><path d="m4 17 6-6-6-6" /></svg>, title: "Configure runtime", desc: "Node.js, Go, Python, or Java. Set env vars and start command." }, { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>, title: "Build container", desc: "We build an isolated Docker image and push it to the internal registry." }, { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>, title: "Go live with SSL", desc: "Nginx routes traffic to your service with a fresh TLS cert." }, { icon: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg>, title: "Monitor & auto-heal", desc: "Uptime checks, alerts, and automatic restarts keep you online." }].map((step, i) => (<div key={step.title} className="reveal relative h-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] p-5"><div className="flex items-center justify-between"><span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-cyan/10 text-cyan ring-1 ring-cyan/20">{step.icon}</span><span className="text-xs font-mono text-gray-500">0{i + 1}</span></div><h3 className="mt-4 text-sm font-semibold text-gray-900 dark:text-white">{step.title}</h3><p className="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-500">{step.desc}</p></div>))}</ol></div></section>
 
-        {/* ── CTA ────────────────────────────────────────── */}
-        <section className="cta-section" style={{ padding: '7rem 6vw' }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-            <div className="cta-block reveal">
-              <p className="eyebrow" style={{ marginBottom: '1rem', opacity: .6 }}>
-                Ready to ship?
-              </p>
-              <h2 style={{
-                fontFamily: 'var(--serif)',
-                fontSize: 'clamp(2rem, 5vw, 4.5rem)',
-                lineHeight: 1.05, marginBottom: '1.5rem',
-                position: 'relative', zIndex: 1,
-              }}>
-                3 projects waiting.<br />No card needed.
-              </h2>
-              <p style={{
-                fontWeight: 300, color: 'var(--muted)', fontSize: '1rem',
-                marginBottom: '2.5rem', maxWidth: '42ch', lineHeight: 1.75,
-                position: 'relative', zIndex: 1,
-              }}>
-                Start for free. Upgrade when you outgrow it. We won't lock you in.
-              </p>
-              <div className="btn-row" style={{ position: 'relative', zIndex: 1 }}>
-                <Link to="/pricing" className="btn-primary">Get Started Free →</Link>
-                <Link to="/about"   className="btn-outline">View Docs</Link>
-              </div>
-            </div>
-          </div>
-        </section>
+      {/* Private Networking Section */}
+      <section className="py-24"><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 grid items-center gap-12 lg:grid-cols-2"><div className="reveal"><span className="inline-flex items-center gap-1.5 rounded-full border border-violet/30 bg-violet/10 px-3 py-1 text-xs font-medium text-violet">Internal networking</span><h2 className="mt-4 text-balance text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Private mesh for your microservices.</h2><p className="mt-3 text-gray-600 dark:text-gray-400">Services discover each other via secret container IDs over a private network. The public internet sees only what you explicitly publish — everything else stays inside.</p><ul className="mt-6 space-y-3 text-sm"><li className="flex items-start gap-2.5"><span className="mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-cyan"><rect x="16" y="16" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="9" y="2" width="6" height="6" rx="1" /><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" /><path d="M12 12V8" /></svg></span><span>Zero-config service discovery on private DNS</span></li><li className="flex items-start gap-2.5"><span className="mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-cyan"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg></span><span>Outbound-only by default; opt-in public exposure</span></li><li className="flex items-start gap-2.5"><span className="mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-cyan"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg></span><span>Alerts via Email, Discord, and Telegram</span></li></ul></div><div className="reveal"><div className="relative rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] p-6"><div className="mb-4 flex items-center justify-between"><p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-500">Internal network</p><span className="rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-medium text-green-500 ring-1 ring-green-500/30">5 services healthy</span></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{[{ name: "api-gateway", id: "a8f31c", exposed: true }, { name: "auth-service", id: "b2c4d9" }, { name: "worker-jobs", id: "f1e8a2" }, { name: "postgres", id: "c7d3b5" }, { name: "redis-cache", id: "e9a4f7" }].map(svc => (<div key={svc.name} className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50/60 dark:bg-[#080c10]/60 p-3 transition-colors hover:border-cyan/30"><div className="flex items-center justify-between"><span className="h-2 w-2 rounded-full bg-green-500" />{svc.exposed ? <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-cyan"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3 text-gray-600"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>}</div><p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{svc.name}</p><p className="font-mono text-[10px] text-gray-500">id: {svc.id}</p></div>))}</div><div className="mt-4 rounded-lg border border-dashed border-gray-200 dark:border-white/10 bg-gray-50/30 dark:bg-[#080c10]/30 p-3 font-mono text-[11px] text-gray-500"><span className="text-green-500">auth-service</span> → <span className="text-cyan">postgres.internal:5432</span> <span className="text-green-500">200 OK</span></div></div></div></div></section>
 
-      </div>
-    </>
-  )
+      {/* Final CTA */}
+      <section className="pb-24"><div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><div className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111827] p-10 text-center"><div className="absolute inset-0 -z-10 bg-hero-glow opacity-60" /><h2 className="text-balance text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Push a commit. Watch it go live.</h2><p className="mx-auto mt-3 max-w-xl text-gray-600 dark:text-gray-400">Start free. Upgrade when you need backend runtimes, custom domains, or AI diagnostics.</p><div className="mt-6 flex flex-wrap justify-center gap-3"><a href="#" className="inline-flex items-center gap-2 rounded-md bg-cyan px-5 py-2.5 text-sm font-medium text-black"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" /><path d="M9 18c-4.51 2-5-2-7-2" /></svg>Connect GitHub</a><Link to="/pricing" className="inline-flex items-center gap-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-[#080c10]/60 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-white">See plans</Link></div></div></div></section>
+    </div>
+  );
 }
