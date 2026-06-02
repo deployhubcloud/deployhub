@@ -11,6 +11,7 @@ import { PendingOrder } from '../models/PendingOrder.js';
 import { CompletedOrder } from '../models/completedOrder.model.js';
 import { buildQueue } from '../utils/queues.js';
 import { v4 as uuidv4 } from 'uuid';
+import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 
 const PAID_PLANS = Object.keys(plans).filter((plan) => plan !== 'free');
 
@@ -200,7 +201,7 @@ const planAmountInPaise = (planName, months) => {
 };
 
 const queueProjectBuild = async (project) => {
-    await buildQueue.add('build', {
+    await buildQueue.add(QUEUE_NAMES.BUILD, {
         projectId: project._id.toString(),
         plan: project.plan,
     });
@@ -275,12 +276,7 @@ export const createProjectForPlan = async (userId, body, {
         });
     }
 
-    const queueData = {
-        projectId: project._id,
-        plan: project.plan
-    }
-
-    await queueProjectBuild(queueData);
+    await queueProjectBuild(project);
 
     return { project };
 };
