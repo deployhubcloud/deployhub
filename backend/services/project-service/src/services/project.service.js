@@ -202,8 +202,9 @@ const planAmountInPaise = (planName, months) => {
 
 const queueProjectBuild = async (project) => {
     await buildQueue.add(QUEUE_NAMES.BUILD, {
-        projectId: project._id.toString(),
+        projectId: project._id,
         plan: project.plan,
+        userId: project.userId
     });
 };
 
