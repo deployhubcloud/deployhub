@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { AUTH_ENV } from '../../lib/env.js';
+import { buildEnv } from '../../lib/env.js';
 import { createRedisClient } from '../../../../../shared/redis/createRedisClient.js';
 
 let redisClient;
@@ -11,9 +11,9 @@ export const connectRedis = async () => {
         Redis,
         logger: console,
         options: {
-        host: AUTH_ENV.REDIS_HOST,
-        port: AUTH_ENV.REDIS_PORT,
-        password: AUTH_ENV.REDIS_PASSWORD,
+        host: buildEnv.REDIS_HOST,
+        port: buildEnv.REDIS_PORT,
+        password: buildEnv.REDIS_PASSWORD,
         maxRetriesPerRequest: 3,
         enableReadyCheck: true,
         lazyConnect: true

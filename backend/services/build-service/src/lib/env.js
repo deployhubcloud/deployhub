@@ -5,6 +5,7 @@ const required = [
     'RABBITMQ_URL',
     'INTERNAL_SECRET',
     'INTERNAL_SERVICE_TALKING_SECRET',
+    'PROJECT_SERVICE_URL'
 ]
 
 for (const key of required) {
@@ -13,7 +14,7 @@ for (const key of required) {
     }
 };
 
-export const AUTH_ENV = {
+export const buildEnv = {
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT,
     MONGODB_URI: process.env.MONGODB_URI,
@@ -23,5 +24,6 @@ export const AUTH_ENV = {
     INTERNAL_SECRET: process.env.INTERNAL_SECRET,
     RABBITMQ_URL: process.env.RABBITMQ_URL,
     INTERNAL_SERVICE_TALKING_SECRET: process.env.INTERNAL_SERVICE_TALKING_SECRET,
-    SERVICE_NAME: process.env.SERVICE_NAME
+    SERVICE_NAME: process.env.SERVICE_NAME,
+    PROJECT_SERVICE_URL: process.env.PROJECT_SERVICE_URL,
 }
