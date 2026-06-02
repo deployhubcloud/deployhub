@@ -4,24 +4,24 @@ import { getUserNotificationSettings } from '../../../../shared/utils/getUserNot
 import { getRedis } from '../core/redis/client.js';
 
 
-export const getNotificationSettings = async (userId) => {
+export const getNotificationSettings = async (projectId) => {
 
     const redis = getRedis();
 
-    const cached = await redis.get(`user:notifications:${userId}`);
+    const cached = await redis.get(`deployhub:project:${projectId}:notifications-settings`);
     if (cached) return JSON.parse(cached);
 
 
     const settings = await getUserNotificationSettings(
         axios,
         NOTIFICATION_ENV.PROJECT_SERVICE_URL,
-        userId,
+        projectId,
         NOTIFICATION_ENV.INTERNAL_SERVICE_TALKING_SECRET,
         NOTIFICATION_ENV.INTERNAL_SECRET
     );
 
     await redis.setex(
-        `user:notifications:${userId}`,
+        `deployhub:project:${projectId}:notifications-settings`,
         3600,
         JSON.stringify(settings)
     );
