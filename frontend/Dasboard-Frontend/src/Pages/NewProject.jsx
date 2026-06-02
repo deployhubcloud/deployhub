@@ -66,11 +66,11 @@ function parseEnv(envText) {
     }, {});
 }
 
-function buildPayload(form, plan, months, projectType) {
+function buildPayload(form, plan, months, projectType, selectedRepo) {
   const env = parseEnv(form.envText);
   const isStatic = projectType === "static";
   const isMicroservice = isStatic ? false : form.isMicroservice;
-  return {
+  const payload = {
     plan,
     months,
     projectName: form.projectName.trim(),
@@ -91,6 +91,19 @@ function buildPayload(form, plan, months, projectType) {
       ? { buildCommand: form.buildCommand.trim(), publishDir: form.publishDir.trim() }
       : { startCommand: form.startCommand.trim(), port: Number(form.port) }),
   };
+
+  // If a GitHub repo was selected, attach additional metadata
+  if (selectedRepo) {
+    payload.repoMetadata = {
+      id: selectedRepo.id,
+      fullName: selectedRepo.full_name,
+      private: selectedRepo.private,
+      htmlUrl: selectedRepo.html_url,
+      description: selectedRepo.description,
+      defaultBranch: selectedRepo.default_branch,
+    };
+  }
+  return payload;
 }
 
 export default function NewProject() {
@@ -106,7 +119,14 @@ export default function NewProject() {
   const [months, setMonths] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [repoError, setRepoError] = useState("");
   const [created, setCreated] = useState(null);
+  const [repos, setRepos] = useState([]);
+  const [selectedRepo, setSelectedRepo] = useState(null);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [useManualRepo, setUseManualRepo] = useState(false);
+  const [repoQuery, setRepoQuery] = useState("");
+
   const [form, setForm] = useState({
     projectName: "",
     repoUrl: "",
@@ -130,11 +150,47 @@ export default function NewProject() {
     telegramChatId: "",
   });
 
+  // Fetch GitHub repos if user is connected via GitHub
+  useEffect(() => {
+    const fetchRepos = async () => {
+      if (!user || user.provider !== 'github') return;
+      setLoadingRepos(true);
+      setRepoError("");
+      try {
+        const response = await api.get("/auth/user/repos");
+        setRepos(response.data.repositories || []);
+      } catch (err) {
+        console.error("Failed to fetch repos", err);
+        setRepoError("Could not load your GitHub repositories. You can still enter a repository URL manually.");
+        setUseManualRepo(true);
+      } finally {
+        setLoadingRepos(false);
+      }
+    };
+    fetchRepos();
+  }, [user]);
+
   const allowedTypes = PLAN_OPTIONS[plan].types;
   const isStatic = selectedType === "static";
   const microserviceEnabled = !isStatic && form.isMicroservice;
   const isPaid = plan !== "free";
-  const previewPayload = useMemo(() => buildPayload(form, plan, months, selectedType), [form, months, plan, selectedType]);
+  const isGitHubUser = user && user.provider === 'github';
+  const filteredRepos = useMemo(() => {
+    const query = repoQuery.trim().toLowerCase();
+    if (!query) return repos.slice(0, 8);
+    return repos
+      .filter((repo) => {
+        const searchable = `${repo.full_name || ""} ${repo.description || ""}`.toLowerCase();
+        return searchable.includes(query);
+      })
+      .slice(0, 8);
+  }, [repoQuery, repos]);
+
+  // Build payload with repo metadata if a GitHub repo was selected
+  const previewPayload = useMemo(
+    () => buildPayload(form, plan, months, selectedType, selectedRepo),
+    [form, months, plan, selectedType, selectedRepo]
+  );
 
   useEffect(() => {
     if (isStatic && form.isMicroservice) {
@@ -161,6 +217,33 @@ export default function NewProject() {
     setMonths(1);
     setError("");
     setCreated(null);
+  };
+
+  const handleRepoSelect = (repo) => {
+    setSelectedRepo(repo);
+    setField("repoUrl", repo.html_url);
+    setField("branch", repo.default_branch);
+    if (!form.projectName) {
+      setField("projectName", repo.name);
+    }
+    setRepoError("");
+    setUseManualRepo(false);
+  };
+
+  const retryRepoFetch = async () => {
+    setLoadingRepos(true);
+    setRepoError("");
+    try {
+      const response = await api.get("/auth/user/repos");
+      setRepos(response.data.repositories || []);
+      setUseManualRepo(false);
+    } catch (err) {
+      console.error("Failed to fetch repos", err);
+      setRepoError("Could not load your GitHub repositories. You can still enter a repository URL manually.");
+      setUseManualRepo(true);
+    } finally {
+      setLoadingRepos(false);
+    }
   };
 
   const validate = () => {
@@ -239,8 +322,8 @@ export default function NewProject() {
 
   if (!TYPE_LABELS[normalizedType]) return <Navigate to="/projects/new/static" replace />;
 
-  // Helper for input classes
   const inputClass = "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all";
+  const repoActionClass = "text-xs font-medium text-violet-300 hover:text-violet-200 focus:outline-none focus:ring-2 focus:ring-violet-500/30";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b0f1c] to-[#05070f] text-white">
@@ -266,7 +349,7 @@ export default function NewProject() {
         <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_340px]">
           {/* Left column: Plans + Form */}
           <div className="space-y-8">
-            {/* Plan cards - horizontal row */}
+            {/* Plan cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {Object.entries(PLAN_OPTIONS).map(([key, item]) => {
                 const selected = plan === key;
@@ -275,11 +358,10 @@ export default function NewProject() {
                     type="button"
                     key={key}
                     onClick={() => selectPlan(key)}
-                    className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${
-                      selected
-                        ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
-                        : "border-white/10 bg-white/5 hover:bg-white/10"
-                    }`}
+                    className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${selected
+                      ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
+                      : "border-white/10 bg-white/5 hover:bg-white/10"
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -319,10 +401,139 @@ export default function NewProject() {
                   <label className="block text-sm font-medium text-gray-300">Project name</label>
                   <input type="text" value={form.projectName} onChange={(e) => setField("projectName", e.target.value)} className={inputClass} placeholder="my-app" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Repository URL</label>
-                  <input type="url" value={form.repoUrl} onChange={(e) => setField("repoUrl", e.target.value)} className={inputClass} placeholder="https://github.com/user/repo" />
+
+                {/* Repository selection – with loading, error, and manual toggle */}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-300">Repository</label>
+                  {isGitHubUser && !useManualRepo ? (
+                    <div className="space-y-2">
+                      {loadingRepos ? (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-300" />
+                            <span className="text-sm text-gray-300">Fetching your repositories...</span>
+                          </div>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            {[0, 1, 2, 3].map((item) => (
+                              <div key={item} className="h-14 animate-pulse rounded-lg bg-white/10" />
+                            ))}
+                          </div>
+                        </div>
+                      ) : repoError ? (
+                        <div className="space-y-3">
+                          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                            {repoError}
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            <button type="button" onClick={retryRepoFetch} className={repoActionClass}>
+                              Retry
+                            </button>
+                            <button type="button" onClick={() => setUseManualRepo(true)} className={repoActionClass}>
+                              Enter URL manually
+                            </button>
+                          </div>
+                        </div>
+                      ) : repos.length === 0 ? (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                          <p className="text-sm text-gray-300">No repositories found.</p>
+                          <button type="button" onClick={() => setUseManualRepo(true)} className={`${repoActionClass} mt-2`}>
+                            Enter URL manually
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <input
+                              type="search"
+                              value={repoQuery}
+                              onChange={(e) => setRepoQuery(e.target.value)}
+                              className={inputClass}
+                              placeholder="Search repositories"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedRepo(null);
+                                setUseManualRepo(true);
+                              }}
+                              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-violet-200 transition hover:bg-white/10"
+                            >
+                              Manual URL
+                            </button>
+                          </div>
+
+                          {selectedRepo && (
+                            <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-100">
+                              Selected: <span className="font-medium">{selectedRepo.full_name}</span>
+                            </div>
+                          )}
+
+                          <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                            {filteredRepos.map((repo) => {
+                              const selected = selectedRepo?.id === repo.id;
+                              return (
+                                <button
+                                  key={repo.id}
+                                  type="button"
+                                  onClick={() => handleRepoSelect(repo)}
+                                  className={`min-w-0 rounded-lg border p-3 text-left transition ${
+                                    selected
+                                      ? "border-violet-400 bg-violet-500/15"
+                                      : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                                  }`}
+                                >
+                                  <div className="flex min-w-0 items-center justify-between gap-2">
+                                    <span className="truncate text-sm font-semibold text-white">{repo.full_name}</span>
+                                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${repo.private ? "bg-amber-400/15 text-amber-200" : "bg-cyan-400/15 text-cyan-200"}`}>
+                                      {repo.private ? "Private" : "Public"}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 truncate text-xs text-gray-400">
+                                    {repo.description || `Default branch: ${repo.default_branch}`}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {filteredRepos.length === 0 && (
+                            <p className="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">No repository matches your search.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {repoError && (
+                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                          {repoError}
+                        </div>
+                      )}
+                      <input
+                        type="url"
+                        value={form.repoUrl}
+                        onChange={(e) => {
+                          setSelectedRepo(null);
+                          setField("repoUrl", e.target.value);
+                        }}
+                        className={inputClass}
+                        placeholder="https://github.com/user/repo"
+                      />
+                      {isGitHubUser && useManualRepo && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRepoError("");
+                            setUseManualRepo(false);
+                          }}
+                          className={repoActionClass}
+                        >
+                          Back to repository list
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Branch</label>
                   <input type="text" value={form.branch} onChange={(e) => setField("branch", e.target.value)} className={inputClass} placeholder="main" />
@@ -347,7 +558,7 @@ export default function NewProject() {
                 )}
               </div>
 
-              {/* Build / start commands */}
+              {/* Build / start commands – unchanged */}
               <div className="grid gap-5 sm:grid-cols-2">
                 {isStatic ? (
                   <>
@@ -362,7 +573,7 @@ export default function NewProject() {
                 )}
               </div>
 
-              {/* Env vars */}
+              {/* Environment variables */}
               <div>
                 <label className="block text-sm font-medium text-gray-300">Environment variables (KEY=value per line)</label>
                 <textarea rows={3} value={form.envText} onChange={(e) => setField("envText", e.target.value)} className={`${inputClass} font-mono`} placeholder="NODE_ENV=production&#10;API_KEY=xxx" />
