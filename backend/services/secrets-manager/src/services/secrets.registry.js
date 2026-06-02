@@ -1,5 +1,3 @@
-
-
 import { env } from '../config/env.js';
 
 export function getSecretsForService(serviceName) {
@@ -64,10 +62,10 @@ export function getSecretsForService(serviceName) {
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
       INTERNAL_SECRET: env.INTERNAL_SECRET,
-      RAZORPAY_KEY_ID: env.RAZORPAY_KEY_ID || '',
-      RAZORPAY_KEY_SECRET: env.RAZORPAY_KEY_SECRET || '',
+      RAZORPAY_KEY_ID: env.RAZORPAY_KEY_ID,
+      RAZORPAY_KEY_SECRET: env.RAZORPAY_KEY_SECRET,
       RABBITMQ_URL: env.RABBITMQ_URL,
-      IDENTITY_SERVICE_URL: env.IDENTITY_SERVICE_URL || '',
+      IDENTITY_SERVICE_URL: env.IDENTITY_SERVICE_URL,
       INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
     },
 
