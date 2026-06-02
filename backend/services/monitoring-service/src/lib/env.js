@@ -6,7 +6,7 @@ dotenv.config({
 
 const requiredEnvVars = [
     "MONITORING_MONGODB_URI",
-    "INTERNAL_SERVICE_SECRET",
+    "INTERNAL_SECRET",
     "INTERNAL_SERVICE_TALKING_SECRET",
     "REDIS_HOST",
     "REDIS_PORT",
@@ -26,7 +26,7 @@ for (const env of requiredEnvVars){
 
 export const env = {
     MONITORING_MONGODB_URI: process.env.MONITORING_MONGODB_URI,
-    INTERNAL_SERVICE_SECRET: process.env.INTERNAL_SERVICE_SECRET,
+    INTERNAL_SECRET: process.env.INTERNAL_SECRET,
     INTERNAL_SERVICE_TALKING_SECRET: process.env.INTERNAL_SERVICE_TALKING_SECRET,
     REDIS_HOST: process.env.REDIS_HOST,
     REDIS_PORT: process.env.REDIS_PORT,

@@ -31,7 +31,7 @@ app.get('/health', (_req, res) => {
 
 // internal auth
 app.use(createInternalAUthMiddleware({
-    secret: env.INTERNAL_SERVICE_SECRET,
+    secret: env.INTERNAL_SECRET,
     logger: console,
     header: "x-internal-secret",
 }));

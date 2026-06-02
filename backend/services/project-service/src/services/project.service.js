@@ -223,7 +223,7 @@ export const createProjectForPlan = async (userId, body, {
         project_env.IDENTITY_SERVICE_URL,
         userId,
         project_env.INTERNAL_SERVICE_TALKING_SECRET,
-        project_env.INTERNAL_SERVICE_SECRET
+        project_env.INTERNAL_SECRET
     );
 
     const finalSubdomain = normalized.isMicroservice

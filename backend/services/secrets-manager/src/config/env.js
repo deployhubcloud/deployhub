@@ -43,7 +43,7 @@ const schema = z.object({
 
   GITHUB_TOKEN_ENCRYPTION_KEY: z.string().length(64, 'Must be 32 bytes = 64 hex chars'),
 
-  INTERNAL_SERVICE_SECRET: z.string().min(32),
+  INTERNAL_SECRET: z.string().min(32),
 
   EMAIL_HOST: z.string().default('smtp.gmail.com'),
   EMAIL_PORT: z.coerce.number().default(465),
