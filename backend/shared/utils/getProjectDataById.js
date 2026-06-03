@@ -1,6 +1,6 @@
 export const getProjectDataById = async (axios, projectId, projectServiceUrl, internalServiceSecret, microservicetalkingsecret) => {
     try {
-        const response = await axios.get(`${projectServiceUrl}//for-other-service/${projectId}`, {
+        const response = await axios.get(`${projectServiceUrl}/for-other-service/${projectId}`, {
             headers: {
                 "Content-Type": "application/json",
                 "x-internal-secret": internalServiceSecret,
