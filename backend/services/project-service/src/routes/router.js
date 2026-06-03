@@ -4,6 +4,7 @@ import { paymentInitController, paymentVerifyController } from '../controllers/p
 import { createProjectValidator, paymentInitValidator, paymentVerifyValidator } from '../validators/createProject.js';
 import { internalApiCallMiddleware } from '../../../../shared/middlewares/interalApiCall.js';
 import { project_env } from '../lib/env.js';
+import { getProjectByIdController } from '../controllers/forOtherService.js';
 
 const projectRouter = express.Router();
 
