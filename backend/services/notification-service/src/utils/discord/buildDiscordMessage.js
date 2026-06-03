@@ -1,42 +1,75 @@
 export const buildDiscordMessage = ({
     projectName,
     buildId,
-    status
+    status,
+    serviceType,
+    deploymentUrl,
+    logsUrl
 }) => {
 
     const config = {
-        building: {
-            emoji: "🚀",
+
+        "build-started": {
+            emoji: "🏗️",
             title: "Build Started",
-            message: "Your build has started and is currently running."
+            message:
+                "Source code received and build process has started."
         },
 
-        success: {
+        "build-success": {
             emoji: "✅",
-            title: "Deployment Successful",
-            message: "Your deployment completed successfully."
+            title: "Build Successful",
+            message:
+                "Build completed successfully. Deployment is starting."
         },
 
-        failed: {
+        "build-failed": {
             emoji: "❌",
-            title: "Deployment Failed",
-            message: "Your deployment failed. Please check your logs."
+            title: "Build Failed",
+            message:
+                "Build process failed. Review logs for more information."
+        },
+
+        "deploy-success": {
+            emoji: "🚀",
+            title: "Deployment Successful",
+            message:
+                "Application deployed successfully and is now live."
         }
     };
 
-    const current =
-        config[status] || {
-            emoji: "ℹ️",
-            title: "Status Update",
-            message: "Project status changed."
-        };
+    const current = config[status];
+
+    let extra = "";
+
+    if (status === "build-failed" && logsUrl) {
+        extra += `\n📄 Logs: ${logsUrl}`;
+    }
+
+    if (status === "deploy-success") {
+
+        extra += `\n🔧 Service Type: ${serviceType}`;
+
+        if (
+            serviceType &&
+            serviceType.toLowerCase() !== "microservice" &&
+            deploymentUrl
+        ) {
+            extra += `\n🌍 Live URL: ${deploymentUrl}`;
+        }
+    }
 
     return `
-${current.emoji} ${current.title}
+${current.emoji} **${current.title}**
 
 📦 Project: ${projectName}
 🆔 Build ID: ${buildId}
 
 ${current.message}
+
+${extra}
+
+━━━━━━━━━━━━━━━━━━━━
+⚡ Powered by DeployHub
 `;
 };
