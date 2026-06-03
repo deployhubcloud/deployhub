@@ -3,11 +3,11 @@ export const getUserNotificationSettings = async (axios, projectServiceUrl, proj
         `${projectServiceUrl}/for-other-service/${projectId}/notification-settings`,
         {
             headers: {
-                content: "application/json",
+                "Content-Type": "application/json",
                 'x-microservice-secret': microservicetalkingsecret,
                 'x-internal-secret': internalServiceSecret,
             }
         }
     );
-    return res.data;
+    return res.data?.notifications || {};
 }
