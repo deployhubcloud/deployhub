@@ -12,6 +12,9 @@ import { CompletedOrder } from '../models/completedOrder.model.js';
 import { buildQueue } from '../utils/queues.js';
 import { v4 as uuidv4 } from 'uuid';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
+import { randomUUID } from "crypto";
+
+
 
 const PAID_PLANS = Object.keys(plans).filter((plan) => plan !== 'free');
 
@@ -21,7 +24,7 @@ const dockerContainerName = (projectId) => {
 
 const getProjectType = (body) => body.projectType || body.type;
 const normalizeSubdomain = (subdomain) => (
-    typeof subdomain === 'string' ? subdomain.trim() : subdomain
+    typeof subdomain === 'string' ? `${subdomain.trim()}-${randomUUID().slice(0, 8)}` : `${subdomain}-${randomUUID().slice(0, 8)}`
 );
 
 const assertIncomingProjectConsistency = (body) => {
