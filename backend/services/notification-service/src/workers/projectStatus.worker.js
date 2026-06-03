@@ -22,7 +22,6 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
     try {
 
         const data = JSON.parse(message);
-        console.log('Project status received', data);
 
         const { projectId, projectstatus, userId, userName, projectName, buildId } = data;
 
@@ -33,7 +32,7 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
             buildId,
             status: projectstatus
         });
-        console.log(discordMessage)
+        
 
         const telegramMessage = buildTelegramMessage({
             projectName,
@@ -66,11 +65,11 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
 
 
         if (userNotificationSettings?.telegram?.enabled) {
-            await sendTelegram(
-                userNotificationSettings.telegram.botToken,
-                userNotificationSettings.telegram.chatId,
-                telegramMessage
-            );
+            await sendTelegram({
+                botToken: userNotificationSettings.telegram.botToken,
+                chatId: userNotificationSettings.telegram.chatId,
+                message: telegramMessage
+            });
         }
 
     } catch (error) {
