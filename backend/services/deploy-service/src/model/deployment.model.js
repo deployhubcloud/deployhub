@@ -4,13 +4,11 @@ const deploymentSchema = new mongoose.Schema({
 
   project: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Project",
     required: true
   },
 
   build: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Build",
     required: true
   },
 
