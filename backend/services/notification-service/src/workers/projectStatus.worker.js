@@ -23,28 +23,47 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
 
         const data = JSON.parse(message);
 
-        const { projectId, projectstatus, userId, userName, projectName, buildId } = data;
+        const { projectId, projectstatus, userId, userName, projectName, buildId, serviceType, deploymentUrl, logsUrl } = data;
 
         const userNotificationSettings = await getNotificationSettings(projectId);
+
+        const statusMap = {
+            building: "build-started",
+            failed: "build-failed",
+            success: "build-success",
+            running: "deploy-success"
+        };
+
+        const finalProjectStatus = statusMap[projectstatus] || "unknown";
 
         const discordMessage = buildDiscordMessage({
             projectName,
             buildId,
-            status: projectstatus
+            status: finalProjectStatus,
+            serviceType,
+            deploymentUrl,
+            logsUrl
+
         });
-        
+
 
         const telegramMessage = buildTelegramMessage({
             projectName,
             buildId,
-            status: projectstatus
+            status: finalProjectStatus,
+            serviceType,
+            deploymentUrl,
+            logsUrl
         });
 
         const emailHtml = buildEmailTemplate({
             userName,
             projectName,
             buildId,
-            status: projectstatus
+            status: finalProjectStatus,
+            serviceType,
+            deploymentUrl,
+            logsUrl
         });
 
         if (userNotificationSettings?.discord?.enabled) {
