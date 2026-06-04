@@ -27,7 +27,7 @@ export const buildTelegramMessage = ({
             emoji: "❌",
             title: "Build Failed",
             message:
-                "Build process failed."
+                "Build process failed. Review logs for more information."
         },
 
         "deploy-success": {
@@ -42,8 +42,15 @@ export const buildTelegramMessage = ({
 
     let extra = "";
 
-    if (status === "build-failed" && logsUrl) {
-        extra += `\n📄 Logs: ${logsUrl}`;
+    if (
+        (
+            status === "build-success" ||
+            status === "build-failed" ||
+            status === "deploy-success"
+        ) &&
+        logsUrl
+    ) {
+        extra += `\n📄 Build Logs: ${logsUrl}`;
     }
 
     if (status === "deploy-success") {
@@ -55,7 +62,7 @@ export const buildTelegramMessage = ({
             serviceType.toLowerCase() !== "microservice" &&
             deploymentUrl
         ) {
-            extra += `\n🌍 URL: ${deploymentUrl}`;
+            extra += `\n🌍 Live URL: ${deploymentUrl}`;
         }
     }
 
