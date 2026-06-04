@@ -60,6 +60,9 @@ const schema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
 
+  DOCKER_USERNAME: z.string(),
+  DOCKER_PASSWORD: z.string(),
+
   DEVLOAD_API_KEY: z.string().optional(),
   DEVLOAD_PROJECT_ID: z.string().optional(),
 
@@ -77,7 +80,12 @@ const schema = z.object({
 
   INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
 
-  BCRYPT_ROUNDS: z.coerce.number().default(10)
+  BCRYPT_ROUNDS: z.coerce.number().default(10),
+
+  MINIO_BUCKET: z.string(),
+  MINIO_SECRET_KEY: z.string(),
+  MINIO_ACCESS_KEY: z.string(),
+  MINIO_PUBLIC_HOST: z.string(),
 })
 
 const parsed = schema.safeParse(process.env);
