@@ -6,13 +6,10 @@ export const generateDockerfile = ({
     startCommand,
 }) => {
 
-    ```
-switch (projectType) {
+    switch (projectType) {
 
-    case "static":
-        return `
-        ```
-
+        case "static":
+            return `
 FROM node:${version} AS builder
 
 WORKDIR /app
@@ -31,11 +28,8 @@ RUN echo "$VITE_ENV_CONTENT" > .env
 RUN if [ -n "$BUILD_CMD" ]; then sh -c "$BUILD_CMD"; else ${buildCommand || "npm run build"}; fi
 `;
 
-    ```
-    case "node":
-        return `
-        ```
-
+        case "node":
+            return `
 FROM node:${version}-alpine AS deps
 
 WORKDIR /app
@@ -62,10 +56,10 @@ ENV START_CMD=$START_CMD
 CMD ["sh", "-c", "$START_CMD"]
 `;
 
-    ```
+            ```
     case "python":
         return `
-        ```
+                ```
 
 FROM python:${version} AS builder
 
@@ -94,10 +88,10 @@ ENV START_CMD=$START_CMD
 CMD ["sh", "-c", "$START_CMD"]
 `;
 
-    ```
+            ```
     case "go":
         return `
-        ```
+                ```
 
 FROM golang:${version} AS builder
 
@@ -119,10 +113,10 @@ EXPOSE 8080
 ENTRYPOINT ["/app"]
 `;
 
-    ```
+            ```
     case "java":
         return `
-        ```
+                ```
 
 FROM maven:3.9-eclipse-temurin-${version} AS builder
 
@@ -146,15 +140,13 @@ EXPOSE $APP_PORT
 CMD ["java", "-jar", "app.jar"]
 `;
 
-    ```
+            ```
     default:
         throw new Error(
             \`Unsupported project type: \${projectType}\`
         );
 }
 ```
+    }
 
 };
-
-```
-```
