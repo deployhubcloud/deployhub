@@ -48,12 +48,19 @@ export const buildEmailTemplate = ({
     let extraRows = "";
     let actionButton = "";
 
-    if (status === "build-failed" && logsUrl) {
+    if (
+        (
+            status === "build-success" ||
+            status === "build-failed" ||
+            status === "deploy-success"
+        ) &&
+        logsUrl
+    ) {
 
         extraRows += `
             <tr>
                 <td style="border:1px solid #e5e7eb;padding:12px;">
-                    <strong>Logs</strong>
+                    <strong>Build Logs</strong>
                 </td>
                 <td style="border:1px solid #e5e7eb;padding:12px;">
                     <a href="${logsUrl}">
@@ -63,20 +70,25 @@ export const buildEmailTemplate = ({
             </tr>
         `;
 
+        const buttonColor =
+            status === "build-failed"
+                ? "#dc2626"
+                : "#22c55e";
+
         actionButton = `
             <a
                 href="${logsUrl}"
                 style="
                     display:inline-block;
                     padding:12px 22px;
-                    background:#dc2626;
+                    background:${buttonColor};
                     color:#ffffff;
                     text-decoration:none;
                     border-radius:8px;
                     font-weight:600;
                 "
             >
-                View Logs
+                View Build Logs
             </a>
         `;
     }
@@ -89,7 +101,7 @@ export const buildEmailTemplate = ({
                     <strong>Service Type</strong>
                 </td>
                 <td style="border:1px solid #e5e7eb;padding:12px;">
-                    ${serviceType}
+                    ${serviceType || "N/A"}
                 </td>
             </tr>
         `;
@@ -113,21 +125,23 @@ export const buildEmailTemplate = ({
                 </tr>
             `;
 
-            actionButton = `
-                <a
-                    href="${deploymentUrl}"
-                    style="
-                        display:inline-block;
-                        padding:12px 22px;
-                        background:#16a34a;
-                        color:#ffffff;
-                        text-decoration:none;
-                        border-radius:8px;
-                        font-weight:600;
-                    "
-                >
-                    Open Application
-                </a>
+            actionButton += `
+                <div style="margin-top:12px;">
+                    <a
+                        href="${deploymentUrl}"
+                        style="
+                            display:inline-block;
+                            padding:12px 22px;
+                            background:#16a34a;
+                            color:#ffffff;
+                            text-decoration:none;
+                            border-radius:8px;
+                            font-weight:600;
+                        "
+                    >
+                        Open Application
+                    </a>
+                </div>
             `;
         }
     }
@@ -200,7 +214,7 @@ export const buildEmailTemplate = ({
                     <strong>Status</strong>
                 </td>
                 <td style="border:1px solid #e5e7eb;padding:12px;">
-                    ${status}
+                    ${current.title}
                 </td>
             </tr>
 
@@ -218,7 +232,7 @@ export const buildEmailTemplate = ({
                 >
                     ${actionButton}
                 </div>
-            `
+                `
             : ""
         }
 
@@ -229,8 +243,7 @@ export const buildEmailTemplate = ({
                 font-size:13px;
             "
         >
-            DeployHub will continue monitoring your deployment lifecycle
-            and notify you about important project events.
+            DeployHub is monitoring your deployment lifecycle and will notify you about important project events.
         </p>
 
     </div>
