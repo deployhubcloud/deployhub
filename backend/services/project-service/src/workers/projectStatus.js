@@ -22,11 +22,45 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
         const data = JSON.parse(message);
         console.log('Project status received', data);
 
-        const { projectId, projectstatus, userId, userName, projectName, buildId } = data;
+        const { projectId, projectstatus, userId, userName, projectName, buildId, containerId, dockerImage } = data;
 
-        await Project.findByIdAndUpdate(projectId, {
-            status: projectstatus
-        })
+        if (projectstatus === 'building') {
+            await Project.findByIdAndUpdate(projectId, {
+                $set: {
+                    status: projectstatus,
+                    buildId
+                },
+                $inc: {
+                    totalBuilds: 1
+                },
+            });
+        }
+
+        if (projectstatus === 'running') {
+            await Project.findByIdAndUpdate(projectId, {
+                $set: {
+                    status: projectstatus,
+                    containerId,
+                }
+            });
+
+            if (dockerImage) {
+                await Project.findByIdAndUpdate(projectId, {
+                    $set: {
+                        dockerImage
+                    }
+                });
+            }
+        }
+
+
+        if (projectstatus === 'failed') {
+            await Project.findByIdAndUpdate(projectId, {
+                $set: {
+                    status: projectstatus
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Error while handling project status notification', error?.message || error);
