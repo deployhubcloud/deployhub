@@ -1,21 +1,371 @@
-import Worker from 'bullmq';
+import { Worker } from 'bullmq';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { connection } from '../utils/connection.js';
-import { getRedis } from '../core/redis/client.js';
+import { GitCloner } from '../../../../shared/git/gitrepoCloner.js';
+import { getProjectDataById } from '../../../../shared/utils/getProjectDataById.js';
+import axios from 'axios';
+import { buildEnv } from '../lib/env.js';
+import Docker from 'dockerode'
+import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
+import { Build } from '../models/build.model.js';
+import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthubAccesstoken.js';
+import { fetchCommitSha } from '../../../../shared/utils/fetchCommitSha.js';
+import Redis from 'ioredis';
+import { deployQueue } from '../utils/queues/queues.js';
+import fs from 'fs';
+import path from 'path';
+import { generateDockerfile } from '../../../../shared/docker/generateDockerfile.js';
+import tar from "tar-fs";
+import { buildDockerImage } from '../../../../shared/docker/buildImage.js';
+import { dockerProgress } from '../../../../shared/docker/dockerProgress.js';
+import { BuildLogger } from '../utils/buildLogger.js';
+import { pushDockerImage } from '../../../../shared/docker/pushImage.js';
+import { createZip } from '../utils/createZip.js';
+import { uplaodStatisBuildZipFile } from '../utils/minio/minio.js';
+import * as maintar from 'tar';
 
-const redis = await getRedis();
+const docker = new Docker()
+
+const redisPubSub = new RedisPubSub(
+    Redis,
+    {
+        host: buildEnv.REDIS_HOST,
+        port: buildEnv.REDIS_PORT,
+        password: buildEnv.REDIS_PASSWORD,
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: true,
+        lazyConnect: true
+    }
+);
+
+
+
+const queueProjectDeploy = async (projectId, projectplan, userId, imageName) => {
+    await deployQueue.add(QUEUE_NAMES.DEPLOY, {
+        projectId: projectId,
+        plan: projectplan,
+        userId: userId,
+        imageName: imageName
+    });
+};
+
+
+// ye base repo folder path hai
+const baserepopath = path.resolve('builds');
+
+// ye docker ka credentials hai
+const dockerUsername = buildEnv.DOCKER_USERNAME;
+const dockerPassword = buildEnv.DOCKER_PASSWORD;
 
 export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
+
+    // data from the queue
+    const { projectId, plan, userId } = job.data;
+
+
+    let project;
+    let newBuild;
+    let imageName;
+
+    // ye buildfilepath ka pura folder path hai
+    let buildFilePath;
+
+    let logsUrl;
+    let logger;
+
+    let startedAt;
+    let finishedAt;
+
     try {
 
-        // data from the queue
-        const { projectId, plan } = job.data;
 
-        
+        // ye startat means abhi ka time jab start hua ahi
+        startedAt = new Date()
+
+        // get the project details from service
+        project = await getProjectDataById(axios, projectId, buildEnv.PROJECT_SERVICE_URL, buildEnv.INTERNAL_SECRET, buildEnv.INTERNAL_SERVICE_TALKING_SECRET);
+
+        // here also fetch token from serive
+        const userGithubAcessToken = await getUserGithubAccessToken(axios, buildEnv.IDENTITY_SERVICE_URL, userId, buildEnv.INTERNAL_SERVICE_TALKING_SECRET, buildEnv.INTERNAL_SECRET)
+
+        // here fetch commitsha
+        const commitSha = await fetchCommitSha(project.repoUrl, project.branch, userGithubAcessToken)
+
+        // here create data for proejt i f not exists
+        newBuild = await Build.create({
+            project: project._id,
+            commitSha: commitSha,
+            status: "pending",
+            startedAt: new Date()
+        })
+
+        logger = new BuildLogger(newBuild._id, projectId)
+        await logger.start()
+
+        // here i send pub/sub of project status so every service listen and work
+        await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
+            projectId: project._id,
+            projectstatus: "building",
+            userId: userId,
+            projectName: project.name,
+            buildId: newBuild._id
+        }));
 
 
+        // here i make docker image name
+        imageName = `${dockerUsername}/${projectId.toString().toLowerCase()}:${newBuild._id.toString().toLowerCase()}`;
+
+
+        // base repo path
+        if (!fs.existsSync(baserepopath)) {
+            fs.mkdirSync(baserepopath, { recursive: true });
+        }
+
+        // build filepath
+        buildFilePath = path.resolve(baserepopath, newBuild._id.toString());
+
+        // check build se bahar na jaye user
+        if (!buildFilePath.startsWith(baserepopath)) {
+            throw new Error('Invalid build path');
+        }
+
+        // yeha pe agar buildFilePath nhi hai to create ho jayega
+        if (!fs.existsSync(buildFilePath)) fs.mkdirSync(buildFilePath, { recursive: true });
+
+
+        // yeha pe docker file likha ja raha hai , based on proejct type
+        const dockerfileContent =
+            generateDockerfile({
+                projectType: project.type,
+                version: "24"
+            });
+
+
+        logger.write(`cloning repo ${project.repoUrl}`)
+
+        await GitCloner.clone({ repoUrl: project.repoUrl, branch: project.branch, targetPath: buildFilePath, githubToken: userGithubAcessToken, folderName: project.rootDirectory })
+
+        logger.write(`repo clone SuccessFully`)
+
+        logger.write('build started')
+
+        // and yeha pe jo buildfilepath hai uske dockerfike copy ho raha hai
+        await fs.writeFileSync(
+            path.join(buildFilePath, "Dockerfile"),
+            dockerfileContent
+        );
+
+        const buildContext = tar.pack(buildFilePath);
+
+        const stream = await buildDockerImage({
+            docker,
+            buildContext,
+            imageName,
+            dockerFile: "Dockerfile",
+            buildArgs: {}
+        });
+
+        await dockerProgress(
+            docker,
+            stream,
+            logger
+        )
+
+        if (project.type === 'static') {
+
+            const container = await docker.createContainer({
+                Image: imageName
+            });
+
+            const archiveStream = await container.getArchive({
+                path: `/app/${project.publishDir}`
+            })
+
+            const tarFile = path.join(
+                buildFilePath,
+                'artifact.tar'
+            );
+
+            await new Promise((resolve, reject) => {
+
+                const writeStream =
+                    fs.createWriteStream(tarFile);
+
+                archiveStream.pipe(writeStream);
+
+                writeStream.on('finish', resolve);
+                writeStream.on('error', reject);
+            });
+
+            const extractedDir = path.join(
+                buildFilePath,
+                'publish'
+            );
+
+            fs.mkdirSync(
+                extractedDir,
+                { recursive: true }
+            );
+
+            await maintar.extract({
+                file: tarFile,
+                cwd: extractedDir
+            });
+
+            logger.write('Making zip of your build folder')
+
+            const zipPath = path.join(
+                buildFilePath,
+                'build.zip'
+            );
+
+            await createZip(
+                path.join(
+                    extractedDir,
+                    project.publishDir
+                ),
+                zipPath
+            );
+
+            logger.write('zip make successfully')
+
+            const zipBuffer = fs.readFileSync(zipPath);
+
+            logger.write('uploading your zip...')
+
+            await uplaodStatisBuildZipFile(
+                `buildzip/${projectId}/${newBuild._id}.zip`,
+                zipBuffer
+            );
+
+            logger.write('zip uplaod successfully')
+
+            await container.remove({
+                force: true
+            });
+
+        } else {
+
+            const pushStream = await pushDockerImage({
+                docker,
+                imageName,
+                username: dockerUsername,
+                password: dockerPassword
+            });
+
+            await dockerProgress(
+                docker,
+                pushStream,
+                logger
+            );
+
+            newBuild.dockerImage = imageName
+            await newBuild.save({ validateBeforeSave: false })
+
+        }
+
+
+        await docker.getImage(imageName).remove({
+            force: true
+        });
+
+
+        const buildlogUrl = await logger.finish("success");
+
+        logsUrl = buildlogUrl
+
+        finishedAt = new Date()
+
+        newBuild.startedAt = startedAt;
+        newBuild.finishedAt = finishedAt;
+        newBuild.logUrl = logsUrl
+        newBuild.status = 'success'
+
+        newBuild.save({ validateBeforeSave: false })
+
+        return {
+            projectId: project._id,
+            projectName: project.name,
+            buildId: newBuild._id,
+            logsUrl,
+            userId,
+            plan,
+            serviceType: project.type,
+            imageName
+        };
 
     } catch (error) {
-        throw error.message;
+
+        if (logger) {
+            const buildlogUrl =
+                await logger.finish("failed");
+
+            if (newBuild) {
+                newBuild.status = "failed";
+                newBuild.logUrl = buildlogUrl;
+                newBuild.startedAt = startedAt;
+                newBuild.finishedAt = new Date();
+
+                await newBuild.save({
+                    validateBeforeSave: false
+                });
+            }
+
+            if (project) {
+                await redisPubSub.produce(
+                    'deployhub:users:build:status',
+                    JSON.stringify({
+                        projectId: project._id,
+                        projectstatus: "failed",
+                        userId,
+                        projectName: project.name,
+                        buildId: newBuild?._id,
+                        logsUrl: buildlogUrl,
+                        serviceType: project.type
+                    })
+                );
+            }
+        }
+
+        throw error;
+    } finally {
+        if (
+            buildFilePath &&
+            fs.existsSync(buildFilePath)
+        ) {
+            fs.rmSync(buildFilePath, {
+                recursive: true,
+                force: true
+            });
+        }
+
+
     }
+}, {
+    connection: connection,
+    concurrency: 5
+})
+
+buildWorker.on("completed", async (job, result) => {
+
+    const { projectId, plan, userId } = job.data;
+
+    // here i send pub/sub of project status so every service listen and work
+    await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
+        projectId: result.projectId,
+        projectstatus: "success",
+        userId: result.userId,
+        projectName: result.projectName,
+        buildId: result.buildId,
+        logsUrl: result.logsUrl,
+        serviceType: result.serviceType
+    }));
+
+    await queueProjectDeploy(projectId, plan, userId, result?.imageName)
+
+    console.log('job completed for build')
+})
+
+buildWorker.on("failed", async (job) => {
+    console.log('build failed')
 })
