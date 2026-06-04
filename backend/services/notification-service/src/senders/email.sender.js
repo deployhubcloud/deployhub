@@ -19,7 +19,6 @@ export const sendEmail = async (toOrOptions, subject, html) => {
             subject: mail.subject,
             html: mail.html,
         });
-        console.log("Email sent: ", info.messageId);
     } catch (error) {
         console.error("Error sending email: ", error);
         throw error;
