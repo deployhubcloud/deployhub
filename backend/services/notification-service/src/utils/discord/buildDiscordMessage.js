@@ -42,8 +42,15 @@ export const buildDiscordMessage = ({
 
     let extra = "";
 
-    if (status === "build-failed" && logsUrl) {
-        extra += `\n📄 Logs: ${logsUrl}`;
+    if (
+        (
+            status === "build-success" ||
+            status === "build-failed" ||
+            status === "deploy-success"
+        ) &&
+        logsUrl
+    ) {
+        extra += `\n📄 Build Logs: ${logsUrl}`;
     }
 
     if (status === "deploy-success") {
