@@ -37,6 +37,24 @@ app.use(createInternalAUthMiddleware({
 }));
 
 
+
+// ye route other microsrvice liye hai taki wo data fetch akr sake
+import forOtherServices from "./routes/forOtherSrvice.js";
+app.use('/for-other-service', forOtherServices)
+
+
+
+// ye user chec kakrne ke liye hai means agar user routes pe req ja raha hai jab req.user hona chiaye
+import userContext from "../../../shared/middlewares/userContext.js";
+app.use(userContext);
+
+
+
+// routes
+import buildRouter from "./routes/router.js"
+app.use('/', buildRouter);
+
+
 export default async function startApp(port, service_name) {
     await connectDb();
     await initRabbitMQ();
