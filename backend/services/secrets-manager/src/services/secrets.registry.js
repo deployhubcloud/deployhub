@@ -80,7 +80,7 @@ export function getSecretsForService(serviceName) {
 
     'deploy-service': {
       PORT: env.DEPLOY_SERVICE_PORT,
-      MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
+      MONGODB_URI: env.DEPLOY_SERVICE_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
@@ -102,7 +102,7 @@ export function getSecretsForService(serviceName) {
 
     'domain-service': {
       PORT: env.DOMAIN_SERVICE_PORT,
-      MONGODB_URI: env.PROJECT_SERVICE_MONGODB_URI,
+      MONGODB_URI: env.DOMAIN_SERVICE_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
