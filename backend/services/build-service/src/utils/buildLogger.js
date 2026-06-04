@@ -40,6 +40,25 @@ export class BuildLogger {
 
         if (!clean) return
 
+        const ignorePatterns = [
+            /^Step \d+\//,
+            /^ ---> /,
+            /^Successfully built/,
+            /^Successfully tagged/,
+            /^Removing intermediate container/,
+            /^npm notice/,
+            /^npm fund/,
+            /^\s*$/
+        ]
+
+        const shouldIgnore = ignorePatterns.some(
+            pattern => pattern.test(clean)
+        )
+
+        if (shouldIgnore) {
+            return
+        }
+
         const ts = new Date().toISOString().slice(11, 23)
         const line = `[${ts}] ${clean}`
 
@@ -72,7 +91,7 @@ export class BuildLogger {
         )
 
         const objectName =
-            `builds/${this.projectId}/${this.buildId}.log`
+            `buildsLogsUrl/${this.projectId}/${this.buildId}.log`
 
         let logUrl = null
 
