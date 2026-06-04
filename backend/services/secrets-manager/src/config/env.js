@@ -56,6 +56,7 @@ const schema = z.object({
   PROJECT_SERVICE_MONGODB_URI: z.string().min(1),
   MONITORING_MONGODB_URI: z.string().min(1),
   NOTIFICATION_MONGODB_URI: z.string().min(1),
+  DOMAIN_SERVICE_MONGODB_URI: z.string(),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
