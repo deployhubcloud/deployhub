@@ -12,11 +12,11 @@ export const fetchBuildDataByIdForOtherServiceControllers = async (req, res) => 
             })
         }
 
-        return buildData;
+        return res.status(200).json(buildData);
 
     } catch (error) {
         return res.status(500).json({
             message: "Internal Server Error"
         })
     }
-}   
+}
