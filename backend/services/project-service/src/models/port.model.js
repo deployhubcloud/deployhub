@@ -6,6 +6,11 @@ const PortSchema = new mongoose.Schema({
         type: Number,
         required: true,
         unique: true
+    },
+    projectId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Project",
+        required: true
     }
 
 }, {
