@@ -42,7 +42,7 @@ export async function ensureBucket() {
 
 export function buildZipUrl(objectName) {
   const publicHost = DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? DEPLOY_SERVICE_ENV.MINIO_PUBLIC_HOST : "localhost:9000"
-  return ` ${DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? "https" : "http"}://${publicHost}/${BUCKET}/${objectName}`
+  return `${DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? "https" : "http"}://${publicHost}/${BUCKET}/${objectName}`
 }
 
 export default client
