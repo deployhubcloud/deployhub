@@ -14,6 +14,7 @@ import os from 'os';
 import { pipeline } from 'stream/promises';
 import tar from 'tar-stream';
 import Docker from 'dockerode';
+import { reloadNginx } from '../../../../shared/nginx/reloadNginx.js';
 
 const docker = new Docker();
 
@@ -168,7 +169,17 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 buildsZipUrl,
                 staticRoot,
             });
+
+            await DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? reloadNginx() : ""
+
+
+        } else {
+
+            
+
         }
+
+
 
 
 
