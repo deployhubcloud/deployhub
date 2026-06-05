@@ -237,7 +237,6 @@ export const createProjectForPlan = async (userId, body, {
         ? null
         : normalized.subdomain;
 
-    const assignedPort = await allocatePort(redisclient, userId, Port);
     const now = new Date();
 
     const project = await Project.create({
@@ -252,7 +251,6 @@ export const createProjectForPlan = async (userId, body, {
         publishDir: normalized.publishDir,
         startCommand: normalized.startCommand,
         port: normalized.port,
-        assignedPort,
         networkName,
         subdomain: finalSubdomain,
         env: normalizeEnv(normalized.env),
@@ -271,6 +269,10 @@ export const createProjectForPlan = async (userId, body, {
         notifications: normalizeNotifications(normalized.notifications),
     });
 
+    const assignedPort = await allocatePort(redisclient, project._id, Port);
+
+
+    project.assignedPort = assignedPort;
     project.dockerContainerName = dockerContainerName(project._id);
     await project.save({ validateBeforeSave: false });
 
