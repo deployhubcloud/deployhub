@@ -11,7 +11,7 @@ export const getUserGithubAccessToken = async (axios, identityServiceUrl, userId
             }
         );
 
-        return response.data.githubAccessToken;
+        return response.data.accessToken;
 
     } catch (error) {
         console.error("Error fetching GitHub access token:", error);
