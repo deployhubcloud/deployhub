@@ -41,7 +41,7 @@ const redisPubSub = new RedisPubSub(
 
 
 const queueProjectDeploy = async (projectId, projectplan, userId, buildId, firstTime) => {
-    await deployQueue.add(QUEUE_NAMES.DEPLOY, {
+    await deployQueue.add('deploy', {
         projectId: projectId,
         plan: projectplan,
         userId: userId,
@@ -362,7 +362,7 @@ buildWorker.on("completed", async (job, result) => {
         serviceType: result.serviceType
     }));
 
-    await queueProjectDeploy({ projectId, projectplan: plan, userId, buildId: result.buildId, firstTime })
+    await queueProjectDeploy(projectId, plan, userId, result.buildId, firstTime)
 
     console.log('job completed for build')
 })
