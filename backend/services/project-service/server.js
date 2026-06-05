@@ -10,6 +10,6 @@ await startup(project_env.PORT)
 
 await import('./src/workers/projectStatus.js')
 
-
+const { Port } = await import("./src/models/port.model.js")
 const { cachePortWhenServerStart } = await import("./src/utils/cachePortWhenServerStart.js")
-await cachePortWhenServerStart
+await cachePortWhenServerStart(Port)
