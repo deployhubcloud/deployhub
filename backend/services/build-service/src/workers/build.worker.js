@@ -40,12 +40,13 @@ const redisPubSub = new RedisPubSub(
 
 
 
-const queueProjectDeploy = async (projectId, projectplan, userId, buildId) => {
+const queueProjectDeploy = async (projectId, projectplan, userId, buildId, firstTime) => {
     await deployQueue.add(QUEUE_NAMES.DEPLOY, {
         projectId: projectId,
         plan: projectplan,
         userId: userId,
-        buildId: buildId
+        buildId: buildId,
+        firstTime: firstTime
     });
 };
 
@@ -348,7 +349,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
 
 buildWorker.on("completed", async (job, result) => {
 
-    const { projectId, plan, userId } = job.data;
+    const { projectId, plan, userId, firstTime } = job.data;
 
     // here i send pub/sub of project status so every service listen and work
     await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
@@ -361,7 +362,7 @@ buildWorker.on("completed", async (job, result) => {
         serviceType: result.serviceType
     }));
 
-    await queueProjectDeploy({ projectId, projectplan: plan, userId, buildId: result.buildId })
+    await queueProjectDeploy({ projectId, projectplan: plan, userId, buildId: result.buildId, firstTime })
 
     console.log('job completed for build')
 })
