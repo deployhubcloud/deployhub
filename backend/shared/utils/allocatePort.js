@@ -21,7 +21,8 @@ export const allocatePort = async (redisclient, projectId, portModel) => {
     await redisclient.set(`deployhub:port:${port}`, projectId.toString());
 
     await portModel.create({
-        port
+        port,
+        projectId
     });
 
     return port;
