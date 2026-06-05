@@ -158,7 +158,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
         // Static
         if (projectData.type === 'static') {
-            const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/userdata/docker/static' : 'G:/deploy-micro/docker/rabbitmq/static';
+            const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/userdata/docker/data/static' : 'G:/deploy-micro/docker/rabbitmq/docker/data/static';
 
             const buildsZipUrl = await buildZipUrl(`buildzip/${projectId}/${buildId}.zip`);
 
