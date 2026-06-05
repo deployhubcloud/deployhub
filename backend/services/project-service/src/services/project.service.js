@@ -13,6 +13,7 @@ import { buildQueue } from '../utils/queues.js';
 import { v4 as uuidv4 } from 'uuid';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { randomUUID } from "crypto";
+import { Port } from '../models/port.model.js'
 
 
 
@@ -235,7 +236,7 @@ export const createProjectForPlan = async (userId, body, {
         ? null
         : normalized.subdomain;
 
-    const assignedPort = await allocatePort(redisclient, userId);
+    const assignedPort = await allocatePort(redisclient, userId, Port);
     const now = new Date();
 
     const project = await Project.create({
