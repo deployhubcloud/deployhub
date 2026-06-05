@@ -29,7 +29,6 @@ export const fetchCommitSha = async (repoUrl, branch, githubAccessToken) => {
         }
 
         const data = await res.json();
-        console.log(data)
         return data?.object?.sha || null;
     } catch (err) {
         console.error("fetchCommitSha failed:", err);
