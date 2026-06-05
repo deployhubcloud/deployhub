@@ -92,12 +92,14 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         // here fetch commitsha
         const commitSha = await fetchCommitSha(project.repoUrl, project.branch, userGithubAcessToken)
 
+
+
         // here create data for proejt i f not exists
         newBuild = await Build.create({
             project: project._id,
             commitSha: commitSha,
             status: "pending",
-            startedAt: new Date()
+            startedAt: new Date(),
         })
 
         logger = new BuildLogger(newBuild._id, projectId)
@@ -109,7 +111,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             projectstatus: "building",
             userId: userId,
             projectName: project.name,
-            buildId: newBuild._id
+            buildId: newBuild._id,
         }));
 
 
