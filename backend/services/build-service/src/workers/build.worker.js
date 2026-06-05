@@ -282,7 +282,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         newBuild.logUrl = logsUrl
         newBuild.status = 'success'
 
-        newBuild.save({ validateBeforeSave: false })
+        await newBuild.save({ validateBeforeSave: false })
 
         return {
             projectId: project._id,
