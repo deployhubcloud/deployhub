@@ -11,3 +11,6 @@ await startApp(DEPLOY_SERVICE_ENV.PORT, DEPLOY_SERVICE_ENV.SERVICE_NAME);
 
 const { ensureBucket } = await import("./utils/minio/minio.js");
 ensureBucket()
+
+
+await import("./workers/DeployWorker.js")
