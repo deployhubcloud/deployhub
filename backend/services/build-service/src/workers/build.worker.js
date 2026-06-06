@@ -23,6 +23,9 @@ import { pushDockerImage } from '../../../../shared/docker/pushImage.js';
 import { createZip } from '../utils/createZip.js';
 import { uplaodStatisBuildZipFile } from '../utils/minio/minio.js';
 import * as maintar from 'tar';
+import { typeLangVersionSelector } from '../utils/languageVersion.js';
+import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
+
 
 const docker = new Docker()
 
@@ -137,28 +140,31 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
 
 
         let dynamicBuildArgs = {};
+
         if (project.type === 'static') {
             let viteEnvContent = '';
 
-            if (project.env) {
-                for (const [key, value] of Object.entries(projectdata.env)) {
-                    viteEnvContent += `${key}=${value}\n`;
-                }
+            for (const envVar of project.env || []) {
+                const value = decrypt(envVar.encryptedValue);
+
+                viteEnvContent += `${envVar.key}=${value}\n`;
             }
+
             dynamicBuildArgs.VITE_ENV_CONTENT = viteEnvContent;
         }
 
-
+        const lanVersion = typeLangVersionSelector(project.type, project.version)
+        console.log('ang ver', lanVersion)
 
         // yeha pe docker file likha ja raha hai , based on proejct type
         const dockerfileContent =
             generateDockerfile({
                 projectType: project.type,
-                version: "24",
+                version: project.version,
                 buildCommand: project?.buildCommand,
                 installCommand: 'npm ci',
                 startCommand: project?.startCommand
-            });
+            }); 
 
 
         logger.write(`cloning repo ${project.repoUrl}`)
@@ -175,6 +181,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             dockerfileContent
         );
 
+        await checkAndPullImage(docker, lanVersion)
+
         const buildContext = tar.pack(buildFilePath);
 
         const stream = await buildDockerImage({
@@ -182,9 +190,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             buildContext,
             imageName,
             dockerFile: "Dockerfile",
-            buildArgs: {
-                VITE_ENV_CONTENT: dynamicBuildArgs
-            }
+            buildArgs: dynamicBuildArgs
         });
 
         await dockerProgress(
@@ -317,6 +323,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         };
 
     } catch (error) {
+
+        console.log(error)
 
         if (logger) {
             const buildlogUrl =
