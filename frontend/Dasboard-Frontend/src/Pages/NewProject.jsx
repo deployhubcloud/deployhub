@@ -35,6 +35,35 @@ const TYPE_LABELS = {
   java: "Java",
 };
 
+// Docker-available versions per runtime
+const RUNTIME_VERSIONS = {
+  static: {
+    label: "Node.js (build)",
+    versions: ["18", "20", "22"],
+    default: "20",
+  },
+  node: {
+    label: "Node.js",
+    versions: ["18", "20", "22"],
+    default: "20",
+  },
+  go: {
+    label: "Go",
+    versions: ["1.21", "1.22", "1.23"],
+    default: "1.22",
+  },
+  python: {
+    label: "Python",
+    versions: ["3.10", "3.11", "3.12"],
+    default: "3.11",
+  },
+  java: {
+    label: "Java",
+    versions: ["17", "21"],
+    default: "21",
+  },
+};
+
 const MONTHS = [1, 3, 6, 12];
 const REPO_PAGE_SIZE = 12;
 
@@ -76,6 +105,7 @@ function buildPayload(form, plan, months, projectType, selectedRepo) {
     months,
     projectName: form.projectName.trim(),
     projectType,
+    version: form.runtimeVersion,
     isMicroservice,
     repoUrl: form.repoUrl.trim(),
     branch: form.branch.trim(),
@@ -93,7 +123,6 @@ function buildPayload(form, plan, months, projectType, selectedRepo) {
       : { startCommand: form.startCommand.trim(), port: Number(form.port) }),
   };
 
-  // If a GitHub repo was selected, attach additional metadata
   if (selectedRepo) {
     payload.repoMetadata = {
       id: selectedRepo.id,
@@ -134,6 +163,7 @@ export default function NewProject() {
     repoUrl: "",
     branch: "main",
     rootDirectory: ".",
+    runtimeVersion: RUNTIME_VERSIONS[selectedType].default,
     isMicroservice: false,
     subdomain: "",
     buildCommand: "npm run build",
@@ -152,10 +182,18 @@ export default function NewProject() {
     telegramChatId: "",
   });
 
+  // Reset runtimeVersion when project type changes (via URL param)
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      runtimeVersion: RUNTIME_VERSIONS[selectedType].default,
+    }));
+  }, [selectedType]);
+
   // Fetch GitHub repos if user is connected via GitHub
   useEffect(() => {
     const fetchRepos = async () => {
-      if (!user || user.provider !== 'github') return;
+      if (!user || user.provider !== "github") return;
       setLoadingRepos(true);
       setRepoError("");
       try {
@@ -176,23 +214,24 @@ export default function NewProject() {
   const isStatic = selectedType === "static";
   const microserviceEnabled = !isStatic && form.isMicroservice;
   const isPaid = plan !== "free";
-  const isGitHubUser = user && user.provider === 'github';
+  const isGitHubUser = user && user.provider === "github";
+  const runtimeConfig = RUNTIME_VERSIONS[selectedType];
+
   const filteredRepos = useMemo(() => {
     const query = repoQuery.trim().toLowerCase();
     if (!query) return repos;
-    return repos
-      .filter((repo) => {
-        const searchable = `${repo.full_name || ""} ${repo.description || ""}`.toLowerCase();
-        return searchable.includes(query);
-      });
+    return repos.filter((repo) => {
+      const searchable = `${repo.full_name || ""} ${repo.description || ""}`.toLowerCase();
+      return searchable.includes(query);
+    });
   }, [repoQuery, repos]);
+
   const visibleRepos = useMemo(
     () => filteredRepos.slice(0, visibleRepoCount),
     [filteredRepos, visibleRepoCount]
   );
   const hasMoreRepos = visibleRepoCount < filteredRepos.length;
 
-  // Build payload with repo metadata if a GitHub repo was selected
   const previewPayload = useMemo(
     () => buildPayload(form, plan, months, selectedType, selectedRepo),
     [form, months, plan, selectedType, selectedRepo]
@@ -266,6 +305,7 @@ export default function NewProject() {
     if (!form.projectName.trim()) return "Project name is required.";
     if (!form.repoUrl.trim()) return "Repository URL is required.";
     if (!form.branch.trim()) return "Branch is required.";
+    if (!form.runtimeVersion) return "Runtime version is required.";
     if (!allowedTypes.includes(selectedType)) return `${PLAN_OPTIONS[plan].name} does not support ${TYPE_LABELS[selectedType]}.`;
     if (isStatic && !form.buildCommand.trim()) return "Build command is required for static projects.";
     if (isStatic && !form.publishDir.trim()) return "Publish directory is required for static projects.";
@@ -338,8 +378,10 @@ export default function NewProject() {
 
   if (!TYPE_LABELS[normalizedType]) return <Navigate to="/projects/new/static" replace />;
 
-  const inputClass = "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all";
-  const repoActionClass = "text-xs font-medium text-violet-300 hover:text-violet-200 focus:outline-none focus:ring-2 focus:ring-violet-500/30";
+  const inputClass =
+    "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all";
+  const repoActionClass =
+    "text-xs font-medium text-violet-300 hover:text-violet-200 focus:outline-none focus:ring-2 focus:ring-violet-500/30";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b0f1c] to-[#05070f] text-white">
@@ -350,7 +392,9 @@ export default function NewProject() {
             <Link to="/projects" className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition">
               ← Back to projects
             </Link>
-            <h1 className="mt-3 text-3xl font-bold bg-gradient-to-r from-white to-violet-300 bg-clip-text text-transparent">Deploy new project</h1>
+            <h1 className="mt-3 text-3xl font-bold bg-gradient-to-r from-white to-violet-300 bg-clip-text text-transparent">
+              Deploy new project
+            </h1>
             <p className="mt-1 text-gray-400">Connect your repository and launch in seconds</p>
           </div>
           {created && (
@@ -363,7 +407,7 @@ export default function NewProject() {
         </div>
 
         <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_340px]">
-          {/* Left column: Plans + Form */}
+          {/* Left column */}
           <div className="space-y-8">
             {/* Plan cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -375,8 +419,8 @@ export default function NewProject() {
                     key={key}
                     onClick={() => selectPlan(key)}
                     className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${selected
-                      ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
-                      : "border-white/10 bg-white/5 hover:bg-white/10"
+                        ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
+                        : "border-white/10 bg-white/5 hover:bg-white/10"
                       }`}
                   >
                     <div className="flex items-start justify-between">
@@ -397,12 +441,16 @@ export default function NewProject() {
                     </div>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {item.types.map((t) => (
-                        <span key={t} className="rounded-full bg-white/10 px-2 py-0.5 text-xs">{TYPE_LABELS[t]}</span>
+                        <span key={t} className="rounded-full bg-white/10 px-2 py-0.5 text-xs">
+                          {TYPE_LABELS[t]}
+                        </span>
                       ))}
                     </div>
                     <ul className="mt-3 space-y-1 text-sm text-gray-300">
                       {item.features.map((f) => (
-                        <li key={f} className="flex items-center gap-1.5">• {f}</li>
+                        <li key={f} className="flex items-center gap-1.5">
+                          • {f}
+                        </li>
                       ))}
                     </ul>
                   </button>
@@ -415,10 +463,49 @@ export default function NewProject() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Project name</label>
-                  <input type="text" value={form.projectName} onChange={(e) => setField("projectName", e.target.value)} className={inputClass} placeholder="my-app" />
+                  <input
+                    type="text"
+                    value={form.projectName}
+                    onChange={(e) => setField("projectName", e.target.value)}
+                    className={inputClass}
+                    placeholder="my-app"
+                  />
                 </div>
 
-                {/* Repository selection – with loading, error, and manual toggle */}
+                {/* ── Runtime Version Selector ── */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">
+                    {runtimeConfig.label} version
+                  </label>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {runtimeConfig.versions.map((v) => {
+                      const active = form.runtimeVersion === v;
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setField("runtimeVersion", v)}
+                          className={`rounded-lg border px-3 py-1.5 text-sm font-mono font-semibold transition-all duration-150 ${active
+                              ? "border-violet-500 bg-violet-500/20 text-violet-200 shadow shadow-violet-500/20"
+                              : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                            }`}
+                        >
+                          {v}
+                          {v === runtimeConfig.default && (
+                            <span className="ml-1.5 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-sans text-emerald-300">
+                              recommended
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Docker image: <span className="font-mono text-gray-400">{selectedType === "static" || selectedType === "node" ? `node:${form.runtimeVersion}-alpine` : selectedType === "go" ? `golang:${form.runtimeVersion}-alpine` : selectedType === "python" ? `python:${form.runtimeVersion}-slim` : `eclipse-temurin:${form.runtimeVersion}-jdk-alpine`}</span>
+                  </p>
+                </div>
+
+                {/* Repository selection */}
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-gray-300">Repository</label>
                   {isGitHubUser && !useManualRepo ? (
@@ -491,7 +578,10 @@ export default function NewProject() {
                             {hasMoreRepos && <span>Scroll to load more</span>}
                           </div>
 
-                          <div onScroll={handleRepoListScroll} className="mt-2 grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                          <div
+                            onScroll={handleRepoListScroll}
+                            className="mt-2 grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2"
+                          >
                             {visibleRepos.map((repo) => {
                               const selected = selectedRepo?.id === repo.id;
                               return (
@@ -499,15 +589,19 @@ export default function NewProject() {
                                   key={repo.id}
                                   type="button"
                                   onClick={() => handleRepoSelect(repo)}
-                                  className={`min-w-0 rounded-lg border p-3 text-left transition ${
-                                    selected
+                                  className={`min-w-0 rounded-lg border p-3 text-left transition ${selected
                                       ? "border-violet-400 bg-violet-500/15"
                                       : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex min-w-0 items-center justify-between gap-2">
                                     <span className="truncate text-sm font-semibold text-white">{repo.full_name}</span>
-                                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${repo.private ? "bg-amber-400/15 text-amber-200" : "bg-cyan-400/15 text-cyan-200"}`}>
+                                    <span
+                                      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${repo.private
+                                          ? "bg-amber-400/15 text-amber-200"
+                                          : "bg-cyan-400/15 text-cyan-200"
+                                        }`}
+                                    >
                                       {repo.private ? "Private" : "Public"}
                                     </span>
                                   </div>
@@ -519,12 +613,18 @@ export default function NewProject() {
                             })}
                           </div>
                           {filteredRepos.length === 0 && (
-                            <p className="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">No repository matches your search.</p>
+                            <p className="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">
+                              No repository matches your search.
+                            </p>
                           )}
                           {hasMoreRepos && filteredRepos.length > 0 && (
                             <button
                               type="button"
-                              onClick={() => setVisibleRepoCount((count) => Math.min(count + REPO_PAGE_SIZE, filteredRepos.length))}
+                              onClick={() =>
+                                setVisibleRepoCount((count) =>
+                                  Math.min(count + REPO_PAGE_SIZE, filteredRepos.length)
+                                )
+                              }
                               className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-violet-200 transition hover:bg-white/10"
                             >
                               Load more repositories
@@ -568,60 +668,152 @@ export default function NewProject() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Branch</label>
-                  <input type="text" value={form.branch} onChange={(e) => setField("branch", e.target.value)} className={inputClass} placeholder="main" />
+                  <input
+                    type="text"
+                    value={form.branch}
+                    onChange={(e) => setField("branch", e.target.value)}
+                    className={inputClass}
+                    placeholder="main"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Root directory</label>
-                  <input type="text" value={form.rootDirectory} onChange={(e) => setField("rootDirectory", e.target.value)} className={inputClass} placeholder="." />
+                  <input
+                    type="text"
+                    value={form.rootDirectory}
+                    onChange={(e) => setField("rootDirectory", e.target.value)}
+                    className={inputClass}
+                    placeholder="."
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Subdomain</label>
-                  <input type="text" value={form.subdomain} onChange={(e) => setField("subdomain", e.target.value.toLowerCase())} disabled={microserviceEnabled} required={!microserviceEnabled} className={inputClass} placeholder="my-app" />
+                  <input
+                    type="text"
+                    value={form.subdomain}
+                    onChange={(e) => setField("subdomain", e.target.value.toLowerCase())}
+                    disabled={microserviceEnabled}
+                    required={!microserviceEnabled}
+                    className={inputClass}
+                    placeholder="my-app"
+                  />
                 </div>
                 {!isStatic && (
                   <div className="flex items-end">
-                    <button type="button" onClick={() => setMicroserviceMode(!microserviceEnabled)} className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 transition ${microserviceEnabled ? "border-purple-500 bg-purple-500/20" : "border-white/10 bg-white/5"}`}>
+                    <button
+                      type="button"
+                      onClick={() => setMicroserviceMode(!microserviceEnabled)}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 transition ${microserviceEnabled ? "border-purple-500 bg-purple-500/20" : "border-white/10 bg-white/5"
+                        }`}
+                    >
                       <span>Microservice mode</span>
-                      <div className={`h-5 w-9 rounded-full transition ${microserviceEnabled ? "bg-purple-500" : "bg-white/30"}`}>
-                        <div className={`h-5 w-5 rounded-full bg-white transition-transform ${microserviceEnabled ? "translate-x-4" : "translate-x-0"}`} />
+                      <div
+                        className={`h-5 w-9 rounded-full transition ${microserviceEnabled ? "bg-purple-500" : "bg-white/30"
+                          }`}
+                      >
+                        <div
+                          className={`h-5 w-5 rounded-full bg-white transition-transform ${microserviceEnabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                        />
                       </div>
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Build / start commands – unchanged */}
+              {/* Build / start commands */}
               <div className="grid gap-5 sm:grid-cols-2">
                 {isStatic ? (
                   <>
-                    <div><label className="block text-sm font-medium text-gray-300">Build command</label><input type="text" value={form.buildCommand} onChange={(e) => setField("buildCommand", e.target.value)} className={inputClass} /></div>
-                    <div><label className="block text-sm font-medium text-gray-300">Publish directory</label><input type="text" value={form.publishDir} onChange={(e) => setField("publishDir", e.target.value)} className={inputClass} /></div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300">Build command</label>
+                      <input
+                        type="text"
+                        value={form.buildCommand}
+                        onChange={(e) => setField("buildCommand", e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300">Publish directory</label>
+                      <input
+                        type="text"
+                        value={form.publishDir}
+                        onChange={(e) => setField("publishDir", e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
                   </>
                 ) : (
                   <>
-                    <div><label className="block text-sm font-medium text-gray-300">Start command</label><input type="text" value={form.startCommand} onChange={(e) => setField("startCommand", e.target.value)} className={inputClass} /></div>
-                    <div><label className="block text-sm font-medium text-gray-300">Port</label><input type="number" value={form.port} onChange={(e) => setField("port", e.target.value)} className={inputClass} /></div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300">Start command</label>
+                      <input
+                        type="text"
+                        value={form.startCommand}
+                        onChange={(e) => setField("startCommand", e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300">Port</label>
+                      <input
+                        type="number"
+                        value={form.port}
+                        onChange={(e) => setField("port", e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
                   </>
                 )}
               </div>
 
               {/* Environment variables */}
               <div>
-                <label className="block text-sm font-medium text-gray-300">Environment variables (KEY=value per line)</label>
-                <textarea rows={3} value={form.envText} onChange={(e) => setField("envText", e.target.value)} className={`${inputClass} font-mono`} placeholder="NODE_ENV=production&#10;API_KEY=xxx" />
+                <label className="block text-sm font-medium text-gray-300">
+                  Environment variables (KEY=value per line)
+                </label>
+                <textarea
+                  rows={3}
+                  value={form.envText}
+                  onChange={(e) => setField("envText", e.target.value)}
+                  className={`${inputClass} font-mono`}
+                  placeholder={"NODE_ENV=production\nAPI_KEY=xxx"}
+                />
               </div>
 
               {/* Monitoring (Pro only) */}
               {plan === "pro" && (
                 <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-                  <button type="button" onClick={() => setField("monitorEnabled", !form.monitorEnabled)} className="flex w-full items-center justify-between">
-                    <div><h3 className="font-semibold">Uptime monitoring</h3><p className="text-sm text-gray-400">Get alerts on downtime</p></div>
-                    <div className={`h-5 w-9 rounded-full transition ${form.monitorEnabled ? "bg-violet-500" : "bg-white/30"}`}>
-                      <div className={`h-5 w-5 rounded-full bg-white transition-transform ${form.monitorEnabled ? "translate-x-4" : "translate-x-0"}`} />
+                  <button
+                    type="button"
+                    onClick={() => setField("monitorEnabled", !form.monitorEnabled)}
+                    className="flex w-full items-center justify-between"
+                  >
+                    <div>
+                      <h3 className="font-semibold">Uptime monitoring</h3>
+                      <p className="text-sm text-gray-400">Get alerts on downtime</p>
+                    </div>
+                    <div
+                      className={`h-5 w-9 rounded-full transition ${form.monitorEnabled ? "bg-violet-500" : "bg-white/30"
+                        }`}
+                    >
+                      <div
+                        className={`h-5 w-5 rounded-full bg-white transition-transform ${form.monitorEnabled ? "translate-x-4" : "translate-x-0"
+                          }`}
+                      />
                     </div>
                   </button>
                   {form.monitorEnabled && (
-                    <div className="mt-3"><label className="text-sm text-gray-300">Health path</label><input type="text" value={form.healthPath} onChange={(e) => setField("healthPath", e.target.value)} className={inputClass} /></div>
+                    <div className="mt-3">
+                      <label className="text-sm text-gray-300">Health path</label>
+                      <input
+                        type="text"
+                        value={form.healthPath}
+                        onChange={(e) => setField("healthPath", e.target.value)}
+                        className={inputClass}
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -630,9 +822,96 @@ export default function NewProject() {
               <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-3">
                 <h3 className="font-semibold">Alert channels</h3>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <div><button type="button" onClick={() => setField("emailNotifications", !form.emailNotifications)} className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2">Email <div className={`h-5 w-9 rounded-full transition ${form.emailNotifications ? "bg-violet-500" : "bg-white/30"}`}><div className={`h-5 w-5 rounded-full bg-white transition-transform ${form.emailNotifications ? "translate-x-4" : "translate-x-0"}`} /></div></button>{form.emailNotifications && <input type="email" value={form.notificationEmail} onChange={(e) => setField("notificationEmail", e.target.value)} className={`${inputClass} mt-2`} placeholder="you@example.com" />}</div>
-                  <div><button type="button" onClick={() => setField("discordNotifications", !form.discordNotifications)} className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2">Discord <div className={`h-5 w-9 rounded-full transition ${form.discordNotifications ? "bg-violet-500" : "bg-white/30"}`}><div className={`h-5 w-5 rounded-full bg-white transition-transform ${form.discordNotifications ? "translate-x-4" : "translate-x-0"}`} /></div></button>{form.discordNotifications && <input type="url" value={form.discordWebhookUrl} onChange={(e) => setField("discordWebhookUrl", e.target.value)} className={`${inputClass} mt-2`} placeholder="https://discord.com/api/webhooks/..." />}</div>
-                  <div><button type="button" onClick={() => setField("telegramNotifications", !form.telegramNotifications)} className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2">Telegram <div className={`h-5 w-9 rounded-full transition ${form.telegramNotifications ? "bg-violet-500" : "bg-white/30"}`}><div className={`h-5 w-5 rounded-full bg-white transition-transform ${form.telegramNotifications ? "translate-x-4" : "translate-x-0"}`} /></div></button>{form.telegramNotifications && <div className="space-y-2 mt-2"><input type="text" value={form.telegramBotToken} onChange={(e) => setField("telegramBotToken", e.target.value)} className={inputClass} placeholder="Bot token" /><input type="text" value={form.telegramChatId} onChange={(e) => setField("telegramChatId", e.target.value)} className={inputClass} placeholder="Chat ID" /></div>}</div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setField("emailNotifications", !form.emailNotifications)}
+                      className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2"
+                    >
+                      Email
+                      <div
+                        className={`h-5 w-9 rounded-full transition ${form.emailNotifications ? "bg-violet-500" : "bg-white/30"
+                          }`}
+                      >
+                        <div
+                          className={`h-5 w-5 rounded-full bg-white transition-transform ${form.emailNotifications ? "translate-x-4" : "translate-x-0"
+                            }`}
+                        />
+                      </div>
+                    </button>
+                    {form.emailNotifications && (
+                      <input
+                        type="email"
+                        value={form.notificationEmail}
+                        onChange={(e) => setField("notificationEmail", e.target.value)}
+                        className={`${inputClass} mt-2`}
+                        placeholder="you@example.com"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setField("discordNotifications", !form.discordNotifications)}
+                      className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2"
+                    >
+                      Discord
+                      <div
+                        className={`h-5 w-9 rounded-full transition ${form.discordNotifications ? "bg-violet-500" : "bg-white/30"
+                          }`}
+                      >
+                        <div
+                          className={`h-5 w-5 rounded-full bg-white transition-transform ${form.discordNotifications ? "translate-x-4" : "translate-x-0"
+                            }`}
+                        />
+                      </div>
+                    </button>
+                    {form.discordNotifications && (
+                      <input
+                        type="url"
+                        value={form.discordWebhookUrl}
+                        onChange={(e) => setField("discordWebhookUrl", e.target.value)}
+                        className={`${inputClass} mt-2`}
+                        placeholder="https://discord.com/api/webhooks/..."
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setField("telegramNotifications", !form.telegramNotifications)}
+                      className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2"
+                    >
+                      Telegram
+                      <div
+                        className={`h-5 w-9 rounded-full transition ${form.telegramNotifications ? "bg-violet-500" : "bg-white/30"
+                          }`}
+                      >
+                        <div
+                          className={`h-5 w-5 rounded-full bg-white transition-transform ${form.telegramNotifications ? "translate-x-4" : "translate-x-0"
+                            }`}
+                        />
+                      </div>
+                    </button>
+                    {form.telegramNotifications && (
+                      <div className="space-y-2 mt-2">
+                        <input
+                          type="text"
+                          value={form.telegramBotToken}
+                          onChange={(e) => setField("telegramBotToken", e.target.value)}
+                          className={inputClass}
+                          placeholder="Bot token"
+                        />
+                        <input
+                          type="text"
+                          value={form.telegramChatId}
+                          onChange={(e) => setField("telegramChatId", e.target.value)}
+                          className={inputClass}
+                          placeholder="Chat ID"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -643,28 +922,63 @@ export default function NewProject() {
             <div className="sticky top-8 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-6 backdrop-blur-sm">
               <h2 className="text-xl font-bold">Order summary</h2>
               <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
-                <div className="flex justify-between"><span className="text-gray-400">Plan</span><span className="font-medium">{PLAN_OPTIONS[plan].name}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Type</span><span>{TYPE_LABELS[selectedType]}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Plan</span>
+                  <span className="font-medium">{PLAN_OPTIONS[plan].name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Type</span>
+                  <span>{TYPE_LABELS[selectedType]}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">{runtimeConfig.label} ver.</span>
+                  <span className="font-mono text-violet-300">{form.runtimeVersion}</span>
+                </div>
                 {isPaid && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Duration</span>
                     <div className="flex gap-2">
                       {MONTHS.map((m) => (
-                        <button key={m} type="button" onClick={() => setMonths(m)} className={`rounded-md px-2 py-1 text-xs font-medium transition ${months === m ? "bg-violet-500 text-white" : "bg-white/10 hover:bg-white/20"}`}>{m}m</button>
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setMonths(m)}
+                          className={`rounded-md px-2 py-1 text-xs font-medium transition ${months === m ? "bg-violet-500 text-white" : "bg-white/10 hover:bg-white/20"
+                            }`}
+                        >
+                          {m}m
+                        </button>
                       ))}
                     </div>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-white/10 pt-3 text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-violet-400">₹{isPaid ? parseInt(PLAN_OPTIONS[plan].price) * months : 0}{isPaid && <span className="text-sm font-normal text-gray-400"> / {months} mo</span>}</span>
+                  <span className="text-violet-400">
+                    ₹{isPaid ? parseInt(PLAN_OPTIONS[plan].price) * months : 0}
+                    {isPaid && <span className="text-sm font-normal text-gray-400"> / {months} mo</span>}
+                  </span>
                 </div>
               </div>
-              {error && <div className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm text-red-300">{error}</div>}
-              <button type="submit" disabled={submitting || (isPaid && !razorpayLoaded)} className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 font-bold text-white shadow-lg shadow-violet-500/25 transition hover:scale-[1.02] disabled:opacity-50">
-                {submitting ? (isPaid ? "Processing payment..." : "Creating project...") : (isPaid ? "Pay & Deploy" : "Deploy for Free")}
+              {error && (
+                <div className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm text-red-300">{error}</div>
+              )}
+              <button
+                type="submit"
+                disabled={submitting || (isPaid && !razorpayLoaded)}
+                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 font-bold text-white shadow-lg shadow-violet-500/25 transition hover:scale-[1.02] disabled:opacity-50"
+              >
+                {submitting
+                  ? isPaid
+                    ? "Processing payment..."
+                    : "Creating project..."
+                  : isPaid
+                    ? "Pay & Deploy"
+                    : "Deploy for Free"}
               </button>
-              {isPaid && !razorpayLoaded && <p className="mt-2 text-center text-xs text-gray-500">Loading payment gateway...</p>}
+              {isPaid && !razorpayLoaded && (
+                <p className="mt-2 text-center text-xs text-gray-500">Loading payment gateway...</p>
+              )}
             </div>
           </div>
         </form>
