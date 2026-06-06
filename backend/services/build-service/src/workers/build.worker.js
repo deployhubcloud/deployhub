@@ -136,11 +136,28 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         if (!fs.existsSync(buildFilePath)) fs.mkdirSync(buildFilePath, { recursive: true });
 
 
+        let dynamicBuildArgs = {};
+        if (project.type === 'static') {
+            let viteEnvContent = '';
+
+            if (project.env) {
+                for (const [key, value] of Object.entries(projectdata.env)) {
+                    viteEnvContent += `${key}=${value}\n`;
+                }
+            }
+            dynamicBuildArgs.VITE_ENV_CONTENT = viteEnvContent;
+        }
+
+
+
         // yeha pe docker file likha ja raha hai , based on proejct type
         const dockerfileContent =
             generateDockerfile({
                 projectType: project.type,
-                version: "24"
+                version: "24",
+                buildCommand: project?.buildCommand,
+                installCommand: 'npm ci',
+                startCommand: project?.startCommand
             });
 
 
@@ -165,7 +182,9 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             buildContext,
             imageName,
             dockerFile: "Dockerfile",
-            buildArgs: {}
+            buildArgs: {
+                VITE_ENV_CONTENT: dynamicBuildArgs
+            }
         });
 
         await dockerProgress(
