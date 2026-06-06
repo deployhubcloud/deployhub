@@ -39,13 +39,13 @@ const TYPE_LABELS = {
 const RUNTIME_VERSIONS = {
   static: {
     label: "Node.js (build)",
-    versions: ["18", "20", "22"],
-    default: "20",
+    versions: [ "22" , "24"],
+    default: "24",
   },
   node: {
     label: "Node.js",
-    versions: ["18", "20", "22"],
-    default: "20",
+    versions: [ "22" , "24"],
+    default: "24",
   },
   go: {
     label: "Go",
