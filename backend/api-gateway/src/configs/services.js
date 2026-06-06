@@ -18,5 +18,12 @@ export const services = {
         isHealthy: false,
         lastChecked: null,
         lastError: null
+    },
+
+    Build: {
+        url: ENV.SERVICES_URL.BUILD,
+        isHealthy: false,
+        lastChecked: null,
+        lastError: null
     }
 }
