@@ -82,6 +82,7 @@ const normalizeProjectBody = (body) => {
         env: body.env,
         notifications: body.notifications || {},
         monitor: body.monitor || {},
+        version: body.version
     };
 };
 
@@ -267,6 +268,7 @@ export const createProjectForPlan = async (userId, body, {
             failedTries: normalized.monitor.failedTries || 2,
         },
         notifications: normalizeNotifications(normalized.notifications),
+        version: normalized.version
     });
 
     const assignedPort = await allocatePort(redisclient, project._id, Port);
