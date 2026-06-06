@@ -6,6 +6,7 @@ export const PROJECT_TYPES = [...new Set(
 )];
 
 const getProjectName = (body) => body.projectName || body.name;
+const getProjectVersion = (body) => body.version
 const getProjectType = (body) => body.projectType || body.type;
 const getRepoUrl = (body) => body.repoUrl || body.codeLink;
 const getBranch = (body) => body.branch || body.branchname;
@@ -14,6 +15,18 @@ const getRootDirectory = (body) => {
     if (body.isFolder) return body.folderName;
     return '.';
 };
+
+const projectversion = (lang) => {
+    const version = {
+        static: ['22', '24'],
+        node: ['22', '24'],
+        java: ["17", "21"],
+        python: ["3.10", "3.11", "3.12"],
+        go: ["1.21", "1.22", "1.23"]
+    }
+
+    return version[lang]
+}
 
 const isValidUrl = (value) => {
     try {
@@ -57,6 +70,13 @@ export const createProjectValidator = [
         if (!PROJECT_TYPES.includes(projectType)) {
             throw new Error(`Project type must be one of: ${PROJECT_TYPES.join(', ')}`);
         }
+
+        const projectVersion = getProjectVersion(req.body);
+        const validVersions = projectversion(projectType);
+        if (!validVersions || !validVersions.includes(String(projectVersion))) {
+            throw new Error(`Invalid version for ${projectType}. Valid versions: ${validVersions?.join(', ')}`);
+        }
+
 
         const repoUrl = getRepoUrl(req.body);
         if (!repoUrl || typeof repoUrl !== 'string') {
