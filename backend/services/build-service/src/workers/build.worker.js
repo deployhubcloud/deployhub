@@ -154,7 +154,16 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         }
 
         const lanVersion = typeLangVersionSelector(project.type, project.version)
-        console.log('ang ver', lanVersion)
+
+
+        logger.write(`cloning repo ${project.repoUrl}`)
+
+        await GitCloner.clone({ repoUrl: project.repoUrl, branch: project.branch, targetPath: buildFilePath, githubToken: userGithubAcessToken, folderName: project.rootDirectory })
+
+        logger.write(`repo cloned successfully`)
+
+
+        logger.write("generating dockerfile");
 
         // yeha pe docker file likha ja raha hai , based on proejct type
         const dockerfileContent =
@@ -164,16 +173,10 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 buildCommand: project?.buildCommand,
                 installCommand: 'npm ci',
                 startCommand: project?.startCommand
-            }); 
+            });
 
+        logger.write(`dockerfile generated`)
 
-        logger.write(`cloning repo ${project.repoUrl}`)
-
-        await GitCloner.clone({ repoUrl: project.repoUrl, branch: project.branch, targetPath: buildFilePath, githubToken: userGithubAcessToken, folderName: project.rootDirectory })
-
-        logger.write(`repo clone SuccessFully`)
-
-        logger.write('build started')
 
         // and yeha pe jo buildfilepath hai uske dockerfike copy ho raha hai
         await fs.writeFileSync(
@@ -181,9 +184,15 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             dockerfileContent
         );
 
+        logger.write(`pulling base image ${lanVersion}`)
+
         await checkAndPullImage(docker, lanVersion)
 
+        logger.write(`base image ready`)
+
         const buildContext = tar.pack(buildFilePath);
+
+        logger.write('building docker image')
 
         const stream = await buildDockerImage({
             docker,
@@ -199,7 +208,11 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             logger
         )
 
+        logger.write('image build complete')
+
         if (project.type === 'static') {
+
+            logger.write('spinning up container');
 
             const container = await docker.createContainer({
                 Image: imageName
@@ -240,7 +253,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 cwd: extractedDir
             });
 
-            logger.write('Making zip of your build folder')
+            logger.write('creating zip archive')
 
             const zipPath = path.join(
                 buildFilePath,
@@ -255,7 +268,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 zipPath
             );
 
-            logger.write('zip make successfully')
+            logger.write('zip created')
 
             const zipBuffer = fs.readFileSync(zipPath);
 
@@ -266,11 +279,13 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 zipBuffer
             );
 
-            logger.write('zip uplaod successfully')
+            logger.write('zip uploaded')
 
             await container.remove({
                 force: true
             });
+
+            logger.write('cleaning up container');
 
         } else {
 
