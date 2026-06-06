@@ -21,6 +21,9 @@ const projectschema = new mongoose.Schema({
         enum: ['draft', 'queued', 'building', 'running', 'failed', 'stopped'],
         default: 'queued'
     },
+    version: {
+        type: Number
+    },
     isMicroservice: {
         type: Boolean,
         default: false
