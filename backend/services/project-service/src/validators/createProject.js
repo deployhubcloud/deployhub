@@ -32,6 +32,12 @@ export const createProjectValidator = [
         .isIn(Object.keys(plans))
         .withMessage(`Plan must be one of: ${Object.keys(plans).join(', ')}`),
 
+    body('version')
+        .notEmpty()
+        .withMessage("version is required")
+        .isNumeric()
+        .withMessage("Version Must be In Number"),
+
     body().custom((_, { req }) => {
         const projectName = getProjectName(req.body);
         if (!projectName || typeof projectName !== 'string') {
