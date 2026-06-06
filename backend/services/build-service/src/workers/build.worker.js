@@ -171,7 +171,6 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 projectType: project.type,
                 version: project.version,
                 buildCommand: project?.buildCommand,
-                installCommand: 'npm ci',
                 startCommand: project?.startCommand
             });
 
