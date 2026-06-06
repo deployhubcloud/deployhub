@@ -4,10 +4,14 @@ const limits = {
     auth: {
         time: 60,
         limit: 100
-    },  
+    },
     project: {
         time: 60,
         limit: 100
+    },
+    build: {
+        time: 10,
+        limit: 250
     }
 }
 
