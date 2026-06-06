@@ -2,6 +2,8 @@ import express from 'express';
 import { checkHealthMiddleware } from '../../middlewares/healthCheck.js';
 import { rateLimitMiddleware } from '../../middlewares/rateLimit.js';
 import proxy from '../../proxy/proxy.js';
+import { verifyJwt } from '../../middlewares/verifyJwt.middleware.js';
+import { services } from '../../configs/services.js';
 
 const buildRouter = express.Router();
 
