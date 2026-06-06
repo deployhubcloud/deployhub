@@ -56,11 +56,8 @@ ENV START_CMD=$START_CMD
 CMD ["sh", "-c", "$START_CMD"]
 `;
 
-            ```
-    case "python":
-        return `
-                ```
-
+        case "python":
+            return `
 FROM python:${version} AS builder
 
 WORKDIR /app
@@ -88,39 +85,48 @@ ENV START_CMD=$START_CMD
 CMD ["sh", "-c", "$START_CMD"]
 `;
 
-            ```
-    case "go":
-        return `
-                ```
-
+        case "go":
+            return `
 FROM golang:${version} AS builder
 
 WORKDIR /app
 
-COPY . .
+COPY go.mod go.sum ./
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux 
-${buildCommand || "go build -o app ."}
+COPY . .
 
-FROM scratch
+RUN CGO_ENABLED=0 GOOS=linux ${buildCommand || "go build -o app ."}
 
-COPY --from=builder /app/app /app
+FROM alpine:latest
 
-EXPOSE 8080
+RUN apk --no-cache add ca-certificates tzdata
 
-ENTRYPOINT ["/app"]
+WORKDIR /app
+
+COPY --from=builder /app/app .
+
+ARG APP_PORT=8080
+ENV PORT=$APP_PORT
+
+EXPOSE $APP_PORT
+
+ARG START_CMD="${startCommand || "./app"}"
+ENV START_CMD=$START_CMD
+
+CMD ["sh", "-c", "$START_CMD"]
 `;
 
-            ```
-    case "java":
-        return `
-                ```
-
+        case "java":
+            return `
 FROM maven:3.9-eclipse-temurin-${version} AS builder
 
 WORKDIR /app
+
+COPY pom.xml .
+
+RUN mvn dependency:go-offline -B
 
 COPY . .
 
@@ -137,16 +143,16 @@ ENV PORT=$APP_PORT
 
 EXPOSE $APP_PORT
 
-CMD ["java", "-jar", "app.jar"]
+ARG START_CMD="${startCommand || "java -jar app.jar"}"
+ENV START_CMD=$START_CMD
+
+CMD ["sh", "-c", "$START_CMD"]
 `;
 
-            ```
-    default:
-        throw new Error(
-            \`Unsupported project type: \${projectType}\`
-        );
-}
-```
+        default:
+            throw new Error(
+                `Unsupported project type: ${projectType}`
+            );
     }
 
 };
