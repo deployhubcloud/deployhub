@@ -20,7 +20,6 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
     try {
 
         const data = JSON.parse(message);
-        console.log('Project status received', data);
 
         const { projectId, projectstatus, userId, userName, projectName, buildId, containerId, dockerImage } = data;
 
