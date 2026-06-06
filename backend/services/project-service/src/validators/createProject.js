@@ -47,9 +47,7 @@ export const createProjectValidator = [
 
     body('version')
         .notEmpty()
-        .withMessage("version is required")
-        .isNumeric()
-        .withMessage("Version Must be In Number"),
+        .withMessage("version is required"),
 
     body().custom((_, { req }) => {
         const projectName = getProjectName(req.body);
