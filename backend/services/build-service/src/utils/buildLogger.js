@@ -4,6 +4,19 @@ import { getRedis } from '../core/redis/client.js'
 
 const redis = getRedis()
 
+const stripAnsi = (str) => str.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')
+
+const ignorePatterns = [
+    /^Step \d+\//,
+    /^ ---> /,
+    /^Successfully built/,
+    /^Successfully tagged/,
+    /^Removing intermediate container/,
+    /^npm notice/,
+    /^npm fund/,
+    /^\s*$/,
+    /\x1b\[[0-9;]*m/
+]
 export class BuildLogger {
     constructor(buildId, projectId) {
         this.buildId = buildId
@@ -18,7 +31,7 @@ export class BuildLogger {
         this.startedAt = new Date()
 
         await this.write(
-            `[deployhub] Build started at ${this.startedAt.toISOString()}`
+            `Build started`
         )
 
         await Build.findByIdAndUpdate(this.buildId, {
@@ -32,24 +45,13 @@ export class BuildLogger {
     async write(chunk) {
         if (!chunk) return
 
-        const clean = chunk
-            .toString()
+        const clean = stripAnsi(chunk
+            .toString())
             .replace(/\r/g, '')
             .replace(/^[\x00-\x08][\x00-\x03][\x00]{6}/gm, '')
             .trimEnd()
 
         if (!clean) return
-
-        const ignorePatterns = [
-            /^Step \d+\//,
-            /^ ---> /,
-            /^Successfully built/,
-            /^Successfully tagged/,
-            /^Removing intermediate container/,
-            /^npm notice/,
-            /^npm fund/,
-            /^\s*$/
-        ]
 
         const shouldIgnore = ignorePatterns.some(
             pattern => pattern.test(clean)
@@ -59,7 +61,7 @@ export class BuildLogger {
             return
         }
 
-        const ts = new Date().toISOString().slice(11, 23)
+        const ts = "deployhub"
         const line = `[${ts}] ${clean}`
 
         this.lines.push(line)
@@ -84,10 +86,11 @@ export class BuildLogger {
     }
 
     async finish(status = 'success') {
-        const finishedAt = new Date()
+
+        const finishedAt = new Date();
 
         await this.write(
-            `[deployhub] Build ${status} at ${finishedAt.toISOString()}`
+            `Build finished`
         )
 
         const objectName =
