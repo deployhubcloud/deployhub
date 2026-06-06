@@ -25,6 +25,7 @@ export const ENV = {
     SERVICES_URL: {
         AUTH: process.env.IDENTITY_SERVICE_URL,
         PROJECT: process.env.PROJECT_SERVICE_URL,
+        BUILD: process.env.BUILD_SERVICE_URL,
         MONITORING: process.env.MONITORING_SERVICE_URL
     },
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
