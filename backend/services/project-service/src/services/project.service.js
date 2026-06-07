@@ -25,7 +25,7 @@ const dockerContainerName = (projectId) => {
 
 const getProjectType = (body) => body.projectType || body.type;
 const normalizeSubdomain = (subdomain) => (
-    typeof subdomain === 'string' ? `${subdomain.trim()}-${randomUUID().slice(0, 8)}` : `${subdomain}-${randomUUID().slice(0, 8)}`
+    typeof subdomain === 'string' ? `${subdomain.trim()}-${randomUUID().slice(0, 8)}` : ``
 );
 
 const assertIncomingProjectConsistency = (body) => {
@@ -39,6 +39,7 @@ const assertIncomingProjectConsistency = (body) => {
     const isMicroservice = body.isMicroservice === true;
 
     if (isMicroservice && subdomain) {
+        console.log(subdomain)
         throw new AppError('Microservice projects cannot have a public subdomain', 400);
     }
 
