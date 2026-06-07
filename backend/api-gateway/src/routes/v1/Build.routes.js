@@ -13,7 +13,7 @@ buildRouter.use(
     "/",
     checkHealthMiddleware('Build'),
     rateLimitMiddleware('build', 'To Many Request! Plase try again Later'),
-    proxy(services.Project.url, "Build-service")
+    proxy(services.Build.url, "Build-service")
 );
 
 
