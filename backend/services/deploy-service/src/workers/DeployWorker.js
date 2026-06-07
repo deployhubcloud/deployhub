@@ -18,6 +18,7 @@ import { reloadNginx } from '../../../../shared/nginx/reloadNginx.js';
 import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
 import Redis from 'ioredis';
 import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthubAccesstoken.js';
+import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
 
 
 const docker = new Docker();
@@ -79,6 +80,7 @@ async function deployStaticProject({ docker, projectId, buildId, buildsZipUrl, s
         const response = await axios({ method: 'GET', url: buildsZipUrl, responseType: 'stream' });
         await pipeline(response.data, fs.createWriteStream(zipPath));
 
+        await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`)
 
         // 2. Create & start helper container
         container = await docker.createContainer({
@@ -279,7 +281,8 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 }
             }
 
-            await ensureNetworkExists(dockerNetworkName)
+            await checkAndPullImage(docker, imageName)
+            await ensureNetworkExists(dockerNetworkName);
 
             const container = await docker.createContainer({
                 Image: imageName,
