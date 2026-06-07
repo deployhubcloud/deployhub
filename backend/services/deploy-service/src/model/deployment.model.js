@@ -25,4 +25,4 @@ const deploymentSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-export default mongoose.model("Deployment", deploymentSchema);
+export const Deployment = mongoose.model("Deployment", deploymentSchema);
