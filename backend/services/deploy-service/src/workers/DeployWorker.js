@@ -20,6 +20,7 @@ import Redis from 'ioredis';
 import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthubAccesstoken.js';
 import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
 import { deleteDockerHubImage } from '../../../../shared/docker/deleteDockerHubImage.js';
+import { Deployment } from '../model/deployment.model.js';
 
 
 const docker = new Docker();
@@ -181,6 +182,11 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
     const { projectId, plan, userId, buildId, firstTime } = job.data;
 
+    const deployment = new Deployment({
+        project: projectId,
+        build: buildId,
+        status: "deploying"
+    })
 
     let projectData;
     let buildData;
@@ -265,6 +271,10 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 deploymentUrl = DEPLOY_SERVICE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${projectData.assignedPort}`
             }
 
+            deployment.status = 'live';
+            deployment.deployedAt = new Date();
+            await deployment.save({ validateBeforeSave: false });
+
             // here i send pub/sub of project status so every service listen and work
             await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
                 projectId: projectData._id,
@@ -338,6 +348,11 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             await container.start();
             await container.logs({ stdout: true, stderr: true });
 
+            deployment.status = 'live';
+            deployment.deployedAt = new Date();
+            deployment.containerId = container.id;
+            await deployment.save({ validateBeforeSave: false });
+
             // here i send pub/sub of project status so every service listen and work
             await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
                 projectId: projectData._id,
@@ -360,7 +375,8 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
 
     } catch (error) {
-        console.error(error);
+        deployment.status = 'failed'
+        await deployment.save({ validateBeforeSave: false })
         throw error;
     }
 
