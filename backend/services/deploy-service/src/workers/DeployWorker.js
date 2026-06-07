@@ -320,8 +320,9 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 buildId: buildData._id,
                 serviceType: projectData.isMicroservice ? "microservice" : projectData.type,
                 deploymentUrl: deploymentUrl,
-
-            }));
+                containerId: container.id,
+                internalUrl: projectData.isMicroservice ? deploymentUrl : null
+            })); 
         }
 
 
