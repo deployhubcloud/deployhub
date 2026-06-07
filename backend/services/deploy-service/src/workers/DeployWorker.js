@@ -19,6 +19,7 @@ import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
 import Redis from 'ioredis';
 import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthubAccesstoken.js';
 import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
+import { deleteDockerHubImage } from '../../../../shared/docker/deleteDockerHubImage.js';
 
 
 const docker = new Docker();
@@ -218,6 +219,24 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             DEPLOY_SERVICE_ENV.INTERNAL_SECRET,
             DEPLOY_SERVICE_ENV.INTERNAL_SERVICE_TALKING_SECRET
         );
+
+        if (!firstTime) {
+
+            oldImage = projectData.imageName;
+
+            if (oldImage) {
+                const response = await deleteDockerHubImage(projectData?.imageName, DEPLOY_SERVICE_ENV.DOCKER_PASSWORD, axios);
+                console.log("Image Deleted from DockerHub", response);
+            }
+
+            if (projectData?.containerId) {
+
+                const container = await docker.getContainer(projectData.containerId);
+                await container.remove({
+                    force: true
+                });
+            }
+        }
 
         // Static
         if (projectData.type === 'static') {
