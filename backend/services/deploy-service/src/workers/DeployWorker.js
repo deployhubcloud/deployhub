@@ -225,7 +225,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             oldImage = projectData.imageName;
 
             if (oldImage) {
-                const response = await deleteDockerHubImage(projectData?.imageName, DEPLOY_SERVICE_ENV.DOCKER_PASSWORD, axios);
+                const response = await deleteDockerHubImage(projectData?.imageName, DEPLOY_SERVICE_ENV.DOCKER_PASSWORD, axios, docker);
                 console.log("Image Deleted from DockerHub", response);
             }
 
