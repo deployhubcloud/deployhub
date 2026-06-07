@@ -42,14 +42,6 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
                     containerId,
                 }
             });
-
-            if (dockerImage) {
-                await Project.findByIdAndUpdate(projectId, {
-                    $set: {
-                        dockerImage
-                    }
-                });
-            }
         }
 
 
@@ -59,6 +51,20 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
                     status: projectstatus
                 }
             });
+        }
+
+        if (projectstatus === 'success') {
+            await Project.findOneAndUpdate(
+                {
+                    _id: projectId,
+                    type: { $ne: 'static' }
+                },
+                {
+                    $set: {
+                        dockerImage
+                    }
+                }
+            );
         }
 
     } catch (error) {
