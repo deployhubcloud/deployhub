@@ -398,7 +398,8 @@ buildWorker.on("completed", async (job, result) => {
         projectName: result.projectName,
         buildId: result.buildId,
         logsUrl: result.logsUrl,
-        serviceType: result.serviceType
+        serviceType: result.serviceType,
+        dockerImage: result.imageName
     }));
 
     await queueProjectDeploy(projectId, plan, userId, result.buildId, firstTime)
