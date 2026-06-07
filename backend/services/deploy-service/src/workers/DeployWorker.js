@@ -185,6 +185,8 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
     let buildData;
     let userGithubToken;
     let userPlan;
+    let deploymentUrl;
+    const reqType = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? 'https://' : "http://"
 
     try {
         userPlan = plans[plan];
@@ -198,7 +200,6 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 DEPLOY_SERVICE_ENV.INTERNAL_SECRET
             );
         }
-        console.log(userGithubToken);
 
 
         // Fetch project & build data
@@ -220,7 +221,12 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
         // Static
         if (projectData.type === 'static') {
-            const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/userdata/docker/data/static' : 'G:/deploy-micro/docker/rabbitmq/docker/data/static';
+            const localStaticRoot = path.resolve("static")
+            if (!fs.existsSync(localStaticRoot)) {
+                fs.mkdirSync(localStaticRoot, { recursive: true });
+            }
+            const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/userdata/docker/data/static' : `${localStaticRoot}`;
+            console.log(staticRoot);
 
             const buildsZipUrl = await buildZipUrl(`buildzip/${projectId}/${buildId}.zip`);
 
@@ -234,6 +240,12 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
             await DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? reloadNginx() : ""
 
+            if (projectData?.customDomains?.length > 0) {
+                deploymentUrl = `${reqType}${projectData.customDomains}`
+            } else {
+                deploymentUrl = DEPLOY_SERVICE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${projectData.assignedPort}`
+            }
+
             // here i send pub/sub of project status so every service listen and work
             await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
                 projectId: projectData._id,
@@ -242,6 +254,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 projectName: projectData.name,
                 buildId: buildData._id,
                 serviceType: projectData.isMicroservice ? "microservice" : projectData.type,
+                internalUrl: deploymentUrl
             }));
 
         } else {
@@ -263,12 +276,6 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
             // ye hai image ka name
             const imageName = `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/${projectId.toString().toLowerCase()}:${buildId.toString().toLowerCase()}`;
-
-            // ye hai req type means aagr local pe hai ho http nhi to https
-            const reqType = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? 'https://' : "http://"
-
-            //ye hai deployment url
-            let deploymentUrl;
 
             const isMicroservice = projectData?.isMicroservice
             if (isMicroservice) {
