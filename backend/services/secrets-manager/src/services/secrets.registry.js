@@ -100,18 +100,6 @@ export function getSecretsForService(serviceName) {
       MINIO_PUBLIC_HOST: env.MINIO_PUBLIC_HOST
     },
 
-
-    'domain-service': {
-      PORT: env.DOMAIN_SERVICE_PORT,
-      MONGODB_URI: env.DOMAIN_SERVICE_MONGODB_URI,
-      REDIS_HOST: env.REDIS_HOST,
-      REDIS_PORT: env.REDIS_PORT,
-      REDIS_PASSWORD: env.REDIS_PASSWORD,
-      RABBITMQ_URL: env.RABBITMQ_URL,
-      INTERNAL_SECRET: env.INTERNAL_SECRET,
-      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET
-    },
-
     'api-gateway': {
       PORT: env.API_GATEWAY_PORT,
       REDIS_HOST: env.REDIS_HOST,
@@ -172,7 +160,6 @@ export function getRegisteredServices() {
     'build-service',
     'project-service',
     'deploy-service',
-    'domain-service',
     'api-gateway',
     'monitoring-service',
     'notification-service'

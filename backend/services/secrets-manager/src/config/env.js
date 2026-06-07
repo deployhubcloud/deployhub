@@ -15,7 +15,6 @@ const schema = z.object({
   PROJECT_SERVICE_PORT: z.coerce.number().default(4002),
   BUILD_SERVICE_PORT: z.coerce.number().default(4003),
   DEPLOY_SERVICE_PORT: z.coerce.number().default(4004),
-  DOMAIN_SERVICE_PORT: z.coerce.number().default(4005),
   NOTIFICATION_SERVICE_PORT: z.coerce.number().default(4006),
   MONITORING_SERVICE_PORT: z.coerce.number().default(4007),
 
@@ -56,7 +55,6 @@ const schema = z.object({
   PROJECT_SERVICE_MONGODB_URI: z.string().min(1),
   MONITORING_MONGODB_URI: z.string().min(1),
   NOTIFICATION_MONGODB_URI: z.string().min(1),
-  DOMAIN_SERVICE_MONGODB_URI: z.string(),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
@@ -77,7 +75,6 @@ const schema = z.object({
   MONITORING_SERVICE_URL: z.string().optional(),
   BUILD_SERVICE_URL: z.string().optional(),
   DEPLOY_SERVICE_URL: z.string().optional(),
-  DOMAIN_SERVICE_URL: z.string().optional(),
 
   INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
 
