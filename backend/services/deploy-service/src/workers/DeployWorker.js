@@ -352,6 +352,12 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             }));
         }
 
+        return {
+            repoLink: projectData.repoUrl,
+            usergithubToken: userGithubToken,
+            userPlan
+        };
+
 
     } catch (error) {
         console.error(error);
@@ -360,11 +366,42 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
 }, { connection, concurrency: 1 });
 
-deployWorker.on('completed', (job) => {
-    console.log('Deployment work completed');
+deployWorker.on('completed', (job, result) => {
+
+    const { firstTime } = job.data;
+
+    if (firstTime && result.usergithubToken && DEPLOY_SERVICE_ENV === 'production' && result.userPlan.github_Ci_Cd) {
+        const repoLinkWithoutGit = result.repoLink.endsWith('.git') ? result.repoLink.slice(0, -4) : result.repoLink;
+        const parts = repoLinkWithoutGit.split('/');
+        const owner = parts[3];
+        const repo = parts[4].replace(/\.git$/, '');
+
+        const result = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/hooks`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${result.usergithubToken}`,
+                    Accept: "application/vnd.github+json"
+                },
+                body: JSON.stringify({
+                    name: "web",
+                    active: true,
+                    events: ["push"],
+                    config: {
+                        url: DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? "https://api.deployhub.cloud/github-webhook" : "https://b960-103-211-132-79.ngrok-free.app/github-webhook",
+                        content_type: "json",
+                        secret: DEPLOY_SERVICE_ENV.GITHUB_WEBHOOK_SECRET
+                    }
+                })
+            }
+        );
+
+        console.log("Webhook setup response:", result.status, await result.text())
+    };
+
 });
 
 deployWorker.on('failed', (job, err) => {
     console.error('Job Failed');
-    console.error(err);
 });
