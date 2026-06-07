@@ -145,9 +145,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             let viteEnvContent = '';
 
             for (const envVar of project.env || []) {
-                const value = decrypt(envVar.encryptedValue);
-
-                viteEnvContent += `${envVar.key}=${value}\n`;
+                viteEnvContent += `${envVar.key}=${encryptedValue}\n`;
             }
 
             dynamicBuildArgs.VITE_ENV_CONTENT = viteEnvContent;
@@ -286,6 +284,10 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
 
             logger.write('cleaning up container');
 
+            await docker.getImage(imageName).remove({
+                force: true
+            });
+
         } else {
 
             const pushStream = await pushDockerImage({
@@ -305,12 +307,6 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             await newBuild.save({ validateBeforeSave: false })
 
         }
-
-
-        await docker.getImage(imageName).remove({
-            force: true
-        });
-
 
         const buildlogUrl = await logger.finish("success");
 
