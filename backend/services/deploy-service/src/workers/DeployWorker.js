@@ -301,6 +301,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     PortBindings: {
                         [`${parseInt(projectPort)}/tcp`]: [
                             {
+                                HostIp: "127.0.0.1",
                                 HostPort: String(hostPort)
                             }
                         ]
@@ -322,7 +323,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 deploymentUrl: deploymentUrl,
                 containerId: container.id,
                 internalUrl: projectData.isMicroservice ? deploymentUrl : null
-            })); 
+            }));
         }
 
 
