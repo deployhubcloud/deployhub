@@ -15,9 +15,24 @@ import { pipeline } from 'stream/promises';
 import tar from 'tar-stream';
 import Docker from 'dockerode';
 import { reloadNginx } from '../../../../shared/nginx/reloadNginx.js';
+import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
+import Redis from 'ioredis';
+import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthubAccesstoken.js';
+
 
 const docker = new Docker();
 
+const redisPubSub = new RedisPubSub(
+    Redis,
+    {
+        host: DEPLOY_SERVICE_ENV.REDIS_HOST,
+        port: DEPLOY_SERVICE_ENV.REDIS_PORT,
+        password: DEPLOY_SERVICE_ENV.REDIS_PASSWORD,
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: true,
+        lazyConnect: true
+    }
+);
 
 async function execInContainer(container, cmd) {
     const exec = await container.exec({
@@ -67,7 +82,7 @@ async function deployStaticProject({ docker, projectId, buildId, buildsZipUrl, s
 
         // 2. Create & start helper container
         container = await docker.createContainer({
-            Image: 'deployhub-static-helper',
+            Image: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
             name: `deployhub-helper-${projectId}-${buildId}`,
             HostConfig: {
                 Binds: [`${staticRoot}:/data/static`],
@@ -112,21 +127,66 @@ async function deployStaticProject({ docker, projectId, buildId, buildsZipUrl, s
     }
 }
 
+const insertEnv = (projectEnv) => {
+    const envVariables = [];
+    if (projectEnv) {
+        for (const [key, value] of Object.entries(projectEnv)) {
+            envVariables.push(`${key}=${encryptedValue}`);
+        }
+    }
+
+    return envVariables
+}
+
+export const ensureNetworkExists = async (networkName) => {
+    try {
+        const networks = await docker.listNetworks();
+
+        const existingNetwork = networks.find(
+            network => network.Name === networkName
+        );
+
+        if (existingNetwork) {
+            return existingNetwork.Id;
+        }
+
+        const network = await docker.createNetwork({
+            Name: networkName,
+            Driver: 'bridge'
+        });
+
+        return network.id;
+    } catch (error) {
+        throw new Error(
+            `Failed to ensure network '${networkName}' exists: ${error.message}`
+        );
+    }
+};
+
+const parseRam = (ram) => {
+    const mb = parseInt(ram.replace('mb', ''));
+    return mb * 1024 * 1024;
+};
+
+const parseCpu = (cpu) => {
+    return Number(cpu) * 1e9;
+};
+
 
 
 const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
     const { projectId, plan, userId, buildId, firstTime } = job.data;
-    console.log(job.data);
+
 
     let projectData;
     let buildData;
+    let userGithubToken;
+    let userPlan;
 
     try {
-        const userPlan = plans[plan];
-        console.log(userPlan);
+        userPlan = plans[plan];
 
-        let userGithubToken;
         if (userPlan.github_Ci_Cd) {
             userGithubToken = await getUserGithubAccessToken(
                 axios,
@@ -172,15 +232,94 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
             await DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? reloadNginx() : ""
 
+            // here i send pub/sub of project status so every service listen and work
+            await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
+                projectId: projectData._id,
+                projectstatus: "running",
+                userId: userId,
+                projectName: projectData.name,
+                buildId: buildData._id,
+                serviceType: projectData.isMicroservice ? "microservice" : projectData.type,
+            }));
 
         } else {
 
-            
+            // ye hai host port means user ko host pe kon sa port assign hua hai
+            const hostPort = projectData.assignedPort;
 
+            //ye hai user ka internal port jsipe server chal raha hai
+            const projectPort = projectData.port || 3000;
+
+            // ye hai user ka environment variable user ka
+            const envVariables = insertEnv(projectData?.env)
+
+            // ye hai container name
+            const containerName = projectData.dockerContainerName
+
+            // ye hai docker network name
+            const dockerNetworkName = projectData.networkName;
+
+            // ye hai image ka name
+            const imageName = `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/${projectId.toString().toLowerCase()}:${buildId.toString().toLowerCase()}`;
+
+            // ye hai req type means aagr local pe hai ho http nhi to https
+            const reqType = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? 'https://' : "http://"
+
+            //ye hai deployment url
+            let deploymentUrl;
+
+            const isMicroservice = projectData?.isMicroservice
+            if (isMicroservice) {
+                deploymentUrl = `http://${containerName}:${projectPort}`
+            } else {
+                if (projectData?.customDomains?.length > 0) {
+                    deploymentUrl = `${reqType}${projectData.customDomains}`
+                } else {
+                    deploymentUrl = DEPLOY_SERVICE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${hostPort}`
+                }
+            }
+
+            await ensureNetworkExists(dockerNetworkName)
+
+            const container = await docker.createContainer({
+                Image: imageName,
+                name: `${containerName}`,
+                Env: envVariables,
+                ExposedPorts: {
+                    [`${parseInt(projectPort)}/tcp`]: {}
+                },
+                HostConfig: {
+                    NetworkMode: dockerNetworkName,
+                    Memory: parseRam(userPlan.resources.ram),
+                    NanoCpus: parseCpu(userPlan.resources.cpu),
+                    StorageOpt: {
+                        size: `${userPlan.resources.storage}M`
+                    },
+                    PortBindings: {
+                        [`${parseInt(projectPort)}/tcp`]: [
+                            {
+                                HostPort: String(hostPort)
+                            }
+                        ]
+                    }
+                }
+            });
+
+            await container.start();
+            await container.logs({ stdout: true, stderr: true });
+
+            // here i send pub/sub of project status so every service listen and work
+            await redisPubSub.produce('deployhub:users:build:status', JSON.stringify({
+                projectId: projectData._id,
+                projectstatus: "running",
+                userId: userId,
+                projectName: projectData.name,
+                buildId: buildData._id,
+                serviceType: projectData.isMicroservice ? "microservice" : projectData.type,
+                deploymentUrl: deploymentUrl,
+
+            }));
         }
-
-
-
 
 
     } catch (error) {
