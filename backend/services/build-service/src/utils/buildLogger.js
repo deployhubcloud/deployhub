@@ -45,44 +45,30 @@ export class BuildLogger {
     async write(chunk) {
         if (!chunk) return
 
-        const clean = stripAnsi(chunk
-            .toString())
+        const lines = stripAnsi(chunk.toString())
             .replace(/\r/g, '')
             .replace(/^[\x00-\x08][\x00-\x03][\x00]{6}/gm, '')
-            .trimEnd()
+            .split('\n')
+            .map(l => l.trimEnd())
+            .filter(l => l.trim())
 
-        if (!clean) return
+        for (const line of lines) {
+            const shouldIgnore = ignorePatterns.some(p => p.test(line))
+            if (shouldIgnore) continue
 
-        const shouldIgnore = ignorePatterns.some(
-            pattern => pattern.test(clean)
-        )
+            const formatted = `[deployhub] ${line}`
+            this.lines.push(formatted)
 
-        if (shouldIgnore) {
-            return
+            await redis.xadd(
+                this.streamKey, '*',
+                'projectId', String(this.projectId),
+                'buildId', String(this.buildId),
+                'log', formatted,
+                'createdAt', String(Date.now())
+            )
+
+            await redis.expire(this.streamKey, 60 * 60 * 24)
         }
-
-        const ts = "deployhub"
-        const line = `[${ts}] ${clean}`
-
-        this.lines.push(line)
-
-        await redis.xadd(
-            this.streamKey,
-            '*',
-            'projectId',
-            String(this.projectId),
-            'buildId',
-            String(this.buildId),
-            'log',
-            line,
-            'createdAt',
-            String(Date.now())
-        )
-
-        await redis.expire(
-            this.streamKey,
-            60 * 60 * 24
-        )
     }
 
     async finish(status = 'success') {
