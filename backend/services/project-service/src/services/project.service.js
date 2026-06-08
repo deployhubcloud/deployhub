@@ -279,6 +279,11 @@ export const createProjectForPlan = async (userId, body, {
     project.dockerContainerName = dockerContainerName(project._id);
     await project.save({ validateBeforeSave: false });
 
+    if (normalized.isMicroservice) {
+        project.internalUrl = `http://${project.dockerContainerName}:${project.port}`;
+        await project.save({ validateBeforeSave: false })
+    }
+
     if (!normalized.isMicroservice) {
         await redisclient.hset(`deployhub:users:subdomain:${finalSubdomain}`, {
             port: assignedPort,
