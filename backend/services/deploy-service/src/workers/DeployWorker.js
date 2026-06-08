@@ -317,6 +317,31 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 }
             }
 
+            if (!firstTime) {
+
+                const containers = await docker.listContainers({
+                    all: true
+                });
+
+                const existingContainer = containers.find(c =>
+                    c.Names.includes(`/${oldcontainername}`)
+                );
+
+                if (existingContainer) {
+                    const container = await docker.getContainer(existingContainer.Id);
+
+                    if (container) {
+                        if (existingContainer.State === "running") {
+                            await container.stop();
+                        };
+                    };
+
+                    await container.remove({
+                        force: true
+                    });
+                }
+            }
+
             await checkAndPullImage(docker, imageName)
             await ensureNetworkExists(dockerNetworkName);
 
