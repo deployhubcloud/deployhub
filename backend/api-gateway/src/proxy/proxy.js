@@ -1,10 +1,13 @@
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { logger } from '../utils/logger.js'; 
+import { logger } from '../utils/logger.js';
 
 export default (target, serviceName) =>
     createProxyMiddleware({
         target,
         changeOrigin: true,
+        ws: false,
+        buffer: false,
+        selfHandleResponse: false,
         on: {
             proxyReq: (proxyReq, req) => {
                 proxyReq.setHeader("x-internal-secret", process.env.INTERNAL_SECRET);
@@ -26,7 +29,12 @@ export default (target, serviceName) =>
             proxyRes(proxyRes, req, res) {
                 const latency = Date.now() - proxyRes.req.startTime;
 
-                // res log
+                // SSE ke liye buffering off
+                if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
+                    res.setHeader('X-Accel-Buffering', 'no')
+                    res.flushHeaders()
+                }
+
                 logger.info({
                     service: serviceName,
                     method: req.method,
