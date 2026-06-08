@@ -84,7 +84,6 @@ const projectschema = new mongoose.Schema({
             return !this.isMicroservice;
         },
         sparse: true,
-        unique: true,
         lowercase: true,
         trim: true,
         validate: {
@@ -174,6 +173,17 @@ projectschema.index(
         unique: true,
         partialFilterExpression: {
             dockerContainerName: { $type: 'string' }
+        }
+    }
+);
+
+projectschema.index(
+    { subdomain: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            isMicroservice: false,
+            subdomain: { $exists: true }
         }
     }
 );
