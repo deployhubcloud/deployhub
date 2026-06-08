@@ -382,7 +382,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
 }, { connection, concurrency: 1 });
 
-deployWorker.on('completed', (job, result) => {
+deployWorker.on('completed', async (job, result) => {
 
     const { firstTime } = job.data;
 
