@@ -6,13 +6,13 @@ export function writeNginxConfig({
     type = 'backend',
     target,
     staticPath,
-    outputPath
+    outputPath,
+    letsencryptDir = '/etc/letsencrypt/live'
 }) {
 
     let locationBlock = '';
 
     if (type === 'static') {
-
         locationBlock = `
     root ${staticPath};
     index index.html;
@@ -20,9 +20,7 @@ export function writeNginxConfig({
     location / {
         try_files \\$uri \\$uri/ /index.html;
     }`;
-
     } else {
-
         locationBlock = `
     location / {
 
@@ -66,8 +64,8 @@ server {
 
     server_name ${domain};
 
-    ssl_certificate ${LETSENCRYPT_DIR}/${sslDomain}/fullchain.pem;
-    ssl_certificate_key ${LETSENCRYPT_DIR}/${sslDomain}/privkey.pem;
+    ssl_certificate ${letsencryptDir}/${sslDomain}/fullchain.pem;
+    ssl_certificate_key ${letsencryptDir}/${sslDomain}/privkey.pem;
 
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
@@ -76,11 +74,10 @@ ${locationBlock}
 
 }
 `;
+    if (outputPath) {
+        fs.writeFileSync(outputPath, config);
+        return outputPath;
+    }
 
-    fs.writeFileSync(
-        outputPath,
-        config
-    );
-
-    return outputPath;
+    return config;
 }
