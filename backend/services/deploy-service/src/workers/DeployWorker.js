@@ -176,6 +176,19 @@ const parseCpu = (cpu) => {
     return Number(cpu) * 1e9;
 };
 
+async function writeNginxFileToHost(container, content, destDir, destFileName) {
+    const fileBuffer = Buffer.from(content, 'utf-8');
+
+    const pack = tar.pack();
+    pack.entry({ name: destFileName, size: fileBuffer.length }, fileBuffer, (err) => {
+        if (err) pack.destroy(err);
+        else pack.finalize();
+    });
+
+    await container.putArchive(pack, { path: destDir });
+    console.log(`[write-to-host] Written -> container:${destDir}/${destFileName}`);
+}
+
 
 
 const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
@@ -392,6 +405,84 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             }));
         }
 
+        if (firstTime && !projectData.isMicroservice) {
+
+            const isProduction = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? true : false
+
+            const localNginxSubdomainDir = path.join(process.cwd(), 'nginx/subdomains')
+            if (!fs.existsSync(localNginxSubdomainDir)) {
+                fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
+            }
+
+            const nginxSubdomainDir = isProduction
+                ? '/home/rahul/userdata/docker/nginx/subdomains'
+                : localNginxSubdomainDir;
+
+            fs.mkdirSync(nginxSubdomainDir, { recursive: true });
+
+            let nginxConfig;
+            if (projectData.type === 'static') {
+                nginxConfig = writeNginxConfig({
+                    type: 'static',
+                    staticPath: `/data/static/${projectId}`,
+                    domain: `${projectData.subdomain}.deployhub.online`,
+                    sslDomain: 'deployhub.online',
+                    outputPath: null
+                });
+            } else {
+                nginxConfig = writeNginxConfig({
+                    type: 'backend',
+                    domain: `${projectData.subdomain}.deployhub.online`,
+                    sslDomain: 'deployhub.online',
+                    target: `http://localhost:${projectData.assignedPort}`,
+                    outputPath: null
+                });
+            }
+
+            // helper container banao sirf nginx conf dir mount karke
+            await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`);
+
+            let nginxContainer = null;
+            try {
+                nginxContainer = await docker.createContainer({
+                    Image: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
+                    name: `deployhub-nginx-helper-${projectId}`,
+                    HostConfig: {
+                        Binds: [`${nginxSubdomainDir}:/data/nginx/subdomains`],
+                        AutoRemove: false,
+                    },
+                });
+                await nginxContainer.start();
+
+                // container ke through host pe likho
+                await writeNginxFileToHost(
+                    nginxContainer,
+                    nginxConfig,
+                    '/data/nginx/subdomains',
+                    `${projectData.subdomain}.conf`
+                );
+
+            } finally {
+                if (nginxContainer) {
+
+                    try {
+                        const info = await nginxContainer.inspect();
+                        if (info.State.Running) await nginxContainer.stop({ t: 5 });
+                    } catch (e) {
+                        console.warn(`[nginx-helper] stop failed: ${e.message}`);
+                    }
+
+                    try {
+                        await nginxContainer.remove({ force: true });
+                    } catch (e) {
+                        console.warn(`[nginx-helper] remove failed: ${e.message}`);
+                    }
+                }
+            }
+
+            if (isProduction) await reloadNginx();
+        }
+
         return {
             repoLink: projectData.repoUrl,
             usergithubToken: userGithubToken,
@@ -443,6 +534,7 @@ deployWorker.on('completed', async (job, result) => {
 
 });
 
-deployWorker.on('failed', (job, err) => {
+deployWorker.on('failed', async (job, err) => {
+    console.log(err)
     console.error('Job Failed');
 });
