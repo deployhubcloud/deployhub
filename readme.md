@@ -22,7 +22,7 @@ Start each service **in order**, in separate terminal windows.
 ### 1. Secrets Manager
 
 ```bash
-cd backend/secrets-manager
+cd backend/services/secrets-manager
 npm ci
 npm run start
 ```
@@ -42,31 +42,60 @@ npm run start
 ### 3. Identity Service
 
 ```bash
-cd backend/identity-service
+cd backend/services/identity-service
 npm ci
 npm run start
 ```
 
 ---
 
-### 4. Frontend (Dashboard)
+### 4. Project Service
+
+```bash
+cd backend/services/project-service
+npm ci
+npm run start
+```
+
+---
+
+### 5. build Service
+
+```bash
+cd backend/services/build-service
+npm ci
+npm run start
+```
+
+---
+
+### 6. deploy Service
+
+```bash
+cd backend/services/deploy-service
+npm ci
+npm run start
+```
+
+---
+
+### 7. notification Service
+
+```bash
+cd backend/services/notification-service
+npm ci
+npm run start
+```
+
+---
+
+### 9. Frontend (Dashboard)
 
 ```bash
 cd frontend/Dashboard-Frontend
 npm ci
 npm run dev
 ```
-
----
-
-## Startup Order Summary
-
-| Step | Service           | Command         |
-|------|-------------------|-----------------|
-| 1    | Secrets Manager   | `npm run start` |
-| 2    | API Gateway       | `npm run start` |
-| 3    | Identity Service  | `npm run start` |
-| 4    | Dashboard Frontend| `npm run dev`   |
 
 ---
 
