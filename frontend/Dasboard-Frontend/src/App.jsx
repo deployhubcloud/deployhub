@@ -28,8 +28,8 @@ export default function App() {
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
 
       <Route element={<Protected><PrivateLayout /></Protected>}>
-        <Route path="/" element={<Home />} />
-        <Route path="/projects" element={<Projects />} />
+        <Route path="/" element={<Projects />} />
+        <Route path="/Builds" element={<Home />} />
         <Route path="/projects/new/:type" element={<NewProject />} />
         <Route path="/settings/sessions" element={<Sessions />} />
         <Route path="/profile" element={<Profile />} />
