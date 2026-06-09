@@ -89,10 +89,20 @@ npm run start
 
 ---
 
-### 9. Frontend (Dashboard)
+### 8. Frontend (Dashboard)
 
 ```bash
 cd frontend/Dashboard-Frontend
+npm ci
+npm run dev
+```
+
+---
+
+### 9. Frontend (Landing-Page)
+
+```bash
+cd frontend/frontend
 npm ci
 npm run dev
 ```
