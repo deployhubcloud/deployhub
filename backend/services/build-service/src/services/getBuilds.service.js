@@ -2,7 +2,18 @@ import { Build } from "../models/build.model.js"
 
 export const getBuilds = (userid) => {
 
-    const builds = await Build.find().lean();
+    const builds = await Build.find().select('project projectName commitSha status startedAt finishedAt logUrl updatedAt createdAt');
 
-    return builds;
+    const formentedBuilds = builds.map((b) => ({
+        projectName: b.projectName,
+        projectId: b.project,
+        commitSha: b.commitSha,
+        buildStaus: b.status,
+        logsUrl: b.logsUrl,
+        startedAt: b.startedAt,
+        finishedAt: b.finishedAt,
+        createdAt: b.createdAt
+    }));
+
+    return formentedBuilds;
 }
