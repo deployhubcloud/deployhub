@@ -13,7 +13,6 @@ import path from 'path';
 import os from 'os';
 import { pipeline } from 'stream/promises';
 import tar from 'tar-stream';
-import Docker from 'dockerode';
 import { reloadNginx } from '../../../../shared/nginx/reloadNginx.js';
 import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
 import Redis from 'ioredis';
@@ -21,9 +20,7 @@ import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthub
 import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
 import { deleteDockerHubImage } from '../../../../shared/docker/deleteDockerHubImage.js';
 import { Deployment } from '../model/deployment.model.js';
-
-
-const docker = new Docker();
+import { docker } from '../utils/docker.js';
 
 const redisPubSub = new RedisPubSub(
     Redis,
