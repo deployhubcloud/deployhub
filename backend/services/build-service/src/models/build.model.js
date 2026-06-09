@@ -14,6 +14,10 @@ const buildSchema = new mongoose.Schema({
         index: true
     },
 
+    projectName: {
+        type: String
+    },
+
     commitSha: String,
 
     status: {
