@@ -7,12 +7,12 @@ export const getBuildsController = async (req, res) => {
 
         const builds = await getBuilds(userId);
 
-        return res.Status(200).json({
+        return res.status(200).json({
             builds
         })
 
     } catch (error) {
-        return res.Status(500).json({
+        return res.status(500).json({
             message: "Internal Server Error"
         })
     }
