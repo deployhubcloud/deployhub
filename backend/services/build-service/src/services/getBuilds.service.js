@@ -9,7 +9,7 @@ export const getBuilds = async (userId) => {
         projectId: b.project,
         commitSha: b.commitSha,
         buildStaus: b.status,
-        logsUrl: b.logsUrl,
+        logsUrl: b.logUrl,
         startedAt: b.startedAt,
         finishedAt: b.finishedAt,
         createdAt: b.createdAt
