@@ -21,6 +21,8 @@ import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.j
 import { deleteDockerHubImage } from '../../../../shared/docker/deleteDockerHubImage.js';
 import { Deployment } from '../model/deployment.model.js';
 import { docker } from '../utils/docker.js';
+import { writeNginxFileToHost } from '../utils/nginx/writeNginxFileToHost.js';
+import { execInContainer } from '../utils/execInContainer.js';
 
 const redisPubSub = new RedisPubSub(
     Redis,
@@ -33,27 +35,6 @@ const redisPubSub = new RedisPubSub(
         lazyConnect: true
     }
 );
-
-async function execInContainer(container, cmd) {
-    const exec = await container.exec({
-        Cmd: cmd,
-        AttachStdout: true,
-        AttachStderr: true,
-    });
-
-    const stream = await exec.start({ hijack: true, stdin: false });
-
-    await new Promise((resolve, reject) => {
-        container.modem.demuxStream(stream, process.stdout, process.stderr);
-        stream.on('end', resolve);
-        stream.on('error', reject);
-    });
-
-    const inspect = await exec.inspect();
-    if (inspect.ExitCode !== 0) {
-        throw new Error(`Command [${cmd.join(' ')}] exited with code ${inspect.ExitCode}`);
-    }
-}
 
 // wrap local file into tar stream for putArchive
 async function createTarFromFile(filePath, archiveName) {
@@ -172,19 +153,6 @@ const parseRam = (ram) => {
 const parseCpu = (cpu) => {
     return Number(cpu) * 1e9;
 };
-
-async function writeNginxFileToHost(container, content, destDir, destFileName) {
-    const fileBuffer = Buffer.from(content, 'utf-8');
-
-    const pack = tar.pack();
-    pack.entry({ name: destFileName, size: fileBuffer.length }, fileBuffer, (err) => {
-        if (err) pack.destroy(err);
-        else pack.finalize();
-    });
-
-    await container.putArchive(pack, { path: destDir });
-    console.log(`[write-to-host] Written -> container:${destDir}/${destFileName}`);
-}
 
 
 
@@ -477,7 +445,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 }
             }
 
-            if (isProduction) await reloadNginx();
+            if (isProduction) await reloadNginx(docker);
         }
 
         return {
