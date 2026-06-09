@@ -1,6 +1,6 @@
 import { getBuilds } from "../services/getBuilds.service.js";
 
-export const getBuildsController = (req, res) => {
+export const getBuildsController = async (req, res) => {
     try {
 
         const userId = req.user._id;
