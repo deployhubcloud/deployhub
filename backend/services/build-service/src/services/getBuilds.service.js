@@ -1,6 +1,6 @@
 import { Build } from "../models/build.model.js"
 
-export const getBuilds = (userid) => {
+export const getBuilds = async (userid) => {
 
     const builds = await Build.find().select('project projectName commitSha status startedAt finishedAt logUrl updatedAt createdAt');
 
