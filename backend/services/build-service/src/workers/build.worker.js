@@ -101,6 +101,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         newBuild = await Build.create({
             userId: userId,
             project: project._id,
+            projectName: project.name,
             commitSha: commitSha,
             status: "pending",
             startedAt: new Date(),
