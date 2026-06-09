@@ -4,4 +4,5 @@ export const QUEUE_NAMES = {
     DEPLOY: 'deployhub-DeployProject',
     MONITOR: 'deployhub-MonitorProject',
     ALERT: 'deployhub-Alert',
+    SUBDOMAIN_CHANGE: 'subdomain-change'
 }
