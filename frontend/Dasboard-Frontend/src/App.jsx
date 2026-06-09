@@ -3,7 +3,7 @@ import { useAuth } from "./context/AuthContext";
 import PublicRoute from "./routes/PublicRoute";
 import Login from "./Pages/Login";
 import Signup from "./Pages/Signup";
-import Home from "./Pages/Home";
+import { Builds } from "./Pages/Builds";
 import Sessions from "./Pages/Sessions";
 import PrivateLayout from "./layouts/PrivateLayout";
 import Profile from "./Pages/Profile";
@@ -29,7 +29,7 @@ export default function App() {
 
       <Route element={<Protected><PrivateLayout /></Protected>}>
         <Route path="/" element={<Projects />} />
-        <Route path="/Builds" element={<Home />} />
+        <Route path="/Builds" element={<Builds />} />
         <Route path="/projects/new/:type" element={<NewProject />} />
         <Route path="/settings/sessions" element={<Sessions />} />
         <Route path="/profile" element={<Profile />} />
