@@ -99,6 +99,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
 
         // here create data for proejt i f not exists
         newBuild = await Build.create({
+            userId: userId,
             project: project._id,
             commitSha: commitSha,
             status: "pending",
