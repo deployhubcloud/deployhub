@@ -1,6 +1,6 @@
 import { Build } from "../models/build.model.js"
 
-export const getBuild = (userid) => {
+export const getBuilds = (userid) => {
 
     const builds = await Build.find().lean();
 
