@@ -6,6 +6,7 @@ export function getSecretsForService(serviceName) {
 
     'identity-service': {
 
+      NODE_ENV: env.NODE_ENV,
       PORT: env.IDENTITY_SERVICE_PORT,
 
       MONGODB_URI: env.IDENTITY_SERVICE_MONGODB_URI,
@@ -44,6 +45,7 @@ export function getSecretsForService(serviceName) {
 
 
     'build-service': {
+      NODE_ENV: env.NODE_ENV,
       PORT: env.BUILD_SERVICE_PORT,
       MONGODB_URI: env.BUILD_SERVICE_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,
@@ -64,6 +66,7 @@ export function getSecretsForService(serviceName) {
 
 
     'project-service': {
+      NODE_ENV: env.NODE_ENV,
       PORT: env.PROJECT_SERVICE_PORT,
       MONGODB_URI: env.PROJECT_SERVICE_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,
@@ -79,6 +82,7 @@ export function getSecretsForService(serviceName) {
 
 
     'deploy-service': {
+      NODE_ENV: env.NODE_ENV,
       PORT: env.DEPLOY_SERVICE_PORT,
       MONGODB_URI: env.DEPLOY_SERVICE_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,
@@ -101,6 +105,7 @@ export function getSecretsForService(serviceName) {
     },
 
     'api-gateway': {
+      NODE_ENV: env.NODE_ENV,
       PORT: env.API_GATEWAY_PORT,
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
@@ -120,6 +125,7 @@ export function getSecretsForService(serviceName) {
     },
 
     'monitoring-service': {
+      NODE_ENV: env.NODE_ENV,
       PORT: env.MONITORING_SERVICE_PORT,
       MONITORING_MONGODB_URI: env.MONITORING_MONGODB_URI,
       INTERNAL_SECRET: env.INTERNAL_SECRET,
@@ -131,6 +137,7 @@ export function getSecretsForService(serviceName) {
     },
 
     'notification-service': {
+      NODE_ENV: env.NODE_ENV,
       PORT: env.NOTIFICATION_SERVICE_PORT,
       MONGODB_URI: env.NOTIFICATION_MONGODB_URI,
       REDIS_HOST: env.REDIS_HOST,

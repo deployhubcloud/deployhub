@@ -497,6 +497,8 @@ deployWorker.on('completed', async (job, result) => {
         console.log("Webhook setup response:", result.status, await result.text())
     };
 
+    console.log("Deploy Job Completed")
+
 });
 
 deployWorker.on('failed', async (job, err) => {

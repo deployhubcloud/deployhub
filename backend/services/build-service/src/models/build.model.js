@@ -2,10 +2,20 @@ import mongoose from "mongoose";
 
 const buildSchema = new mongoose.Schema({
 
+
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        index: true
+    },
     project: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         index: true
+    },
+
+    projectName: {
+        type: String
     },
 
     commitSha: String,
