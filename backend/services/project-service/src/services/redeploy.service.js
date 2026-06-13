@@ -1,4 +1,5 @@
 import { AppError } from "../../../../shared/errors/AppError.js";
+import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
 import { Project } from "../models/project.model.js";
 import { buildQueue } from "../utils/queues.js";
 
