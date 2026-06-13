@@ -385,7 +385,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
     }
 }, {
     connection: connection,
-    concurrency: 5
+    concurrency: 1
 })
 
 buildWorker.on("completed", async (job, result) => {
