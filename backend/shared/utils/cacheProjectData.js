@@ -1,12 +1,12 @@
-export const cacheProjectData = async (redis, projectData, expiryTime) => {
+export const cacheProjectData = async (projectId, redis, projectData, expiryTime) => {
     try {
 
         const TTL = parseInt(expiryTime) * 5
-        const redisProjectKey = `deployhub:users:project:${projectData._id}`;
+        const redisProjectKey = `deployhub:users:project:${projectId}`;
 
         await redis
             .multi()
-            .hset(redisProjectKey, JSON.stringify(projectData))
+            .set(redisProjectKey, JSON.stringify(projectData))
             .expire(redisProjectKey, TTL)
             .exec();
 
@@ -21,7 +21,7 @@ export const getCacheProjectData = async (projectId, redis) => {
     try {
         const redisProjectKey = `deployhub:users:project:${projectId}`;
 
-        const data = await redis.hgetall(redisProjectKey);
+        const data = await redis.get(redisProjectKey);
         return JSON.parse(data);
     } catch (error) {
         console.log(error);
