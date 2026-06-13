@@ -249,7 +249,7 @@ export default function ProjectSidebar() {
 
         <div className="px-2 sm:px-3 py-4 border-t border-white/5">
           <Link
-            to="/projects"
+            to="/"
             onClick={close}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-gray-500 hover:text-white hover:bg-white/5 border border-transparent transition-all duration-200"
           >
