@@ -206,7 +206,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
         if (!firstTime) {
 
-            oldImage = projectData.imageName;
+            const oldImage = projectData.imageName;
 
             if (oldImage) {
                 const response = await deleteDockerHubImage(projectData?.imageName, DEPLOY_SERVICE_ENV.DOCKER_PASSWORD, axios, docker);
@@ -312,11 +312,12 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                         if (existingContainer.State === "running") {
                             await container.stop();
                         };
+
+                        await container.remove({
+                            force: true
+                        });
                     };
 
-                    await container.remove({
-                        force: true
-                    });
                 }
             }
 
