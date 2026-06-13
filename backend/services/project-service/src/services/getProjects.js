@@ -1,3 +1,4 @@
+import { AppError } from "../../../../shared/errors/AppError.js";
 import { Project } from "../models/project.model.js";
 
 export const getProjects = async (userId) => {
@@ -30,4 +31,17 @@ export const getProjects = async (userId) => {
 
     return formetedProject
 
+}
+
+export const getProjectMetaService = async (projectId) => {
+
+    const projectData = await Project.findById(projectId).select('plan name').lean();
+    if (!projectData) {
+        throw new AppError("Invalid ProjectId", 404)
+    }
+
+    return {
+        name: projectData.name,
+        plan: projectData.plan
+    }
 }
