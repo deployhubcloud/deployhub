@@ -6,7 +6,7 @@ import { internalApiCallMiddleware } from '../../../../shared/middlewares/intera
 import { project_env } from '../lib/env.js';
 import { getProjectByIdController } from '../controllers/forOtherService.js';
 import { reDeployController } from '../controllers/reDeploy.js';
-import { getProjectMetaController, getProjectsController } from '../controllers/getProjects.js';
+import { getProjectDataByIdConroller, getProjectMetaController, getProjectsController } from '../controllers/getProjects.js';
 
 const projectRouter = express.Router();
 
@@ -17,5 +17,6 @@ projectRouter.post('/payment/verify', paymentVerifyValidator, paymentVerifyContr
 projectRouter.get('/for-other-service/:projectId', internalApiCallMiddleware({ secret: project_env.INTERNAL_SERVICE_TALKING_SECRET }), getProjectByIdController);
 projectRouter.post('/redeploy/:projectId', reDeployController);
 projectRouter.get('/:projectId/meta', getProjectMetaController)
+projectRouter.get('/project/:projectId', getProjectDataByIdConroller);
 
 export default projectRouter;
