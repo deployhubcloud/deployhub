@@ -112,12 +112,12 @@ export default function ProjectSidebar() {
 
   useEffect(() => {
     if (!projectId) return
-    api.get(`/projects/${projectId}/meta`)
+    api.get(`/project/${projectId}/meta`)
       .then(res => {
         setProjectName(res.data?.name || 'Project')
         setPlan(res.data?.plan || null)
       })
-      .catch(() => navigate('/projects'))
+      .catch(() => navigate('/'))
       .finally(() => setBootstrap(false))
   }, [projectId, navigate])
 

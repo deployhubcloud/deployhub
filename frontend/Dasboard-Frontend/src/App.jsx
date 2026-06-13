@@ -9,6 +9,8 @@ import PrivateLayout from "./layouts/PrivateLayout";
 import Profile from "./Pages/Profile";
 import Projects from "./Pages/Projects";
 import NewProject from "./Pages/NewProject";
+import ProjectLayout from "./layouts/ProjectLayout";
+import Overview from "./Pages/Overview";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
@@ -33,6 +35,10 @@ export default function App() {
         <Route path="/projects/new/:type" element={<NewProject />} />
         <Route path="/settings/sessions" element={<Sessions />} />
         <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<Protected><ProjectLayout /></Protected>}>
+        <Route path="/project/:id" element={<Overview />} />
       </Route>
 
       <Route
