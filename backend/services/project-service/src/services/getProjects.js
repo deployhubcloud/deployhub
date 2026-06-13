@@ -102,6 +102,8 @@ export const getProjectDataByIdService = async (projectId) => {
     const cacheData = await getCacheProjectData(projectData._id, redis);
     if (!cacheData) {
         await cacheProjectData(projectData._id, redis, formetedProjectData, 60)
+
+        return formetedProjectData;
     }
 
 
