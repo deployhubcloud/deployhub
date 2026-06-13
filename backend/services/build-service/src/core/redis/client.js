@@ -14,7 +14,7 @@ export const connectRedis = async () => {
         host: buildEnv.REDIS_HOST,
         port: buildEnv.REDIS_PORT,
         password: buildEnv.REDIS_PASSWORD,
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: null,
         enableReadyCheck: true,
         lazyConnect: true
         }
