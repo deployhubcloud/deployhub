@@ -17,6 +17,6 @@ projectRouter.post('/payment/verify', paymentVerifyValidator, paymentVerifyContr
 projectRouter.get('/for-other-service/:projectId', internalApiCallMiddleware({ secret: project_env.INTERNAL_SERVICE_TALKING_SECRET }), getProjectByIdController);
 projectRouter.post('/redeploy/:projectId', reDeployController);
 projectRouter.get('/:projectId/meta', getProjectMetaController)
-projectRouter.get('/project/:projectId', getProjectDataByIdConroller);
+projectRouter.get('/overview/:projectId', getProjectDataByIdConroller);
 
 export default projectRouter;
