@@ -99,7 +99,8 @@ export const getProjectDataByIdService = async (projectId) => {
                 status: buildData.status,
                 timeTaken: timeTakenSeconds,
                 createdAt: buildData.credtedAt
-            }
+            },
+            totalBuilds: projectData.totalBuilds
         }
 
         await cacheProjectData(projectData._id, redis, formetedProjectData, 60)
