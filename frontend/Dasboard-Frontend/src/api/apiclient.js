@@ -12,6 +12,35 @@ let lastRateLimitNoticeAt = 0;
 
 const RATE_LIMIT_NOTICE_COOLDOWN_MS = 3000;
 const RATE_LIMIT_EVENT = "deployhub:rate-limit";
+const SERVICE_DOWN_EVENT = "deployhub:service-down";
+
+const notifyServiceDown = (error) => {
+  window.dispatchEvent(
+    new CustomEvent(SERVICE_DOWN_EVENT, {
+      detail: {
+        message:
+          error.response?.data?.message ||
+          "DeployHub services are temporarily unavailable.",
+        url: error.config?.url,
+      },
+    })
+  );
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 429) {
+      notifyRateLimit(error);
+    }
+
+    if (error.response?.status === 503) {
+      notifyServiceDown(error);
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 function subscribeTokenRefresh(callback) {
   refreshSubscribers.push(callback);
@@ -153,3 +182,5 @@ export const attachInterceptors = (getToken, refreshToken, logout) => {
     api.interceptors.response.eject(responseInterceptor);
   };
 };
+
+export { SERVICE_DOWN_EVENT };
