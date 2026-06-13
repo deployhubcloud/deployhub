@@ -1,7 +1,7 @@
 export const cacheProjectData = async (projectId, redis, projectData, expiryTime) => {
     try {
 
-        const TTL = parseInt(expiryTime) * 5
+        const TTL = 60 * parseInt(expiryTime)
         const redisProjectKey = `deployhub:users:project:${projectId}`;
 
         await redis
