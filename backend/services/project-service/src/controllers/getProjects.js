@@ -26,7 +26,6 @@ export const getProjectMetaController = async (req, res) => {
 
         const projectData = await getProjectMetaService(projectId);
 
-        console.log(projectData);
         return res.status(200).json({
             projectData
         });
