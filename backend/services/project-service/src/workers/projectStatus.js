@@ -1,8 +1,9 @@
 import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
+import { clearCacheProjectData } from '../../../../shared/utils/cacheProjectData.js';
 import { project_env } from '../lib/env.js';
 import { Project } from '../models/project.model.js'
 import Redis from 'ioredis';
-
+import { getRedis } from '../core/redis/client.js';
 
 const redisPubSub = new RedisPubSub(
     Redis,
@@ -17,6 +18,7 @@ const redisPubSub = new RedisPubSub(
 );
 
 redisPubSub.consume('deployhub:users:build:status', async (message) => {
+    const redis = getRedis()
     try {
 
         const data = JSON.parse(message);
@@ -66,6 +68,8 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
                 }
             );
         }
+
+        await clearCacheProjectData(projectId, redis)
 
     } catch (error) {
         console.error('Error while handling project status notification', error?.message || error);
