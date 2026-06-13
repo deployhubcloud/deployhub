@@ -55,6 +55,11 @@ export const getProjectDataByIdService = async (projectId) => {
 
     const redis = getRedis()
 
+    const cacheData = await getCacheProjectData(projectId, redis);
+    if (cacheData) {
+        return cacheData;
+    };
+
     const projectData = await Project.findById(projectId).select('name type version status isMicroservice repoUrl branch buildCommand startCommand internalUrl subdomain customDomains monitor notifications buildId startDate endDate paymentStatus').lean();
 
 
@@ -99,13 +104,9 @@ export const getProjectDataByIdService = async (projectId) => {
         }
     }
 
-    const cacheData = await getCacheProjectData(projectData._id, redis);
     if (!cacheData) {
         await cacheProjectData(projectData._id, redis, formetedProjectData, 60)
 
         return formetedProjectData;
     }
-
-
-    return cacheData;
 }
