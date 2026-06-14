@@ -5,7 +5,7 @@ export const cacheBuildsData = async (projectId, buildData, expireTime) => {
 
         const TTL = 60 * expireTime || 60
         const redis = getRedis();
-        const cacheKey = `deployhub:project:${projectId}:builds`
+        const cacheKey = `deployhub:users:project:${projectId}:builds`
 
         await redis
             .multi()
@@ -25,7 +25,7 @@ export const getCahceBuildData = async (projectId) => {
     try {
 
         const redis = getRedis();
-        const cacheKey = `deployhub:project:${projectId}:builds`
+        const cacheKey = `deployhub:users:project:${projectId}:builds`
 
         const data = await redis.get(cacheKey);
         return JSON.parse(data);
@@ -39,7 +39,7 @@ export const getCahceBuildData = async (projectId) => {
 export const deleteCacheBuildData = async (projectId) => {
     try {
         const redis = getRedis();
-        const cacheKey = `deployhub:project:${projectId}:builds`
+        const cacheKey = `deployhub:users:project:${projectId}:builds`
 
         await redis.del(cacheKey);
     } catch (error) {
