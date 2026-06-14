@@ -5,6 +5,8 @@ import hpp from "hpp";
 import { env } from "./lib/env.js";
 import { connectRedis } from "./core/redis/client.js";
 import { createShutdownHandler } from "../../../shared/utils/gracefulShutdown.js";
+import cookieParser from "cookie-parser";
+
 
 const app = express();
 
@@ -18,12 +20,16 @@ app.set("trust proxy", 1);
 // parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 
 // health
 app.get('/health', (_req, res) => {
     res.status(200).json({ success: true, message: 'Healthy' });
 });
+
+
+import streamRoutes from './routes/routes.js'
+app.use('/api/v1/stream', streamRoutes)
 
 
 export default async function startApp() {
