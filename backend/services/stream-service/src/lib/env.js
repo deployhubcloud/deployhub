@@ -18,6 +18,7 @@ const requiredEnvVars = [
     "ACCESS_TOKEN_EXPIRY",
     "REFRESH_TOKEN_SECRET",
     "REFRESH_TOKEN_EXPIRY",
+    "FRONTEND_URI"
 ]
 
 for (const env of requiredEnvVars) {
@@ -40,4 +41,5 @@ export const env = {
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
     REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
     REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
+    FRONTEND_URI: process.env.FRONTEND_URI
 };
