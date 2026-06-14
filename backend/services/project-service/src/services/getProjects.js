@@ -65,7 +65,7 @@ export const getProjectDataByIdService = async (projectId) => {
             throw new AppError("Invalid ProjectId", 404)
         }
 
-        const domain = projectData?.customDomains.length > 0 ? projectData.customDomains : projectData.subdomain;
+        const domain = projectData?.customDomains.length > 0 ? projectData.customDomains : `${projectData.subdomain}.deployhub.online`;
 
         const buildData = await getBuildDataById(axios, projectData.buildId, project_env.BUILD_SERVICE_URL, project_env.INTERNAL_SECRET, project_env.INTERNAL_SERVICE_TALKING_SECRET);
 
