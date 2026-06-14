@@ -98,7 +98,7 @@ export const getProjectDataByIdService = async (projectId) => {
                 commitSha: buildData.commitSha,
                 status: buildData.status,
                 timeTaken: timeTakenSeconds,
-                createdAt: buildData.credtedAt
+                createdAt: buildData.createdAt
             },
             totalBuilds: projectData.totalBuilds
         }
