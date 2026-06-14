@@ -294,7 +294,7 @@ export const createProjectForPlan = async (userId, body, {
     }
 
     await queueProjectBuild(project);
-    await publishProjectStatus(redisclient, { projectId: project._id, status: project.status })
+    await publishProjectStatus(redisclient, { projectId: project._id, status: 'queued' })
 
     return { project };
 };
