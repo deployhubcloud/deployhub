@@ -1,4 +1,5 @@
 import { clearCacheProjectData } from "../../../../shared/utils/cacheProjectData.js";
+import { publishProjectStatus } from "../../../../shared/utils/publishProjectStatus.js";
 import { getRedis } from "../core/redis/client.js";
 import { reDeployment } from "../services/redeploy.service.js";
 
@@ -12,6 +13,7 @@ export const reDeployController = async (req, res) => {
         await reDeployment(projectId);
 
         await clearCacheProjectData(projectId, redis)
+        await publishProjectStatus(redis, { projectId: projectId, status: 'queued' })
 
         return res.status(200).json({
             message: "Redeployment in queue"
