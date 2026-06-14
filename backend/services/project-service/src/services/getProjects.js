@@ -10,7 +10,7 @@ export const getProjects = async (userId) => {
 
     const projects = await Project.find({ userId })
         .select("name type status version isMicroservice internalUrl subdomain customDomains totalBuilds plan monitor notifications cretedAt updatedAt")
-        .sort({ cretedAt: -1 })
+        .sort({ createdAt: -1 })
         .lean();
 
     const formetedProject = projects.map((p) => ({
