@@ -1,4 +1,4 @@
-export const publishProjectStatus = async (redis, streamKey, payload) => {
+export const publishProjectStatus = async (redis, payload) => {
 
     const { projectId, status } = payload;
 
