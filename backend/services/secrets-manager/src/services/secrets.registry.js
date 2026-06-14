@@ -154,6 +154,15 @@ export function getSecretsForService(serviceName) {
       PROJECT_SERVICE_URL: env.PROJECT_SERVICE_URL,
       BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
       DEPLOY_SERVICE_URL: env.DEPLOY_SERVICE_URL
+    },
+
+    'stream-service': {
+      REDIS_HOST: env.REDIS_HOST,
+      REDIS_PORT: env.REDIS_PORT,
+      REDIS_PASSWORD: env.REDIS_PASSWORD,
+      INTERNAL_SECRET: env.INTERNAL_SECRET,
+      NODE_ENV: env.NODE_ENV,
+      PORT: env.STREAM_SERVICE_PORT,
     }
 
   };
@@ -170,6 +179,7 @@ export function getRegisteredServices() {
     'deploy-service',
     'api-gateway',
     'monitoring-service',
-    'notification-service'
+    'notification-service',
+    'stream-service'
   ];
 }

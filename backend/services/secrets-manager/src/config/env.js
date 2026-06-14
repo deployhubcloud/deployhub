@@ -17,7 +17,7 @@ const schema = z.object({
   DEPLOY_SERVICE_PORT: z.coerce.number().default(4004),
   NOTIFICATION_SERVICE_PORT: z.coerce.number().default(4006),
   MONITORING_SERVICE_PORT: z.coerce.number().default(4007),
-
+  STREAM_SERVICE_PORT: z.coerce.number().default(4008),
 
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
