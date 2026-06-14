@@ -55,7 +55,7 @@ function Builds() {
 
     useEffect(() => {
         api.get('/build' + '/builds/' + projectId)
-            .then(r => { setBuilds(r.data.data || []); setTotal(r.data.total || 0) })
+            .then(r => { setBuilds(r.data.data || []); setTotal(r.data.data.length || 0) })
             .catch(() => setError('Failed to load builds.'))
             .finally(() => setLoading(false))
     }, [projectId])
