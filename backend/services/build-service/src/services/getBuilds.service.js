@@ -24,10 +24,11 @@ export const getBuildByProjectId = async (projectId) => {
     const cacheData = await getCahceBuildData(projectId);
     if (!cacheData) {
 
-        const buildsData = await Build.find({ project: projectId }).select('commitSha status startedAt finishedAt logUrl createdAt').lean();
+        const buildsData = await Build.find({ project: projectId }).select('commitSha status startedAt finishedAt logUrl createdAt _id').lean();
         const formetedBuilds = buildsData.map((b) => ({
+            _id: b._id,
             commitSha: b.commitSha,
-            buildStaus: b.status,
+            status: b.status,
             logsUrl: b.logUrl,
             startedAt: b.startedAt,
             finishedAt: b.finishedAt,
