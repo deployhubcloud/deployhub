@@ -205,20 +205,28 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
         );
 
         if (!firstTime) {
+            const containers = await docker.listContainers({
+                all: true
+            });
 
-            const oldImage = projectData.imageName;
+            const existingContainer = containers.find(c =>
+                c.Names.includes(`/${projectData.dockerContainerName}`)
+            );
 
-            if (oldImage) {
-                const response = await deleteDockerHubImage(projectData?.imageName, DEPLOY_SERVICE_ENV.DOCKER_PASSWORD, axios, docker);
-                console.log("Image Deleted from DockerHub", response);
-            }
+            if (existingContainer) {
+                const container = await docker.getContainer(existingContainer.Id);
+                console.log(container)
 
-            if (projectData?.containerId) {
+                if (container) {
+                    if (existingContainer.State === "running") {
+                        await container.stop();
+                    };
 
-                const container = await docker.getContainer(projectData.containerId);
-                await container.remove({
-                    force: true
-                });
+                    await container.remove({
+                        force: true
+                    });
+                };
+
             }
         }
 
@@ -292,32 +300,6 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     deploymentUrl = `${reqType}${projectData.customDomains}`
                 } else {
                     deploymentUrl = DEPLOY_SERVICE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${hostPort}`
-                }
-            }
-
-            if (!firstTime) {
-
-                const containers = await docker.listContainers({
-                    all: true
-                });
-
-                const existingContainer = containers.find(c =>
-                    c.Names.includes(`/${oldcontainername}`)
-                );
-
-                if (existingContainer) {
-                    const container = await docker.getContainer(existingContainer.Id);
-
-                    if (container) {
-                        if (existingContainer.State === "running") {
-                            await container.stop();
-                        };
-
-                        await container.remove({
-                            force: true
-                        });
-                    };
-
                 }
             }
 
