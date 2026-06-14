@@ -453,7 +453,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
 deployWorker.on('completed', async (job, result) => {
 
-    const { firstTime } = job.data;
+    const { firstTime, projectId } = job.data;
 
     if (firstTime && result.usergithubToken && DEPLOY_SERVICE_ENV === 'production' && result.userPlan.github_Ci_Cd) {
         const repoLinkWithoutGit = result.repoLink.endsWith('.git') ? result.repoLink.slice(0, -4) : result.repoLink;
