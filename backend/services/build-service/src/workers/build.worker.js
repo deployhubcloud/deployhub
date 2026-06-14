@@ -414,7 +414,7 @@ buildWorker.on("completed", async (job, result) => {
         dockerImage: result.imageName
     }));
 
-    await queueProjectDeploy(projectId, plan, userId, result.buildId, firstTime)
+    await queueProjectDeploy(projectId, plan, userId, result.buildId, firstTime);
 
     console.log('job completed for build')
 })
