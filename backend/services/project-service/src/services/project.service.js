@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { randomUUID } from "crypto";
 import { Port } from '../models/port.model.js'
+import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
 
 
 
@@ -293,6 +294,7 @@ export const createProjectForPlan = async (userId, body, {
     }
 
     await queueProjectBuild(project);
+    await publishProjectStatus(redisclient, { projectId: project._id, status: project.status })
 
     return { project };
 };
