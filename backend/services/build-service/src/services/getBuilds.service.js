@@ -3,7 +3,7 @@ import { cacheBuildsData, getCahceBuildData } from "../utils/cacheBuildData.js";
 
 export const getBuilds = async (userId) => {
 
-    const builds = await Build.find({ userId }).select('project projectName commitSha status startedAt finishedAt logUrl updatedAt createdAt').lean()
+    const builds = await Build.find({ userId }).select('project projectName commitSha status startedAt finishedAt logUrl updatedAt createdAt').sort({ createdAt: -1 }).lean()
 
     const formentedBuilds = builds.map((b) => ({
         projectName: b.projectName,
