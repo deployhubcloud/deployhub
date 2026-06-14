@@ -23,6 +23,9 @@ import { Deployment } from '../model/deployment.model.js';
 import { docker } from '../utils/docker.js';
 import { writeNginxFileToHost } from '../utils/nginx/writeNginxFileToHost.js';
 import { execInContainer } from '../utils/execInContainer.js';
+import { getRedis } from '../core/redis/client.js';
+import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
+
 
 const redisPubSub = new RedisPubSub(
     Redis,
@@ -35,6 +38,8 @@ const redisPubSub = new RedisPubSub(
         lazyConnect: true
     }
 );
+
+const redis = getRedis();
 
 // wrap local file into tar stream for putArchive
 async function createTarFromFile(filePath, archiveName) {
@@ -479,6 +484,8 @@ deployWorker.on('completed', async (job, result) => {
 
         console.log("Webhook setup response:", result.status, await result.text())
     };
+
+    await publishProjectStatus(redis, { projectId: projectId, status: 'running' })
 
     console.log("Deploy Job Completed")
 
