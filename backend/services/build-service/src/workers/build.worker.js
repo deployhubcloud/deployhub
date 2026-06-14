@@ -26,6 +26,8 @@ import * as maintar from 'tar';
 import { typeLangVersionSelector } from '../utils/languageVersion.js';
 import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
 import { deleteCacheBuildData } from '../utils/cacheBuildData.js';
+import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
+import { getRedis } from '../core/redis/client.js';
 
 
 const docker = new Docker()
@@ -41,6 +43,8 @@ const redisPubSub = new RedisPubSub(
         lazyConnect: true
     }
 );
+
+const redis = getRedis();
 
 
 
@@ -67,6 +71,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
     // data from the queue
     const { projectId, plan, userId } = job.data;
 
+
+    await publishProjectStatus(redis, { projectId: projectId, status: 'building' })
 
     await deleteCacheBuildData(projectId);
     let project;
@@ -370,6 +376,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 );
             }
         }
+
+        await publishProjectStatus(redis, { projectId: projectId, status: 'failed' })
 
         throw error;
     } finally {
