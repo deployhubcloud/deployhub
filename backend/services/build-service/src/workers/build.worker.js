@@ -25,6 +25,7 @@ import { uplaodStatisBuildZipFile } from '../utils/minio/minio.js';
 import * as maintar from 'tar';
 import { typeLangVersionSelector } from '../utils/languageVersion.js';
 import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.js';
+import { deleteCacheBuildData } from '../utils/cacheBuildData.js';
 
 
 const docker = new Docker()
@@ -67,6 +68,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
     const { projectId, plan, userId } = job.data;
 
 
+    await deleteCacheBuildData(projectId);
     let project;
     let newBuild;
     let imageName;
