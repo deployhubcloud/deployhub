@@ -1,5 +1,6 @@
 import { Build } from "../models/build.model.js"
 import { cacheBuildsData, getCahceBuildData } from "../utils/cacheBuildData.js";
+import { AppError } from "../../../../shared/errors/AppError.js"
 
 export const getBuilds = async (userId) => {
 
@@ -41,4 +42,14 @@ export const getBuildByProjectId = async (projectId) => {
     }
 
     return cacheData
+}
+
+export const getLatestBuildIdService = async (ProjectId) => {
+
+    const latestBuildId = await Build.findOne({ project: projectId }).select('_id').select({ createdAt: -1 }).lean();
+    if (!latestBuildId) {
+        throw new AppError('invalid ProjectId', 404)
+    }
+    return latestBuildId;
+
 }
