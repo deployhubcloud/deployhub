@@ -13,6 +13,7 @@ import ProjectLayout from "./layouts/ProjectLayout";
 import Overview from "./Pages/Overview";
 import ServiceDownOverlay from "./components/ServiceDownOverlay";
 import { Builds as ProjectBuilds } from "./Pages/Project/Builds";
+import Logs from "./Pages/Project/Logs";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
@@ -45,6 +46,7 @@ export default function App() {
         <Route element={<Protected><ProjectLayout /></Protected>}>
           <Route path="/project/:id" element={<Overview />} />
           <Route path="/project/:id/builds" element={<ProjectBuilds />} />
+          <Route path="/project/:id/logs" element={<Logs />} />
         </Route>
 
         <Route
