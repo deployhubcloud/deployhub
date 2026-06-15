@@ -28,6 +28,7 @@ import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.j
 import { deleteCacheBuildData } from '../utils/cacheBuildData.js';
 import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
 import { getRedis } from '../core/redis/client.js';
+import { cacheLatestBuildIdofProject } from '../../../../shared/utils/cacheLatestBuildIdofProject.js';
 
 
 const docker = new Docker()
@@ -114,6 +115,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             status: "pending",
             startedAt: new Date(),
         })
+
+        await cacheLatestBuildIdofProject(projectId, redis);
 
         logger = new BuildLogger(newBuild._id, projectId)
         await logger.start()
