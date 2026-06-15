@@ -12,4 +12,6 @@ export const publishProjectStatus = async (redis, payload) => {
         "timestamp",
         String(Date.now())
     );
+
+    await redis.publish('project:status:updates', JSON.stringify({ projectId: String(projectId), status: String(status) }))
 };
