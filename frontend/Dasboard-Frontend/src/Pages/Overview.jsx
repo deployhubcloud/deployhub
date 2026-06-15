@@ -135,7 +135,6 @@ export default function Overview() {
 
   // WS se live status update
   const handleStatusUpdate = useCallback((status) => {
-    console.log('Status update received:', status)
     setProject(prev => prev ? { ...prev, stats: status } : prev)
   }, [])
 

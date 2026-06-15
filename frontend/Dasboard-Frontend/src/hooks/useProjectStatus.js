@@ -14,12 +14,7 @@ export function useProjectStatus(projectId, onStatusUpdate) {
 
         const socket = connectSocket()
 
-        console.log('Subscribing to projectId:', projectId) // aa raha hai?
-
         const handleStatus = ({ projectId: pid, status }) => {
-            console.log('pid:', pid, typeof pid)
-            console.log('projectId:', projectId, typeof projectId)
-            console.log('match:', pid === projectId)
             if (pid === projectId) {
                 onUpdateRef.current(status)
             }
