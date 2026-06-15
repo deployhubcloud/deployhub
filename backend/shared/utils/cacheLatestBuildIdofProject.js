@@ -1,21 +1,19 @@
-export const cacheLatestBuildIdofProject = async (projectid, redis, buildId) => {
+export const cacheLatestBuildIdOfProject = async (projectid, redis, data) => {
     try {
-
         const redisKey = `deployhub:project:latestbuildId:${projectid}`;
-        await redis.set(redisKey, buildId.toString());
-
+        await redis.hset(redisKey, data);
     } catch (error) {
         throw error;
     }
-}
+};
 
-export const getCacheLatestBuildIdofProject = async (projectid, redis) => {
+
+export const getCacheLatestBuildIdOfProject = async (projectid, redis) => {
     try {
-
         const redisKey = `deployhub:project:latestbuildId:${projectid}`;
-        return await redis.get(redisKey);
-
+        const data = await redis.hgetall(redisKey);
+        return data;
     } catch (error) {
-        throw error
+        throw error;
     }
 };
