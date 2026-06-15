@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/apiclient'
-
+import { useProjectsStatus } from '../hooks/useProjectsStatus'
 
 const STATUS = {
   queued: { text: 'Queued', color: '#eab308', pulse: false },
@@ -19,7 +19,6 @@ const TYPES = [
   { key: 'java', title: 'Java Service', desc: 'Spring Boot and JVM services with Pro resources.', plan: 'Pro', color: '#a78bfa', icon: 'M8 18h8M10 14h4m-5-3h6a3 3 0 000-6H9v13m3-13v13' },
 ]
 
-// ── Helpers ───────────────────────────────────────────────────────────────
 function Icon({ path, className = 'h-5 w-5' }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,42 +43,81 @@ function getDisplayUrl(project) {
   return project.domain
 }
 
-// Type → mono glyph for the row avatar
 const TYPE_GLYPH = { node: 'N', static: 'S', go: 'Go', python: 'Py', java: 'Jv' }
 const TYPE_LABEL = { node: 'Node.js', static: 'Static', go: 'Go', python: 'Python', java: 'Java' }
 
-// ── Status dot + label ────────────────────────────────────────────────────
-function StatusDot({ status, withLabel = true }) {
+// ── useVisibleProjects ────────────────────────────────────────────────────
+function useVisibleProjects(projects) {
+  const [visibleIds, setVisibleIds] = useState([])
+  const rowRefs = useRef({})
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      setVisibleIds([])
+      return
+    }
+
+    setVisibleIds([])
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setVisibleIds(prev => {
+          const updated = new Set(prev)
+          entries.forEach(entry => {
+            const id = entry.target.dataset.projectId
+            if (entry.isIntersecting) updated.add(id)
+            else updated.delete(id)
+          })
+          return [...updated]
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    Object.entries(rowRefs.current).forEach(([, el]) => {
+      if (el) observer.observe(el)
+    })
+
+    return () => {
+      observer.disconnect()
+      setVisibleIds([])
+    }
+  }, [projects])
+
+  return { visibleIds, rowRefs }
+}
+
+// ── StatusDot ─────────────────────────────────────────────────────────────
+function StatusDot({ status }) {
   const s = STATUS[status] || STATUS.stopped
   return (
     <span className="inline-flex items-center gap-2 text-[12px] font-medium" style={{ color: s.color }}>
       <span className="relative inline-flex">
         <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />
         {s.pulse && (
-          <span
-            className="absolute inset-0 w-2 h-2 rounded-full animate-ping"
-            style={{ background: s.color, opacity: 0.6 }}
-          />
+          <span className="absolute inset-0 w-2 h-2 rounded-full animate-ping"
+            style={{ background: s.color, opacity: 0.6 }} />
         )}
       </span>
-      {withLabel && s.text}
+      {s.text}
     </span>
   )
 }
 
-// ── Project Row (new horizontal layout) ───────────────────────────────────
-function ProjectRow({ project }) {
+// ── ProjectRow ────────────────────────────────────────────────────────────
+function ProjectRow({ project, rowRef }) {
   const navigate = useNavigate()
   const displayUrl = getDisplayUrl(project)
   const isInternal = project.isMicroservice && project.internalUrl
   const showVersion = project.type !== 'static' && project.version
   const s = STATUS[project.status] || STATUS.stopped
-
   const notif = project.notification || {}
   const notifCount = (notif.discord ? 1 : 0) + (notif.telegram ? 1 : 0) + (notif.email ? 1 : 0)
 
   return (
     <div
+      ref={rowRef}
+      data-project-id={project._id}
       onClick={e => {
         if (e.target.closest('button') || e.target.closest('a')) return
         navigate(`/project/${project._id}`)
@@ -89,22 +127,13 @@ function ProjectRow({ project }) {
       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      {/* Left status stripe */}
-      <span
-        className="absolute left-0 top-0 h-full w-[2px] opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ background: s.color }}
-      />
+      <span className="absolute left-0 top-0 h-full w-[2px] opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: s.color }} />
 
-      {/* Identity (5 cols) */}
+      {/* Identity */}
       <div className="col-span-12 md:col-span-5 flex items-center gap-3 min-w-0">
-        <div
-          className="w-10 h-10 rounded-lg grid place-items-center text-[13px] font-semibold tracking-tight flex-shrink-0"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: '#e5e7eb',
-          }}
-        >
+        <div className="w-10 h-10 rounded-lg grid place-items-center text-[13px] font-semibold tracking-tight flex-shrink-0"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: '#e5e7eb' }}>
           {TYPE_GLYPH[project.type] || project.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
@@ -112,33 +141,30 @@ function ProjectRow({ project }) {
             <span className="font-semibold text-white text-[14px] truncate">{project.name}</span>
             {project.plan === 'pro' && (
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(34,211,238,0.1)', color: '#22d3ee' }}>
-                Pro
-              </span>
+                style={{ background: 'rgba(34,211,238,0.1)', color: '#22d3ee' }}>Pro</span>
             )}
             {project.isMicroservice && (
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(168,85,247,0.1)', color: '#c084fc' }}>
-                μSVC
-              </span>
+                style={{ background: 'rgba(168,85,247,0.1)', color: '#c084fc' }}>μSVC</span>
             )}
           </div>
-          <a
-            href={isInternal ? undefined : `https://${displayUrl}`}
-            target={isInternal ? undefined : '_blank'}
-            rel="noreferrer"
-            onClick={e => { if (isInternal) e.preventDefault() }}
-            className="text-[12px] truncate block mt-0.5 transition-colors"
-            style={{ color: '#6b7280' }}
-            onMouseEnter={e => { if (!isInternal) e.currentTarget.style.color = '#e5e7eb' }}
-            onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
-          >
-            {displayUrl}{isInternal && ' · internal'}
-          </a>
+          {isInternal ? (
+            <span className="text-[12px] truncate block mt-0.5" style={{ color: '#6b7280' }}>
+              {displayUrl} · internal
+            </span>
+          ) : (
+            <a href={`https://${displayUrl}`} target="_blank" rel="noreferrer"
+              className="text-[12px] truncate block mt-0.5 transition-colors"
+              style={{ color: '#6b7280' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#e5e7eb')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}>
+              {displayUrl}
+            </a>
+          )}
         </div>
       </div>
 
-      {/* Meta (2 cols) */}
+      {/* Meta */}
       <div className="hidden md:flex md:col-span-2 items-center gap-2 text-[12px]" style={{ color: '#9ca3af' }}>
         <span>{TYPE_LABEL[project.type] || project.type}</span>
         {showVersion && (
@@ -149,17 +175,18 @@ function ProjectRow({ project }) {
         )}
       </div>
 
-      {/* Builds (1 col) */}
+      {/* Builds */}
       <div className="hidden md:block md:col-span-1 text-[13px] font-medium tabular-nums" style={{ color: '#d1d5db' }}>
         {project.totalBuilds ?? 0}
         <span className="ml-1 text-[10px] uppercase tracking-wider" style={{ color: '#4b5563' }}>blds</span>
       </div>
 
-      {/* Signals (2 cols) — notif + monitor */}
+      {/* Signals */}
       <div className="hidden md:flex md:col-span-2 items-center gap-3 text-[11px]" style={{ color: '#6b7280' }}>
         <span className="inline-flex items-center gap-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+              d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
           {notifCount}/3
         </span>
@@ -171,7 +198,7 @@ function ProjectRow({ project }) {
         </span>
       </div>
 
-      {/* Status + open (2 cols) */}
+      {/* Status */}
       <div className="col-span-12 md:col-span-2 flex items-center justify-between md:justify-end gap-4">
         <StatusDot status={project.status} />
         <div className="flex items-center gap-3">
@@ -183,14 +210,8 @@ function ProjectRow({ project }) {
             onClick={e => e.stopPropagation()}
             className="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all"
             style={{ color: '#9ca3af', border: '1px solid rgba(255,255,255,0.08)' }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = '#fff'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = '#9ca3af'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
           >
             Open
           </Link>
@@ -200,7 +221,7 @@ function ProjectRow({ project }) {
   )
 }
 
-// ── Skeleton row ──────────────────────────────────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
     <div className="grid grid-cols-12 items-center gap-4 px-5 py-4 animate-pulse"
@@ -233,11 +254,9 @@ function EmptyState({ onNew }) {
       </div>
       <h3 className="font-semibold text-lg text-white mb-1.5">Nothing deployed yet</h3>
       <p className="text-sm mb-6" style={{ color: '#6b7280' }}>Ship your first project in under a minute.</p>
-      <button
-        onClick={onNew}
+      <button onClick={onNew}
         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-black transition-transform hover:scale-[1.02]"
-        style={{ background: '#22d3ee' }}
-      >
+        style={{ background: '#22d3ee' }}>
         <Icon path="M12 4v16m8-8H4" className="w-4 h-4" />
         New Deployment
       </button>
@@ -245,7 +264,7 @@ function EmptyState({ onNew }) {
   )
 }
 
-// ── New Deployment Modal ──────────────────────────────────────────────────
+// ── Modal ─────────────────────────────────────────────────────────────────
 function NewDeployModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -264,17 +283,12 @@ function NewDeployModal({ onClose }) {
             </svg>
           </button>
         </div>
-
         <div className="p-3 max-h-[65vh] overflow-y-auto">
           {TYPES.map(type => (
-            <Link
-              key={type.key}
-              to={`/projects/new/${type.key}`}
-              onClick={onClose}
+            <Link key={type.key} to={`/projects/new/${type.key}`} onClick={onClose}
               className="flex items-center gap-3 rounded-xl p-3 transition-colors"
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
                 style={{ color: type.color, background: `${type.color}12`, border: `1px solid ${type.color}25` }}>
                 <Icon path={type.icon} />
@@ -319,6 +333,13 @@ export function Projects() {
       .finally(() => setLoading(false))
   }, [])
 
+  // Status update handler
+  const handleStatusUpdate = useCallback((projectId, status) => {
+    setProjects(prev =>
+      prev.map(p => p._id === projectId ? { ...p, status } : p)
+    )
+  }, [])
+
   const counts = useMemo(() => ({
     all: projects.length,
     running: projects.filter(p => p.status === 'running').length,
@@ -339,6 +360,10 @@ export function Projects() {
         return new Date(b.createdAt) - new Date(a.createdAt)
       })
   }, [projects, filter, sort, query])
+
+  // Visible projects track + WS subscribe
+  const { visibleIds, rowRefs } = useVisibleProjects(filtered)
+  useProjectsStatus(visibleIds, handleStatusUpdate)
 
   const FILTERS = [
     { k: 'all', l: 'All', c: counts.all, color: '#9ca3af' },
@@ -364,18 +389,14 @@ export function Projects() {
             </p>
           )}
         </div>
-
-        <button
-          onClick={() => setModalOpen(true)}
+        <button onClick={() => setModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold text-sm text-black transition-transform hover:scale-[1.02] active:scale-95"
-          style={{ background: '#22d3ee' }}
-        >
+          style={{ background: '#22d3ee' }}>
           <Icon path="M12 4v16m8-8H4" className="h-4 w-4" />
           New Deployment
         </button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="px-4 py-3 rounded-lg text-sm"
           style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
@@ -383,7 +404,7 @@ export function Projects() {
         </div>
       )}
 
-      {/* Controls bar — search + sort */}
+      {/* Controls */}
       {!loading && projects.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
@@ -392,30 +413,16 @@ export function Projects() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
+            <input value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Search projects or domains…"
               className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none transition-colors"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                color: '#e5e7eb',
-              }}
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#e5e7eb' }}
               onFocus={e => (e.currentTarget.style.borderColor = 'rgba(34,211,238,0.4)')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')}
-            />
+              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')} />
           </div>
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value)}
+          <select value={sort} onChange={e => setSort(e.target.value)}
             className="text-sm rounded-lg px-3 py-2 outline-none cursor-pointer"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: '#d1d5db',
-            }}
-          >
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#d1d5db' }}>
             <option value="recent">Recent</option>
             <option value="name">Name</option>
             <option value="builds">Most builds</option>
@@ -423,21 +430,18 @@ export function Projects() {
         </div>
       )}
 
-      {/* Filter chips — compact pill row */}
+      {/* Filter chips */}
       {!loading && projects.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
           {FILTERS.map(t => {
             const active = filter === t.k
             return (
-              <button
-                key={t.k}
-                onClick={() => setFilter(t.k)}
+              <button key={t.k} onClick={() => setFilter(t.k)}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
                 style={active
                   ? { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }
                   : { background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: '#9ca3af' }
-                }
-              >
+                }>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.color }} />
                 {t.l}
                 <span className="tabular-nums" style={{ color: active ? '#9ca3af' : '#4b5563' }}>{t.c}</span>
@@ -447,11 +451,10 @@ export function Projects() {
         </div>
       )}
 
-      {/* List container */}
+      {/* List */}
       <div className="rounded-xl overflow-hidden"
         style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)' }}>
 
-        {/* Table header */}
         {!loading && filtered.length > 0 && (
           <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em]"
             style={{ color: '#4b5563', background: 'rgba(255,255,255,0.02)' }}>
@@ -464,19 +467,19 @@ export function Projects() {
         )}
 
         {loading ? (
-          <>
-            <SkeletonRow /><SkeletonRow /><SkeletonRow />
-          </>
+          <><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
         ) : filtered.length === 0 ? (
           projects.length === 0
             ? <EmptyState onNew={() => setModalOpen(true)} />
-            : (
-              <div className="py-16 text-center text-sm" style={{ color: '#6b7280' }}>
-                No projects match your filters.
-              </div>
-            )
+            : <div className="py-16 text-center text-sm" style={{ color: '#6b7280' }}>No projects match your filters.</div>
         ) : (
-          filtered.map(p => <ProjectRow key={p._id} project={p} />)
+          filtered.map(p => (
+            <ProjectRow
+              key={p._id}
+              project={p}
+              rowRef={el => { rowRefs.current[p._id] = el }}
+            />
+          ))
         )}
       </div>
 

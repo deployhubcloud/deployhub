@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api/apiclient'
+import { useProjectStatus } from '../hooks/useProjectStatus'
 
 // ── Helpers ───────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -131,6 +132,14 @@ export default function Overview() {
       .catch(() => setError('Failed to load project.'))
       .finally(() => setLoading(false))
   }, [projectId])
+
+  // WS se live status update
+  const handleStatusUpdate = useCallback((status) => {
+    console.log('Status update received:', status)
+    setProject(prev => prev ? { ...prev, stats: status } : prev)
+  }, [])
+
+  useProjectStatus(projectId, handleStatusUpdate)
 
   async function handleRedeploy() {
     setRedeployLoading(true)
