@@ -45,6 +45,9 @@ export default async function startApp() {
         console.log(`Auth server running on port ${env.PORT}`);
     });
 
+    const { initWS } = await import('./ws/index.js')
+    initWS(server, corsOption.origin)
+
     const shutdown = createShutdownHandler({
         server,
         logger: console,
