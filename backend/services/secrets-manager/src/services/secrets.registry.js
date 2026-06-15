@@ -167,6 +167,7 @@ export function getSecretsForService(serviceName) {
       ACCESS_TOKEN_EXPIRY: env.ACCESS_TOKEN_EXPIRY,
       REFRESH_TOKEN_SECRET: env.REFRESH_TOKEN_SECRET,
       REFRESH_TOKEN_EXPIRY: env.REFRESH_TOKEN_EXPIRY,
+      BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
     }
 
   };
