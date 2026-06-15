@@ -28,7 +28,7 @@ import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.j
 import { deleteCacheBuildData } from '../utils/cacheBuildData.js';
 import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
 import { getRedis } from '../core/redis/client.js';
-import { cacheLatestBuildIdofProject } from '../../../../shared/utils/cacheLatestBuildIdofProject.js';
+import { cacheLatestBuildIdOfProject } from '../../../../shared/utils/cacheLatestBuildIdofProject.js';
 
 
 const docker = new Docker()
@@ -116,7 +116,13 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             startedAt: new Date(),
         })
 
-        await cacheLatestBuildIdofProject(projectId, redis);
+        const cacheData = {
+            buildId: newBuild._id,
+            projectContainerName: project.dockerContainerName,
+            projectType: project.type
+        }
+
+        await cacheLatestBuildIdOfProject(projectId, redis, cacheData);
 
         logger = new BuildLogger(newBuild._id, projectId)
         await logger.start()
@@ -381,6 +387,11 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         }
 
         await publishProjectStatus(redis, { projectId: projectId, status: 'failed' })
+        const cacheData = {
+            logsUrl: logsUrl
+        }
+
+        await cacheLatestBuildIdOfProject(projectId, redis, cacheData);
 
         throw error;
     } finally {
@@ -419,6 +430,11 @@ buildWorker.on("completed", async (job, result) => {
 
     await queueProjectDeploy(projectId, plan, userId, result.buildId, firstTime);
 
+    const cacheData = {
+        logsUrl: result.logsUrl
+    }
+
+    await cacheLatestBuildIdOfProject(projectId, redis, cacheData);
     console.log('job completed for build')
 })
 
