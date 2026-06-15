@@ -1,310 +1,325 @@
 import { getRedis } from '../../core/redis/client.js';
 import { docker } from '../../utils/docker.js';
-import { getCacheLatestBuildIdofProject } from '../../../../../shared/utils/cacheLatestBuildIdofProject.js';
+import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cacheLatestBuildIdofProject.js';
 
 export function registerLogsStreamHandler(io) {
-
     io.on('connection', (socket) => {
+        let currentWatcher = null;
 
         socket.on('subscribe_logs', async ({ projectId }) => {
             if (!projectId) return;
 
+            if (currentWatcher) {
+                currentWatcher.stop();
+                currentWatcher = null;
+            }
+
             try {
-
                 const redis = getRedis();
-
-                const cache = await getCacheLatestBuildIdofProject(
-                    projectId,
-                    redis
-                );
-
-                if (!cache) {
-
-                    return socket.emit('build_log', {
-                        projectId,
-                        type: 'info',
-                        message: 'No logs available.'
-                    });
-
-                }
-
-                const {
-                    buildId,
-                    projectContainerName,
-                    projectType
-                } = cache;
-
-                const type =
-                    String(projectType || '')
-                        .trim()
-                        .toLowerCase();
-
-                let status = null;
-
-                const entries = await redis.xrevrange(
-                    `project:status:${projectId}`,
-                    '+',
-                    '-',
-                    'COUNT',
-                    1
-                );
-
-                if (entries?.length) {
-
-                    const [, fields] = entries[0];
-
-                    const payload = {};
-
-                    for (
-                        let i = 0;
-                        i < fields.length;
-                        i += 2
-                    ) {
-
-                        payload[fields[i]] =
-                            fields[i + 1];
-
-                    }
-
-                    status = payload.status;
-
-                }
-
-                if (!status) {
-
-                    return socket.emit('build_log', {
-                        projectId,
-                        type: 'info',
-                        message: 'No logs available.'
-                    });
-
-                }
-
-                [...socket.rooms]
-                    .filter(room =>
-                        room.startsWith('logs:')
-                    )
-                    .forEach(room =>
-                        socket.leave(room)
-                    );
-
-                socket.join(`logs:${projectId}`);
-
-                /**
-                 * BUILDING / QUEUED
-                 * Redis Build Logs
-                 */
-                if (
-                    status === 'building' ||
-                    status === 'queued'
-                ) {
-
-                    if (!buildId) {
-
-                        return socket.emit('build_log', {
-                            projectId,
-                            type: 'info',
-                            message: 'Build logs are not available.'
-                        });
-
-                    }
-
-                    return streamBuildLogs(
-                        socket,
-                        projectId,
-                        buildId,
-                        redis
-                    );
-
-                }
-
-                /**
-                 * RUNNING STATIC
-                 * No Logs
-                 */
-                if (
-                    status === 'running' &&
-                    type === 'static'
-                ) {
-
-                    return socket.emit('build_log', {
-                        projectId,
-                        type: 'info',
-                        message: 'Logs are not available for this project.'
-                    });
-
-                }
-
-                /**
-                 * RUNNING CONTAINER
-                 * Docker Logs
-                 */
-                if (
-                    status === 'running' &&
-                    type !== 'static'
-                ) {
-
-                    if (!projectContainerName) {
-
-                        return socket.emit('build_log', {
-                            projectId,
-                            type: 'info',
-                            message: 'Logs are not available.'
-                        });
-
-                    }
-
-                    return streamDockerLogs(
-                        socket,
-                        projectId,
-                        projectContainerName
-                    );
-
-                }
-
+                const watcher = new ProjectLogsWatcher(socket, projectId, redis);
+                currentWatcher = watcher;
+                await watcher.start();
             } catch (error) {
-                return socket.emit('build_log', {
+                console.error(`Log subscription error for ${projectId}:`, error);
+                socket.emit('build_log', {
                     projectId,
-                    type: 'info',
-                    message: 'No logs available.'
+                    type: 'error',
+                    message: 'Failed to subscribe to logs.'
                 });
             }
         });
 
         socket.on('unsubscribe_logs', ({ projectId }) => {
-            if (!projectId) return;
-            socket.leave(`logs:${projectId}`);
+            if (currentWatcher && currentWatcher.projectId === projectId) {
+                currentWatcher.stop();
+                currentWatcher = null;
+            }
         });
 
+        socket.on('disconnect', () => {
+            if (currentWatcher) {
+                currentWatcher.stop();
+                currentWatcher = null;
+            }
+        });
     });
-
 }
 
-async function streamBuildLogs(socket, projectId, buildId, redis) {
+class ProjectLogsWatcher {
+    constructor(socket, projectId, redis) {
+        this.socket = socket;
+        this.projectId = projectId;
+        this.redis = redis;
+        this.active = true;
+        this.currentStream = null;
+        this.lastStatus = null;
+    }
 
-    const streamKey = `build:logs:${buildId}`;
-    let lastId = '0';
-    let active = true;
+    async start() {
+        await this.refreshAndSwitch();
+        this.watchStatusStream();
+    }
 
-    const cleanup = () => {
-        active = false;
-        socket.off('disconnect', cleanup);
-        socket.off('unsubscribe_logs', unsubHandler);
-    };
+    stop() {
+        this.active = false;
+        if (this.currentStream) {
+            this.currentStream.stop();
+            this.currentStream = null;
+        }
+    }
 
-    const unsubHandler = ({ projectId: unsub }) => {
-        if (unsub === projectId) cleanup();
-    };
+    emitReset() {
+        this.socket.emit('build_log', {
+            projectId: this.projectId,
+            type: 'reset'
+        });
+    }
 
-    socket.once('disconnect', cleanup);
-    socket.on('unsubscribe_logs', unsubHandler);
+    async refreshAndSwitch() {
+        if (!this.active) return;
 
-    while (active && socket.connected) {
-
-        try {
-
-            const results = await redis.xread('COUNT', 100, 'STREAMS', streamKey, lastId);
-
-            if (!results) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                continue;
-            }
-
-            const messages = results[0][1];
-
-            for (const [id, fields] of messages) {
-                lastId = id;
-                const data = {};
-                for (let i = 0; i < fields.length; i += 2) {
-                    data[fields[i]] = fields[i + 1];
-                }
-
-                socket.emit('build_log', {
-                    projectId,
-                    type: data.type || 'log',
-                    log: data.log || ''
-                });
-
-                if (data.type === 'complete') {
-                    cleanup();
-                    return;
-                }
-            }
-
-        } catch {
-            socket.emit('build_log', {
-                projectId,
-                type: 'error',
-                message: 'Build log stream error.'
-            });
-            cleanup();
+        const status = await this.getCurrentStatus();
+        const cache = await getCacheLatestBuildIdOfProject(this.projectId, this.redis);
+        if (!cache) {
+            this.emitInfo('No build information available yet.');
+            return;
         }
 
+        const { buildId, projectContainerName, projectType, logsUrl } = cache;
+        const type = (projectType || '').trim().toLowerCase();
+
+        let neededType = null;
+        let neededParams = null;
+
+        if (!status) {
+            neededType = 'none';
+        } else if (status === 'building' || status === 'queued') {
+            if (buildId) {
+                neededType = 'build';
+                neededParams = { buildId };
+            } else {
+                neededType = 'none';
+            }
+        } else if (status === 'running') {
+            if (type === 'static') {
+                if (logsUrl) {
+                    neededType = 'static';
+                    neededParams = { logsUrl };
+                } else {
+                    neededType = 'none';
+                    this.emitInfo('Static project is running, but logs URL is not yet available. Waiting...');
+                }
+            } else {
+                if (projectContainerName) {
+                    neededType = 'docker';
+                    neededParams = { containerName: projectContainerName };
+                } else {
+                    neededType = 'none';
+                }
+            }
+        } else {
+            neededType = 'none';
+        }
+
+        
+        if (this.currentStream && this.currentStream.type === neededType) {
+            if (neededType === 'static' && this.currentStream.logsUrl !== logsUrl) {
+                this.currentStream.stop();
+                this.currentStream = null;
+            } else {
+                return;
+            }
+        }
+
+        
+        if (this.currentStream) {
+            this.currentStream.stop();
+            this.currentStream = null;
+        }
+
+        
+        this.emitReset();
+
+        // Start new stream
+        switch (neededType) {
+            case 'build':
+                this.currentStream = await this.startBuildLogStream(buildId);
+                break;
+            case 'docker':
+                this.currentStream = await this.startDockerLogStream(projectContainerName);
+                break;
+            case 'static':
+                this.currentStream = this.startStaticLogStream(logsUrl);
+                break;
+            case 'none':
+                this.emitInfo('No logs available at this moment.');
+                this.currentStream = null;
+                break;
+        }
     }
 
-}
+    async getCurrentStatus() {
+        const entries = await this.redis.xrevrange(
+            `project:status:${this.projectId}`,
+            '+',
+            '-',
+            'COUNT',
+            1
+        );
+        if (entries?.length) {
+            const [, fields] = entries[0];
+            const payload = {};
+            for (let i = 0; i < fields.length; i += 2) {
+                payload[fields[i]] = fields[i + 1];
+            }
+            return payload.status;
+        }
+        return null;
+    }
 
-async function streamDockerLogs(socket, projectId, containerName) {
+    async watchStatusStream() {
+        if (!this.active) return;
+        const streamKey = `project:status:${this.projectId}`;
+        let lastId = '$';
 
-    let active = true;
+        while (this.active && this.socket.connected) {
+            try {
+                const results = await this.redis.xread('BLOCK', 2000, 'STREAMS', streamKey, lastId);
+                if (!this.active) break;
 
-    try {
+                if (results) {
+                    const messages = results[0][1];
+                    for (const [id, fields] of messages) {
+                        lastId = id;
+                        const payload = {};
+                        for (let i = 0; i < fields.length; i += 2) {
+                            payload[fields[i]] = fields[i + 1];
+                        }
+                        const newStatus = payload.status;
+                        if (newStatus && newStatus !== this.lastStatus) {
+                            this.lastStatus = newStatus;
+                            await this.refreshAndSwitch();
+                        }
+                    }
+                }
+            } catch (err) {
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+    }
 
-        const container = docker.getContainer(containerName);
-        const stream = await container.logs({
-            stdout: true,
-            stderr: true,
-            follow: true,
-            tail: 100
-        });
-
-        const unsubDockerHandler = ({ projectId: unsub }) => {
-            if (unsub === projectId) cleanup();
+    async startBuildLogStream(buildId) {
+        const streamKey = `build:logs:${buildId}`;
+        let lastId = '0';
+        let active = true;
+        const stop = () => { active = false; };
+        const run = async () => {
+            while (active && this.active && this.socket.connected) {
+                try {
+                    const results = await this.redis.xread('COUNT', 100, 'STREAMS', streamKey, lastId);
+                    if (!results) {
+                        await new Promise(r => setTimeout(r, 500));
+                        continue;
+                    }
+                    const messages = results[0][1];
+                    for (const [id, fields] of messages) {
+                        lastId = id;
+                        const data = {};
+                        for (let i = 0; i < fields.length; i += 2) {
+                            data[fields[i]] = fields[i + 1];
+                        }
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId,
+                            type: data.type || 'log',
+                            log: data.log || ''
+                        });
+                        if (data.type === 'complete') {
+                            active = false;
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'error',
+                        message: 'Build log stream error.'
+                    });
+                    active = false;
+                }
+            }
         };
+        run();
+        return { type: 'build', stop, buildId };
+    }
 
-        const cleanup = () => {
+    async startDockerLogStream(containerName) {
+        let active = true;
+        let stream = null;
+        const stop = () => {
             active = false;
-            socket.off('disconnect', cleanup);
-            socket.off('unsubscribe_logs', unsubDockerHandler);
-            try { stream.destroy(); } catch { }
+            if (stream) try { stream.destroy(); } catch (e) { }
         };
-
-        socket.once('disconnect', cleanup);
-        socket.on('unsubscribe_logs', unsubDockerHandler);
-
-        stream.on('data', chunk => {
-            if (!active) return;
-            socket.emit('build_log', {
-                projectId,
-                type: 'log',
-                log: chunk.toString()
+        try {
+            const container = docker.getContainer(containerName);
+            stream = await container.logs({
+                stdout: true,
+                stderr: true,
+                follow: true,
+                tail: 100
             });
-        });
-
-        stream.on('end', () => {
-            socket.emit('build_log', {
-                projectId,
-                type: 'complete',
-                log: 'Container log stream ended.'
+            stream.on('data', (chunk) => {
+                if (!active) return;
+                this.socket.emit('build_log', {
+                    projectId: this.projectId,
+                    type: 'log',
+                    log: chunk.toString()
+                });
             });
-            cleanup();
-        });
-
-        stream.on('error', error => {
-            socket.emit('build_log', {
-                projectId,
+            stream.on('end', () => {
+                if (active) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'complete',
+                        log: 'Container log stream ended.'
+                    });
+                }
+                active = false;
+            });
+            stream.on('error', (err) => {
+                if (active) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'error',
+                        message: err.message
+                    });
+                }
+                active = false;
+            });
+        } catch (err) {
+            this.socket.emit('build_log', {
+                projectId: this.projectId,
                 type: 'error',
-                message: error.message
+                message: err.message
             });
-            cleanup();
-        });
-
-    } catch (error) {
-        socket.emit('build_log', {
-            projectId,
-            type: 'error',
-            message: error.message
-        });
+            return { type: 'docker', stop: () => { }, dockerError: true };
+        }
+        return { type: 'docker', stop, containerName };
     }
 
+    startStaticLogStream(logsUrl) {
+        this.socket.emit('build_log', {
+            projectId: this.projectId,
+            type: 'static_project',
+            logsUrl: logsUrl
+        });
+        return { type: 'static', stop: () => { }, logsUrl };
+    }
+
+    emitInfo(message) {
+        this.socket.emit('build_log', {
+            projectId: this.projectId,
+            type: 'info',
+            message
+        });
+    }
 }
