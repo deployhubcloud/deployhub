@@ -19,8 +19,6 @@ const requiredEnvVars = [
     "REFRESH_TOKEN_SECRET",
     "REFRESH_TOKEN_EXPIRY",
     "FRONTEND_URI",
-    'INTERNAL_SERVICE_TALKING_SECRET',
-    'BUILD_SERVICE_URL '
 ]
 
 for (const env of requiredEnvVars) {
@@ -44,6 +42,4 @@ export const env = {
     REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
     REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
     FRONTEND_URI: process.env.FRONTEND_URI,
-    BUILD_SERVICE_URL: process.env.BUILD_SERVICE_URL,
-    INTERNAL_SERVICE_TALKING_SECRET: process.env.INTERNAL_SERVICE_TALKING_SECRET,
 };
