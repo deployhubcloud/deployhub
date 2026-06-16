@@ -18,7 +18,7 @@ const projectschema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['draft', 'queued', 'building', 'running', 'failed', 'stopped'],
+        enum: ['draft', 'queued', 'building', 'running', 'failed', 'stopped', 'crash'],
         default: 'queued'
     },
     version: {
