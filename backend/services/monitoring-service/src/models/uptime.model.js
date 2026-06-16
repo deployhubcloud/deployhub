@@ -5,19 +5,15 @@ const uptimeSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true
     },
+    projectName: {
+        type: String
+    },
     url: {
         type: String,
         required: true
     },
-    interval: {
-        type: Number,
-        required: true
-    },
     lastDownAt: {
         type: Date
-    },
-    uptimePercentage: {
-        type: Number
     },
     failedTries: {
         type: Number,
