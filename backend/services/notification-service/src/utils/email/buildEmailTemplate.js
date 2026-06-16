@@ -40,6 +40,14 @@ export const buildEmailTemplate = ({
             color: "#16a34a",
             message:
                 "Your application has been successfully deployed and is now live."
+        },
+
+        "crash": {
+            emoji: "💥",
+            title: "Application Crashed",
+            color: "#dc2626",
+            message:
+                "Your application has stopped responding and appears to have crashed. DeployHub is attempting automatic recovery."
         }
     };
 
@@ -144,6 +152,16 @@ export const buildEmailTemplate = ({
                 </div>
             `;
         }
+    }
+
+    if (status === "crash") {
+        extraRows += `
+        <tr>
+            <td style="border:1px solid #e5e7eb;padding:12px;">
+                <strong>Crash Logs</strong>
+            </td>
+        </tr>
+    `;
     }
 
     return `
