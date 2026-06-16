@@ -450,15 +450,6 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     monitorfailedTries: projectData.monitor.failedTries
                 };
 
-
-                await redis.hset(`deployhub:user:project:${projectData._id}:monitoring`, {
-                    projectId: project._id,
-                    projectName: project.name,
-                    pingUrl,
-                    monitorIntervalSeconds: projectData.monitor.intervalSeconds,
-                    monitorfailedTries: projectData.monitor.failedTries
-                });
-
                 await monitoringQueue.add(QUEUE_NAMES.MONITORING, monitoringQueueData);
 
             }

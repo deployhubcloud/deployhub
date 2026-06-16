@@ -28,6 +28,14 @@ const worker = new Worker(QUEUE_NAMES.MONITORING, async (job) => {
             projectId.toString()
         );
 
+        await redis.hset(`deployhub:user:project:${projectId}:monitoring`, {
+            projectId,
+            projectName,
+            pingUrl,
+            monitorIntervalSeconds,
+            monitorfailedTries,
+        });
+
 
     } catch (error) {
         throw error;
