@@ -10,3 +10,4 @@ const connection = {
 };
 
 export const deployQueue = new Queue(QUEUE_NAMES.DEPLOY, { connection });
+export const monitoringQueue = new Queue(QUEUE_NAMES.MONITORING, { connection });

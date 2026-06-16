@@ -25,6 +25,7 @@ import { writeNginxFileToHost } from '../utils/nginx/writeNginxFileToHost.js';
 import { execInContainer } from '../utils/execInContainer.js';
 import { getRedis } from '../core/redis/client.js';
 import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
+import { monitoringQueue } from '../utils/queues/queues.js';
 
 
 const redisPubSub = new RedisPubSub(
@@ -434,6 +435,33 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             }
 
             if (isProduction) await reloadNginx(docker);
+        }
+
+        if (firstTime) {
+            if (userPlan.uptime_monitoring) {
+
+                let pingUrl = `http://localhost:${projectData.assignedPort}/${projectData.monitor.healthPath}`;
+
+                const monitoringQueueData = {
+                    projectId: project._id,
+                    projectName: project.name,
+                    pingUrl,
+                    monitorIntervalSeconds: projectData.monitor.intervalSeconds,
+                    monitorfailedTries: projectData.monitor.failedTries
+                }
+
+
+                await redis.hset(`deployhub:user:project:${projectData._id}:monitoring`, {
+                    projectId: project._id,
+                    projectName: project.name,
+                    pingUrl,
+                    monitorIntervalSeconds: projectData.monitor.intervalSeconds,
+                    monitorfailedTries: projectData.monitor.failedTries
+                });
+
+                await monitoringQueue(monitoringQueueData);
+
+            }
         }
 
         return {
