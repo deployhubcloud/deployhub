@@ -1,11 +1,9 @@
-// app.js — sab kuch yahan, normal static imports
 import express from "express";
 import helmet from "helmet";
 import hpp from "hpp";
 import { env } from "./lib/env.js";
 import { monitoringDbClose, monitoringDbConnect } from "./core/db/mongodb.js";
 import { connectRedis } from "./core/redis/client.js";
-import { initRabbitMQ, closeRabbitMQ } from "./core/messageBroker/rabbitMq.js";
 import { createShutdownHandler } from "../../../shared/utils/gracefulShutdown.js";
 import { createInternalAUthMiddleware } from "../../../shared/middlewares/internalAuth.js";
 
@@ -39,7 +37,6 @@ app.use(createInternalAUthMiddleware({
 
 export default async function startApp() {
     await monitoringDbConnect();
-    await initRabbitMQ();
     await connectRedis();
 
     const server = app.listen(env.PORT, () => {
@@ -49,7 +46,7 @@ export default async function startApp() {
     const shutdown = createShutdownHandler({
         server,
         logger: console,
-        closeResources: [closeRabbitMQ, monitoringDbClose],
+        closeResources: [monitoringDbClose],
     });
 
     process.on("SIGINT", shutdown);

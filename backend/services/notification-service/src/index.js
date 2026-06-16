@@ -1,4 +1,3 @@
-// app.js — sab kuch yahan, normal static imports
 import express from "express";
 import helmet from "helmet";
 import hpp from "hpp";
