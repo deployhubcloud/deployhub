@@ -5,25 +5,13 @@ const uptimeSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true
     },
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true
-    },
     url: {
         type: String,
-        required: true
-    },
-    status: {
-        type: String,
-        enum: ['up', 'down'],
         required: true
     },
     interval: {
         type: Number,
         required: true
-    },
-    lastChecked: {
-        type: Date
     },
     lastDownAt: {
         type: Date
@@ -31,13 +19,12 @@ const uptimeSchema = new mongoose.Schema({
     uptimePercentage: {
         type: Number
     },
-    failCount: {
+    failedTries: {
         type: Number,
         default: 0
     },
-    alertSent: {
-        type: Boolean,
-        default: false
+    intervalSeconds: {
+        type: Number
     },
     isActive: {
         type: Boolean,
