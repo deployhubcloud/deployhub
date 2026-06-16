@@ -1,4 +1,3 @@
-// project-service/src/utils/queues.js
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { project_env } from '../lib/env.js';

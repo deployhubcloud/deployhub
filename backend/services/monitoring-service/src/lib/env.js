@@ -18,8 +18,8 @@ const requiredEnvVars = [
     "RABBITMQ_URL"
 ]
 
-for (const env of requiredEnvVars){
-    if(!process.env[env]){
+for (const env of requiredEnvVars) {
+    if (!process.env[env]) {
         throw new Error(`Missing Env Var: ${env}`);
     }
 }
@@ -34,6 +34,5 @@ export const env = {
     BOOTSTRAP_TOKEN: process.env.BOOTSTRAP_TOKEN,
     SECRETS_MANAGER_URL: process.env.SECRETS_MANAGER_URL,
     SERVICE_NAME: process.env.SERVICE_NAME,
-    PORT: process.env.PORT,
-    RABBITMQ_URL: process.env.RABBITMQ_URL
+    PORT: process.env.PORT
 };
