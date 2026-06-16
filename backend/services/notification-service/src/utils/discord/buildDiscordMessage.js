@@ -35,6 +35,14 @@ export const buildDiscordMessage = ({
             title: "Deployment Successful",
             message:
                 "Application deployed successfully and is now live."
+        },
+
+        "crash": {
+            emoji: "💥",
+            title: "Application Crashed",
+            color: "#dc2626",
+            message:
+                "Your application has stopped responding and appears to have crashed. DeployHub is attempting automatic recovery."
         }
     };
 
@@ -64,6 +72,10 @@ export const buildDiscordMessage = ({
         ) {
             extra += `\n🌍 Live URL: ${deploymentUrl}`;
         }
+    }
+
+    if (status === "crash") {
+        extra += `\n🚨 Status: Service Unavailable! Please See Your Live Logs on Deployhub`;
     }
 
     return `
