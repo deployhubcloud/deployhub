@@ -31,7 +31,8 @@ redisPubSub.consume('deployhub:users:build:status', async (message) => {
             building: "build-started",
             failed: "build-failed",
             success: "build-success",
-            running: "deploy-success"
+            running: "deploy-success",
+            crash: 'crash'
         };
 
         const finalProjectStatus = statusMap[projectstatus] || "unknown";
