@@ -459,7 +459,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     monitorfailedTries: projectData.monitor.failedTries
                 });
 
-                await monitoringQueue(monitoringQueueData);
+                await monitoringQueue.add(QUEUE_NAMES.MONITORING, monitoringQueueData);
 
             }
         }
