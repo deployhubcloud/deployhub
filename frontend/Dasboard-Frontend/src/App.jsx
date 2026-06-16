@@ -14,6 +14,10 @@ import Overview from "./Pages/Overview";
 import ServiceDownOverlay from "./components/ServiceDownOverlay";
 import { Builds as ProjectBuilds } from "./Pages/Project/Builds";
 import Logs from "./Pages/Project/Logs";
+import { Metrics } from "./Pages/Project/Metrics";
+import { Settings } from "./Pages/Project/Settings";
+import { Domain } from "./Pages/Project/Domain";
+import { Billing } from "./Pages/Project/Billing";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
@@ -47,6 +51,10 @@ export default function App() {
           <Route path="/project/:id" element={<Overview />} />
           <Route path="/project/:id/builds" element={<ProjectBuilds />} />
           <Route path="/project/:id/logs" element={<Logs />} />
+          <Route path="/project/:id/metrics" element={<Metrics />} />
+          <Route path="/project/:id/settings" element={<Settings />} />
+          <Route path="/project/:id/domains" element={<Domain />} />
+          <Route path="/project/:id/billing" element={<Billing />} />
         </Route>
 
         <Route
