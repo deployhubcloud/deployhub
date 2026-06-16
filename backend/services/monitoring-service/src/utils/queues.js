@@ -2,7 +2,8 @@ import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { getRedis } from '../core/redis/client.js';
 
-const connection = getRedis();
+export const connection = getRedis();
 
 
 export const monitoringQueue = new Queue(QUEUE_NAMES.MONITORING, { connection });
+export const healthCheckQueue = new Queue(QUEUE_NAMES.HEALTH_CHECK_QUEUE, { connection })
