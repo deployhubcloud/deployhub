@@ -48,6 +48,14 @@ export const buildEmailTemplate = ({
             color: "#dc2626",
             message:
                 "Your application has stopped responding and appears to have crashed. DeployHub is attempting automatic recovery."
+        },
+
+        "recovered": {
+            emoji: "🔄",
+            title: "Application Recovered",
+            color: "#22c55e",
+            message:
+                "Your application has successfully recovered from the crash and is now running normally."
         }
     };
 
@@ -164,6 +172,20 @@ export const buildEmailTemplate = ({
     `;
     }
 
+    // For crash and recovered, we do not show buildId row
+    const buildIdRow = (status !== "crash" && status !== "recovered")
+        ? `
+            <tr>
+                <td style="border:1px solid #e5e7eb;padding:12px;">
+                    <strong>Build ID</strong>
+                </td>
+                <td style="border:1px solid #e5e7eb;padding:12px;">
+                    ${buildId}
+                </td>
+            </tr>
+        `
+        : "";
+
     return `
 <div
     style="
@@ -218,14 +240,7 @@ export const buildEmailTemplate = ({
                 </td>
             </tr>
 
-            <tr>
-                <td style="border:1px solid #e5e7eb;padding:12px;">
-                    <strong>Build ID</strong>
-                </td>
-                <td style="border:1px solid #e5e7eb;padding:12px;">
-                    ${buildId}
-                </td>
-            </tr>
+            ${buildIdRow}
 
             <tr>
                 <td style="border:1px solid #e5e7eb;padding:12px;">

@@ -43,6 +43,13 @@ export const buildTelegramMessage = ({
             color: "#dc2626",
             message:
                 "Your application has stopped responding and appears to have crashed. DeployHub is attempting automatic recovery."
+        },
+
+        "recovered": {
+            emoji: "🔄",
+            title: "Application Recovered",
+            message:
+                "Your application has successfully recovered from the crash and is now running normally."
         }
     };
 
@@ -78,11 +85,16 @@ export const buildTelegramMessage = ({
         extra += `\n🚨 Status: Service Unavailable! Please See Your Live Logs on Deployhub`;
     }
 
+    // For crash and recovered, we do not show buildId
+    const buildIdLine = (status !== "crash" && status !== "recovered")
+        ? `🆔 Build ID: \`${buildId}\``
+        : "";
+
     return `
 ${current.emoji} *${current.title}*
 
 📦 Project: ${projectName}
-🆔 Build ID: \`${buildId}\`
+${buildIdLine}
 
 ${current.message}
 
