@@ -333,6 +333,9 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                                 HostPort: String(hostPort)
                             }
                         ]
+                    },
+                    RestartPolicy: {
+                        Name: "unless-stopped"
                     }
                 }
             });
