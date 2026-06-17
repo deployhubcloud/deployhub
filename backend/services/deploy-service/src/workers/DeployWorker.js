@@ -443,17 +443,19 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
         if (firstTime) {
             if (userPlan.uptime_monitoring) {
 
-                let pingUrl = `http://localhost:${projectData.assignedPort}/${projectData.monitor.healthPath}`;
+                const healthPath = projectData.monitor.healthPath.startsWith("/") ? projectData.monitor.healthPath : `/${projectData.monitor.healthPath}`;
+
+                let pingUrl = `http://localhost:${projectData.assignedPort}${healthPath}`;
 
                 const monitoringQueueData = {
-                    projectId: project._id,
-                    projectName: project.name,
+                    projectId: projectData._id,
+                    projectName: projectData.name,
                     pingUrl,
                     monitorIntervalSeconds: projectData.monitor.intervalSeconds,
                     monitorfailedTries: projectData.monitor.failedTries
                 };
 
-                await monitoringQueue.add(QUEUE_NAMES.MONITORING, monitoringQueueData);
+                await monitoringQueue.add('monitoring', monitoringQueueData);
 
             }
         }
