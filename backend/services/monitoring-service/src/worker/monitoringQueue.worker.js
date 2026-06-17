@@ -40,7 +40,7 @@ const worker = new Worker(QUEUE_NAMES.MONITORING, async (job) => {
     } catch (error) {
         throw error;
     }
-})
+}, { connection })
 
 
 worker.on("completed", () => {

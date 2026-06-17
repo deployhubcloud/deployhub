@@ -1,7 +1,12 @@
 import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
 import { healthCheckQueue } from "../utils/queues.js";
+import { getRedis } from "../core/redis/client.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
-const schedulerWorker = async () => {
+export const schedulerWorker = async () => {
+
+    const redis = getRedis();
+
     while (true) {
         const now = Date.now();
 
@@ -17,11 +22,9 @@ const schedulerWorker = async () => {
                 projectId
             );
 
-            await healthCheckQueue.add(QUEUE_NAMES.HEALTH_CHECK_QUEUE, { projectId });
+            await healthCheckQueue.add('health-check', { projectId });
         }
 
         await sleep(1000);
     }
 }
-
-schedulerWorker()
