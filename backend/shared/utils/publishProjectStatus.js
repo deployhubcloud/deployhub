@@ -4,6 +4,9 @@ export const publishProjectStatus = async (redis, payload) => {
 
     await redis.xadd(
         `deployhub:users:projects:status:${projectId}`,
+        "MAXLEN",
+        "=",
+        1,
         "*",
         "projectId",
         String(projectId),
