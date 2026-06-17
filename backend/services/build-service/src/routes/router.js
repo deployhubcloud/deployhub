@@ -1,5 +1,4 @@
 import express from 'express';
-import { buildLogsStream } from '../controllers/buildLogsStream.js';
 import { getBuildByProjectIdController, getBuildsController } from '../controllers/getBuilds.controller.js';
 
 
