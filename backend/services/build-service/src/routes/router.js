@@ -6,7 +6,6 @@ import { getBuildByProjectIdController, getBuildsController } from '../controlle
 const buildRouter = express.Router();
 
 buildRouter.get('/builds', getBuildsController);
-buildRouter.get('/builds/logs/:projectId', buildLogsStream);
 buildRouter.get('/builds/:projectId', getBuildByProjectIdController);
 
 
