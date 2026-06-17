@@ -21,7 +21,7 @@ const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async () =>
         if (result.status !== 200) {
 
             await redis.xadd(
-                `project:status:${projectId}`,
+                `deployhub:users:projects:status:${projectId}`,
                 "*",
                 "projectId",
                 String(projectId),
@@ -45,7 +45,7 @@ const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async () =>
 
 
         await redis.xadd(
-            `project:status:${projectId}`,
+            `deployhub:users:projects:status:${projectId}`,
             "*",
             "projectId",
             String(projectId),

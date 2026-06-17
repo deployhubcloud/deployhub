@@ -121,7 +121,7 @@ class ProjectLogsWatcher {
             neededType = 'none';
         }
 
-        
+
         if (this.currentStream && this.currentStream.type === neededType) {
             if (neededType === 'static' && this.currentStream.logsUrl !== logsUrl) {
                 this.currentStream.stop();
@@ -131,13 +131,13 @@ class ProjectLogsWatcher {
             }
         }
 
-        
+
         if (this.currentStream) {
             this.currentStream.stop();
             this.currentStream = null;
         }
 
-        
+
         this.emitReset();
 
         // Start new stream
@@ -160,7 +160,7 @@ class ProjectLogsWatcher {
 
     async getCurrentStatus() {
         const entries = await this.redis.xrevrange(
-            `project:status:${this.projectId}`,
+            `deployhub:users:projects:status:${this.projectId}`,
             '+',
             '-',
             'COUNT',
@@ -179,7 +179,7 @@ class ProjectLogsWatcher {
 
     async watchStatusStream() {
         if (!this.active) return;
-        const streamKey = `project:status:${this.projectId}`;
+        const streamKey = `deployhub:users:projects:status:${this.projectId}`;
         let lastId = '$';
 
         while (this.active && this.socket.connected) {

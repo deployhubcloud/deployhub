@@ -3,7 +3,7 @@ export const publishProjectStatus = async (redis, payload) => {
     const { projectId, status } = payload;
 
     await redis.xadd(
-        `project:status:${projectId}`,
+        `deployhub:users:projects:status:${projectId}`,
         "*",
         "projectId",
         String(projectId),
@@ -13,5 +13,5 @@ export const publishProjectStatus = async (redis, payload) => {
         String(Date.now())
     );
 
-    await redis.publish('project:status:updates', JSON.stringify({ projectId: String(projectId), status: String(status) }))
+    await redis.publish('deployhub:users:projects:status:updates', JSON.stringify({ projectId: String(projectId), status: String(status) }))
 };

@@ -18,7 +18,7 @@ export function registerProjectStatusHandler(io) {
             for (const projectId of projectIds) {
                 try {
                     const entries = await redis.xrevrange(
-                        `project:status:${projectId}`, '+', '-', 'COUNT', 1
+                        `deployhub:users:projects:status:${projectId}`, '+', '-', 'COUNT', 1
                     )
                     if (entries?.length > 0) {
                         const [, fields] = entries[0]
@@ -44,10 +44,10 @@ async function startRedisSubscriber() {
 
     subscriber = redis.duplicate()
 
-    await subscriber.subscribe('project:status:updates')
+    await subscriber.subscribe('deployhub:users:projects:status:updates')
 
     subscriber.on('message', (channel, message) => {
-        if (channel !== 'project:status:updates') return
+        if (channel !== 'deployhub:users:projects:status:updates') return
         try {
             const { projectId, status } = JSON.parse(message)
             const io = getIO()

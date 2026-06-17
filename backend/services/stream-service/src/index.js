@@ -33,10 +33,6 @@ app.get('/health', (_req, res) => {
 });
 
 
-import streamRoutes from './routes/routes.js'
-app.use('/api/v1/stream', streamRoutes)
-
-
 export default async function startApp() {
     await connectRedis();
 
