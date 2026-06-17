@@ -4,6 +4,7 @@ import { connection } from "../utils/queues.js";
 import axios from "axios";
 import Uptime from "../models/uptime.model.js";
 import { getRedis } from "../core/redis/client.js";
+import { env } from "../lib/env.js";
 
 const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async (job) => {
     const redis = getRedis();
@@ -84,6 +85,17 @@ const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async (job)
                     })
                 );
             }
+
+            if (status === 'running') {
+                await redis.publish(
+                    "deployhub:users:build:status",
+                    JSON.stringify({
+                        projectId,
+                        projectstatus: "recovered",
+                        projectName: monitorData.projectName,
+                    })
+                );
+            }
         }
 
         const nextPingAt =
@@ -104,7 +116,7 @@ const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async (job)
 }, { connection, concurrency: 50 });
 
 healthCheckWorker.on("completed", () => {
-    console.log("healthCheckWorker job completed");
+    if (process.env.NODE_ENV !== 'production') console.log('healthCheckWorker job completed')
 });
 
 healthCheckWorker.on("failed", (job, error) => {
