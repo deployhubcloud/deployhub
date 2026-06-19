@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'prototype/frontend/**'
+      - 'frontend/frontend'
       - '.github/workflows/frontend.yml'
 
 permissions:
