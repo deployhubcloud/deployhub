@@ -3,9 +3,9 @@ name: Frontend CI/CD
 on:
   push:
     branches:
-      - master
+      - main
     paths:
-      - 'frontend/frontend'
+      - 'prototype/frontend/**'
       - '.github/workflows/frontend.yml'
 
 permissions:
@@ -37,7 +37,7 @@ jobs:
             ./prototype/frontend
 
       - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:${{ github.sha }}
           severity: 'CRITICAL,HIGH'
