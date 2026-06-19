@@ -21,12 +21,12 @@ const LockIcon = () => (
 )
 const EyeIcon = ({ off }) => off ? (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
   </svg>
 ) : (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>
 )
 const SpinIcon = () => (
@@ -43,14 +43,14 @@ const GithubIcon = () => (
 
 function InputField({ label, id, name, type = 'text', value, onChange, placeholder, disabled, icon, rightEl }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-xs font-semibold text-gray-500 tracking-widest uppercase">{label}</label>
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-[11px] font-bold text-[#666] tracking-widest uppercase">{label}</label>
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-600">{icon}</div>
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">{icon}</div>
         <input type={type} id={id} name={name} value={value} onChange={onChange}
           placeholder={placeholder} required disabled={disabled}
-          className="w-full pl-10 pr-10 py-3 text-sm text-white rounded-xl bg-white/[0.04] border border-white/[0.08] focus:border-[#00e5ff]/50 focus:outline-none focus:ring-2 focus:ring-[#00e5ff]/10 placeholder:text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" />
-        {rightEl && <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center">{rightEl}</div>}
+          className="w-full pl-11 pr-11 py-3.5 text-sm text-[#1a1a2e] font-medium rounded-2xl bg-white border border-slate-200 focus:border-[var(--indigo-bright)] focus:outline-none focus:ring-4 focus:ring-[#4a3fcf]/5 placeholder:text-slate-400/60 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" />
+        {rightEl && <div className="absolute inset-y-0 right-0 pr-4 flex items-center">{rightEl}</div>}
       </div>
     </div>
   )
@@ -59,22 +59,22 @@ function InputField({ label, id, name, type = 'text', value, onChange, placehold
 function ErrorAlert({ message }) {
   if (!message) return null
   return (
-    <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-      <svg className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+    <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3.5">
+      <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
       </svg>
-      <span className="text-red-400 text-sm">{message}</span>
+      <span className="text-red-600 text-sm font-medium">{message}</span>
     </div>
   )
 }
 
 function OTPBox({ formData, setShowOTP, authRedirectState }) {
-  const [otp, setOtp]             = useState(['', '', '', '', '', ''])
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError]         = useState('')
-  const [cooldown, setCooldown]   = useState(30)
-  const inputRefs                 = useRef([])
-  const navigate                  = useNavigate()
+  const [error, setError] = useState('')
+  const [cooldown, setCooldown] = useState(30)
+  const inputRefs = useRef([])
+  const navigate = useNavigate()
 
   useEffect(() => {
     const t = setInterval(() => setCooldown(p => p > 0 ? p - 1 : 0), 1000)
@@ -121,41 +121,43 @@ function OTPBox({ formData, setShowOTP, authRedirectState }) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#00e5ff]/10 border border-[#00e5ff]/20 mx-auto flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-[#00e5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--indigo-bright)]/5 border border-[var(--indigo-bright)]/10 mx-auto flex items-center justify-center mb-4">
+          <svg className="w-6 h-6 text-[var(--indigo-bright)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h3 className="font-syne font-black text-xl text-white mb-1">Check your inbox</h3>
-        <p className="text-gray-500 text-sm leading-relaxed">
-          We sent a 6-digit code to<br />
-          <span className="text-gray-300 font-medium">{formData.email}</span>
+        <h3 className="font-extrabold text-2xl text-[var(--indigo-deep)] tracking-tight" style={{ fontFamily: 'var(--outfit)' }}>Check your inbox</h3>
+        <p className="text-slate-500 text-sm leading-relaxed mt-1">
+          We sent a 6-digit signature verification code to<br />
+          <span className="text-[var(--indigo-bright)] font-semibold">{formData.email}</span>
         </p>
       </div>
+
       <ErrorAlert message={error} />
+
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="flex justify-center gap-2.5">
+        <div className="flex justify-center gap-2">
           {otp.map((digit, i) => (
             <input key={i} ref={el => inputRefs.current[i] = el}
               type="text" inputMode="numeric" maxLength={1} value={digit}
               onChange={e => handleChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)} onPaste={handlePaste} disabled={isLoading}
-              className={`w-11 h-12 text-center text-xl font-black rounded-xl border-2 outline-none transition-all duration-200 bg-white/[0.03] disabled:opacity-50 ${digit ? 'border-[#00e5ff]/60 text-[#00e5ff] bg-[#00e5ff]/5' : 'border-white/10 text-white focus:border-[#00e5ff]/40 focus:bg-[#00e5ff]/5'}`} />
+              className={`w-12 h-13 text-center text-xl font-bold rounded-xl border-2 outline-none transition-all duration-200 disabled:opacity-50 ${digit ? 'border-[var(--indigo-bright)] text-[var(--indigo-bright)] bg-white shadow-sm' : 'border-slate-200 bg-white text-[var(--indigo-deep)] focus:border-[var(--indigo-bright)]/60'}`} />
           ))}
         </div>
         <button type="submit" disabled={isLoading || otp.join('').length !== 6}
-          className="w-full py-3.5 rounded-xl bg-[#00e5ff] text-black font-bold text-sm hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#00e5ff]/25 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0">
-          {isLoading ? <><SpinIcon /> Verifying...</> : 'Verify & Continue →'}
+          className="w-full py-4 rounded-2xl bg-[var(--indigo-deep)] text-white font-bold text-sm hover:bg-[var(--indigo-bright)] hover:-translate-y-[1px] active:translate-y-0 transition-all duration-200 shadow-lg shadow-[#1e1b6e]/10 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+          {isLoading ? <><SpinIcon /> Verifying...</> : 'Verify & Complete →'}
         </button>
       </form>
-      <div className="text-center space-y-3">
+      <div className="text-center space-y-3 pt-2">
         <button onClick={handleResend} disabled={cooldown > 0}
-          className={`text-sm font-medium transition-colors ${cooldown > 0 ? 'text-gray-700 cursor-not-allowed' : 'text-[#00e5ff] hover:text-cyan-300'}`}>
-          {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+          className={`text-xs font-bold uppercase tracking-wider transition-colors ${cooldown > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-[var(--indigo-bright)] hover:underline'}`}>
+          {cooldown > 0 ? `Resend Key in ${cooldown}s` : 'Resend Code'}
         </button>
         <button onClick={() => setShowOTP(false)}
-          className="block w-full text-sm text-gray-700 hover:text-gray-500 transition-colors">
-          ← Back to signup
+          className="block w-full text-xs text-slate-500 font-semibold hover:text-slate-700 transition-colors">
+          ← Back to signup registration
         </button>
       </div>
     </div>
@@ -164,44 +166,65 @@ function OTPBox({ formData, setShowOTP, authRedirectState }) {
 
 function LeftPanel() {
   return (
-    <div className="hidden lg:flex flex-col justify-center p-10 w-[400px] flex-shrink-0 bg-[#080d14] border-r border-white/5 relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#00e5ff]/3 via-transparent to-[#7c3aed]/3 pointer-events-none" />
-      <div className="relative z-10 space-y-8">
+    <div className="hidden lg:flex flex-col justify-between p-12 w-[460px] flex-shrink-0 text-white relative overflow-hidden" style={{ background: 'var(--primary-grad)' }}>
+      <div className="absolute inset-0 opacity-[0.07] pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255, 255, 255, 1) 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+
+      {/* Synchronized Brand Node Logo */}
+      <div className="relative z-10 flex items-center gap-3 font-semibold text-lg tracking-tight">
+        <div className="w-8 h-8 bg-white/10 border border-white/10 rounded-lg flex items-center justify-center">
+          <div className="w-3.5 h-3.5 border-2 border-[var(--lime)] border-r-transparent border-b-transparent rounded-full -rotate-45" />
+        </div>
+        DeployHub
+      </div>
+
+      <div className="relative z-10 space-y-10 my-auto">
         <div>
-          <h2 className="font-syne font-black text-3xl leading-tight text-white mb-3">
-            Host smarter.<br /><span className="text-[#00e5ff]">Ship faster.</span>
+          <h2 className="font-extrabold text-4xl leading-[1.1] tracking-tight mb-4" style={{ fontFamily: 'var(--outfit)' }}>
+            Host smarter.<br />Ship <span style={{ fontFamily: 'var(--fraunces)', fontStyle: 'italic', color: 'var(--lime)' }}>faster.</span>
           </h2>
-          <p className="text-gray-500 text-sm leading-relaxed">
-            Deploy static sites and Node.js apps in seconds. Free forever.
+          <p className="text-white/80 text-sm leading-relaxed max-w-[320px]">
+            Deploy cluster-managed static builds and runtime instances in real-time. Free forever for developers.
           </p>
         </div>
+
+        {/* Feature System Metric Highlights */}
         <div className="space-y-3">
-          {[['⚡','Deploy in under 60 seconds'],['🔒','Free SSL on every project'],['📊','Request tracking built-in'],['🔄','Auto-restart on crash']].map(([icon, text]) => (
-            <div key={text} className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-[#00e5ff]/10 border border-[#00e5ff]/15 flex items-center justify-center text-xs flex-shrink-0">{icon}</div>
-              <span className="text-gray-400 text-sm">{text}</span>
+          {[
+            { icon: '⚡', text: 'Deploy environments under 60 seconds' },
+            { icon: '🔒', text: 'Automatic SSL provisioned at termination' },
+            { icon: '📊', text: 'Granular telemetry and log tracking' },
+          ].map(item => (
+            <div key={item.text} className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl px-4 py-3">
+              <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xs flex-shrink-0">{item.icon}</div>
+              <span className="text-white/90 text-xs font-semibold tracking-wide">{item.text}</span>
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-6 pt-6 border-t border-white/5">
-          {[['2.8k+','Projects'],['99.9%','Uptime'],['Free','To start']].map(([n, l]) => (
-            <div key={l}>
-              <div className="font-syne font-black text-lg text-[#00e5ff]">{n}</div>
-              <div className="text-xs text-gray-600 mt-0.5">{l}</div>
-            </div>
-          ))}
-        </div>
+      </div>
+
+      {/* Synchronized Metrics Deck */}
+      <div className="relative z-10 flex items-center gap-8 border-t border-white/10 pt-6">
+        {[
+          { num: '12.4k+', label: 'Total Serving' },
+          { num: '99.9%', label: 'SLA Uptime' },
+          { num: '< 8s', label: 'Build Time' }
+        ].map(stat => (
+          <div key={stat.label}>
+            <div className="font-extrabold text-xl text-white">{stat.num}</div>
+            <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mt-0.5">{stat.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
 export const Signup = () => {
-  const [formData, setFormData]           = useState({ email: '', fullName: '', password: '' })
-  const [error, setError]                 = useState('')
-  const [isLoading, setIsLoading]         = useState(false)
-  const [showOTP, setShowOTP]             = useState(false)
-  const [showPass, setShowPass]           = useState(false)
+  const [formData, setFormData] = useState({ email: '', fullName: '', password: '' })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [showOTP, setShowOTP] = useState(false)
+  const [showPass, setShowPass] = useState(false)
   const [githubLoading, setGithubLoading] = useState(false)
   const location = useLocation()
   const redirectTo = redirectPathFromState(location.state)
@@ -229,25 +252,47 @@ export const Signup = () => {
   const anyLoading = isLoading || githubLoading
 
   return (
-    <div className="min-h-screen bg-[#050810] flex">
+    <div className="dh-root min-h-screen flex selection:bg-[#4a3fcf]/10" style={{ background: 'var(--slate-bg)', fontFamily: 'var(--outfit)' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:ital,wght@0,700;1,700&display=swap');
+        
+        :root {
+          --primary-grad: linear-gradient(135deg, #1e1b6e 0%, #2d27a8 40%, #4a3fcf 70%, #7060ee 100%);
+          --indigo-deep: #1e1b6e;
+          --indigo-mid: #2d27a8;
+          --indigo-bright: #4a3fcf;
+          --lime: #c8f135;
+          --slate-bg: #f0f2ff;
+          --outfit: 'Outfit', sans-serif;
+          --fraunces: 'Fraunces', serif;
+        }
+
+        @keyframes progress {
+          0%{transform:translateX(-100%)}
+          100%{transform:translateX(200%)}
+        }
+      `}</style>
+
       <LeftPanel />
 
-      <div className="flex-1 flex items-center justify-center px-8 py-10 relative overflow-y-auto">
-        <div className="w-full max-w-sm relative z-10">
+      <div className="flex-1 flex items-center justify-center px-8 py-12 relative overflow-y-auto">
+        <div className="w-full max-w-[360px] relative z-10">
 
-          {/* Top progress bar */}
           {anyLoading && (
-            <div className="absolute -top-8 left-0 right-0 h-0.5 overflow-hidden rounded-full">
-              <div className="h-full bg-gradient-to-r from-[#00e5ff] to-[#7c3aed]"
-                style={{ animation: 'progress 1.2s ease-in-out infinite' }} />
+            <div className="absolute -top-10 left-0 right-0 h-[3px] bg-slate-200/50 overflow-hidden rounded-full">
+              <div className="h-full bg-gradient-to-r from-[var(--indigo-bright)] to-[var(--lime)]"
+                style={{ animation: 'progress 1.5s cubic-bezier(0.65, 0.05, 0.36, 1) infinite' }} />
             </div>
           )}
 
           {!showOTP ? (
-            <div className="space-y-5">
-              <div>
-                <h1 className="font-syne font-black text-2xl text-white mb-1">Create account</h1>
-                <p className="text-gray-500 text-sm">Start hosting your projects for free</p>
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <div className="lg:hidden mb-4 w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-grad)' }}>
+                  <div className="w-3.5 h-3.5 border-2 border-[var(--lime)] border-r-transparent border-b-transparent rounded-full -rotate-45" />
+                </div>
+                <h1 className="font-extrabold text-3xl text-[var(--indigo-deep)] tracking-tight">Create account</h1>
+                <p className="text-slate-500 text-sm font-medium">Start hosting your projects for free</p>
               </div>
 
               {/* GitHub OAuth Button */}
@@ -255,7 +300,7 @@ export const Signup = () => {
                 type="button"
                 onClick={handleGithubSignup}
                 disabled={anyLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm font-medium text-gray-300 hover:bg-white/[0.08] hover:border-white/20 hover:text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-2xl bg-white border border-slate-200 text-sm font-bold text-[var(--indigo-deep)] hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
               >
                 {githubLoading ? (
                   <>
@@ -270,46 +315,49 @@ export const Signup = () => {
                 )}
               </button>
 
-              <div className="relative flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/[0.06]" />
-                <span className="text-xs text-gray-700 font-medium">or with email</span>
-                <div className="flex-1 h-px bg-white/[0.06]" />
+              <div className="relative flex items-center gap-4 py-1">
+                <div className="flex-1 h-px bg-slate-200" />
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">or with email system</span>
+                <div className="flex-1 h-px bg-slate-200" />
               </div>
 
               <ErrorAlert message={error} />
 
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <InputField label="Email" id="email" name="email" type="email"
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <InputField label="Account Email" id="email" name="email" type="email"
                   value={formData.email} onChange={handleChange}
                   placeholder="you@example.com" disabled={anyLoading} icon={<EmailIcon />} />
+
                 <InputField label="Full Name" id="fullName" name="fullName"
                   value={formData.fullName} onChange={handleChange}
                   placeholder="John Doe" disabled={anyLoading} icon={<UserIcon />} />
-                <InputField label="Password" id="password" name="password"
+
+                <InputField label="Account Password" id="password" name="password"
                   type={showPass ? 'text' : 'password'}
                   value={formData.password} onChange={handleChange}
                   placeholder="Min. 8 characters" disabled={anyLoading} icon={<LockIcon />}
                   rightEl={
                     <button type="button" onClick={() => setShowPass(p => !p)}
-                      className="text-gray-600 hover:text-gray-400 transition-colors">
+                      className="text-slate-400 hover:text-slate-600 transition-colors">
                       <EyeIcon off={showPass} />
                     </button>
                   } />
+
                 <button type="submit" disabled={anyLoading}
-                  className="w-full py-3.5 rounded-xl bg-[#00e5ff] text-black font-bold text-sm mt-1 hover:bg-cyan-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#00e5ff]/25 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0">
-                  {isLoading ? <><SpinIcon /> Creating account...</> : 'Create Account →'}
+                  className="w-full py-4 rounded-2xl bg-[var(--indigo-deep)] text-white font-bold text-sm mt-2 hover:bg-[var(--indigo-bright)] hover:-translate-y-[1px] active:translate-y-0 transition-all duration-200 shadow-lg shadow-[#1e1b6e]/10 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                  {isLoading ? <><SpinIcon /> Initializing Registry...</> : 'Create Account →'}
                 </button>
               </form>
 
-              <p className="text-center text-sm text-gray-600">
+              <p className="text-center text-xs text-slate-500 font-medium">
                 Already have an account?{' '}
-                <Link to="/login" state={location.state} className="text-[#00e5ff] hover:text-cyan-300 font-medium transition-colors">Sign in</Link>
+                <Link to="/login" state={location.state} className="text-[var(--indigo-bright)] font-bold hover:underline transition-all">Sign in</Link>
               </p>
-              <p className="text-center text-xs text-gray-700">
+              <p className="text-center text-[10px] text-slate-400 font-medium px-4">
                 By continuing, you agree to our{' '}
-                <a href="#" className="hover:text-gray-500 transition-colors">Terms</a>
+                <a href="#" className="hover:text-slate-600 transition-colors underline">Terms</a>
                 {' & '}
-                <a href="#" className="hover:text-gray-500 transition-colors">Privacy Policy</a>
+                <a href="#" className="hover:text-slate-600 transition-colors underline">Privacy Policy</a>
               </p>
             </div>
           ) : (
@@ -321,7 +369,6 @@ export const Signup = () => {
           )}
         </div>
       </div>
-      <style>{`@keyframes progress { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }`}</style>
     </div>
   )
 }

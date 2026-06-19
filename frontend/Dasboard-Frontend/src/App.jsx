@@ -18,6 +18,7 @@ import { Metrics } from "./Pages/Project/Metrics";
 import { Settings } from "./Pages/Project/Settings";
 import { Domain } from "./Pages/Project/Domain";
 import { Billing } from "./Pages/Project/Billing";
+import { BuildLogs } from "./Pages/Project/BuildLogs";
 
 function Protected({ children }) {
   const { isAuthenticated, isAuthReady } = useAuth();
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/project/:id" element={<Overview />} />
           <Route path="/project/:id/builds" element={<ProjectBuilds />} />
           <Route path="/project/:id/logs" element={<Logs />} />
+          <Route path="/project/:id/logs/:buildId" element={<BuildLogs />} />
           <Route path="/project/:id/metrics" element={<Metrics />} />
           <Route path="/project/:id/settings" element={<Settings />} />
           <Route path="/project/:id/domains" element={<Domain />} />
