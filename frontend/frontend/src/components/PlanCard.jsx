@@ -1,7 +1,7 @@
+import { useLaunchModal } from "../lib/launch-modal";
+
 export default function PlanCard({ plan, annual, delay = 0 }) {
-  const priceDisplay = annual
-    ? plan.annual === 0 ? "Free" : `$${plan.annual}/year`
-    : plan.monthly === 0 ? "Free" : `$${plan.monthly}/mo`;
+  const { openLaunch } = useLaunchModal();
 
   return (
     <div
@@ -34,9 +34,13 @@ export default function PlanCard({ plan, annual, delay = 0 }) {
           </li>
         ))}
       </ul>
-      <a href="https://dashboard.deployhub.cloud" className={`block text-center py-3 rounded-xl text-sm font-bold transition-all ${plan.ctaStyle === "solid" ? "bg-cyan text-black hover:bg-cyan-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan/30" : "border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white hover:border-cyan/50 hover:text-cyan"}`}>
+      <button
+        type="button"
+        onClick={openLaunch}
+        className={`block w-full text-center py-3 rounded-xl text-sm font-bold transition-all ${plan.ctaStyle === "solid" ? "bg-cyan text-black hover:bg-cyan-dark hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan/30" : "border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white hover:border-cyan/50 hover:text-cyan"}`}
+      >
         {plan.cta}
-      </a>
+      </button>
     </div>
   );
 }
