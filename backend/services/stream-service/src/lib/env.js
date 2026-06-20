@@ -19,6 +19,7 @@ const requiredEnvVars = [
     "REFRESH_TOKEN_SECRET",
     "REFRESH_TOKEN_EXPIRY",
     "FRONTEND_URI",
+    'STREAM_SERVICE_NAME'
 ]
 
 for (const env of requiredEnvVars) {
@@ -35,7 +36,7 @@ export const env = {
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
     BOOTSTRAP_TOKEN: process.env.BOOTSTRAP_TOKEN,
     SECRETS_MANAGER_URL: process.env.SECRETS_MANAGER_URL,
-    SERVICE_NAME: process.env.SERVICE_NAME,
+    STREAM_SERVICE_NAME: process.env.STREAM_SERVICE_NAME,
     PORT: process.env.PORT,
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,

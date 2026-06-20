@@ -3,8 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { api } from '../api/apiclient'
 
 function formatDate(dateString) {
-  if (!dateString) return '-'
-
+  if (!dateString) return '—'
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -14,7 +13,6 @@ function formatDate(dateString) {
 
 function getInitials(name) {
   if (!name) return 'U'
-
   return name
     .split(' ')
     .filter(Boolean)
@@ -77,6 +75,10 @@ export function Profile() {
       return
     }
 
+    let accountAge = userData?.createdAt
+      ? Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
+      : 0
+
     setLoading(true)
     setError(null)
     setSuccess(null)
@@ -96,7 +98,7 @@ export function Profile() {
       }
 
       await fetchUser()
-      setSuccess('Profile updated successfully')
+      setSuccess('Profile identity records updated successfully')
       setIsEditing(false)
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update profile'))
@@ -112,17 +114,17 @@ export function Profile() {
     if (!file) return
 
     if (isGithubUser) {
-      setError('GitHub profile picture is managed by GitHub')
+      setError('OAuth profile assets are managed by GitHub directly.')
       return
     }
 
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file')
+      setError('Please provide a valid image format template.')
       return
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image size should be less than 2MB')
+      setError('Image asset boundaries must scale beneath 2MB.')
       return
     }
 
@@ -152,64 +154,48 @@ export function Profile() {
     }
   }
 
-  const accountAge = user?.createdAt
-    ? Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
-    : 0
-
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }} className="space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 px-4 py-2">
+      {/* View Title Panel Header */}
       <div>
-        <p className="text-xs font-bold tracking-[0.15em] uppercase mb-1.5" style={{ color: '#00e5ff' }}>
-          Account
+        <p className="text-[10px] font-extrabold tracking-[0.2em] uppercase mb-1 text-[#c8f135]">
+          Identity Core
         </p>
-        <h1 className="font-syne font-black text-[28px] text-white leading-none">Profile Settings</h1>
+        <h1 className="font-['Outfit'] font-extrabold text-2xl text-white tracking-tight leading-none sm:text-3xl">Profile Settings</h1>
       </div>
 
-      <div
-        className="rounded-2xl p-6"
-        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
-      >
+      {/* Main Configurations Dashboard Shell */}
+      <div className="rounded-2xl p-6 bg-black/10 border border-[#1e1b6e]/30 shadow-xl">
+
+        {/* Status Messaging Systems */}
         {error && (
-          <div
-            className="mb-4 p-3 rounded-lg flex items-center gap-2"
-            style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}
-          >
-            <svg className="w-4 h-4 flex-shrink-0" style={{ color: '#f87171' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 bg-rose-500/[0.05] border border-rose-500/15 text-rose-400">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.25}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="text-sm" style={{ color: '#f87171' }}>{error}</span>
+            <span className="text-xs font-bold font-mono tracking-wide">{error}</span>
           </div>
         )}
 
         {success && (
-          <div
-            className="mb-4 p-3 rounded-lg flex items-center gap-2"
-            style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}
-          >
-            <svg className="w-4 h-4 flex-shrink-0" style={{ color: '#34d399' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <div className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 bg-emerald-500/[0.05] border border-emerald-500/15 text-emerald-400">
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.25}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <span className="text-sm" style={{ color: '#34d399' }}>{success}</span>
+            <span className="text-xs font-bold font-mono tracking-wide">{success}</span>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
-          <div className="relative">
-            <div
-              className="w-24 h-24 rounded-2xl overflow-hidden"
-              style={{
-                background: 'linear-gradient(135deg, rgba(0,229,255,0.1), rgba(0,184,204,0.1))',
-                border: '2px solid rgba(0,229,255,0.2)',
-              }}
-            >
+        {/* Identity Profiler Meta Info Row */}
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8 pb-6 border-b border-[#1e1b6e]/20">
+          <div className="relative group shrink-0">
+            <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white/[0.02] border border-white/[0.06] shadow-inner flex items-center justify-center">
               {formData.profilePic ? (
                 <img src={formData.profilePic} alt={formData.fullName} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="font-syne font-black text-2xl" style={{ color: '#00e5ff' }}>
-                    {getInitials(formData.fullName)}
-                  </span>
-                </div>
+                <span className="font-['Outfit'] font-extrabold text-2xl text-slate-200">
+                  {getInitials(formData.fullName)}
+                </span>
               )}
             </div>
 
@@ -217,12 +203,11 @@ export function Profile() {
               <>
                 <label
                   htmlFor="profile-pic-upload"
-                  className="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all hover:scale-110"
-                  style={{ background: '#00e5ff', boxShadow: '0 4px 12px rgba(0,229,255,0.3)' }}
+                  className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-[#c8f135] shadow-md shadow-[#c8f135]/10 hover:scale-105 active:scale-95 hover:bg-[#b0d52b]"
                 >
-                  <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg className="w-4 h-4 text-[#1a2000]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </label>
                 <input
@@ -237,37 +222,34 @@ export function Profile() {
             )}
           </div>
 
-          <div>
-            <h2 className="font-syne font-black text-xl text-white mb-1">
-              {formData.fullName || 'User'}
+          <div className="text-center sm:text-left space-y-1">
+            <h2 className="font-['Outfit'] font-extrabold text-xl text-white tracking-tight">
+              {formData.fullName || 'Unassigned Identifier'}
             </h2>
-            <div className="flex items-center gap-2 mb-2">
-              <span
-                className="text-xs px-2 py-0.5 rounded-full"
-                style={{
-                  background: 'rgba(156,163,175,0.08)',
-                  color: '#9ca3af',
-                  border: '1px solid rgba(156,163,175,0.2)',
-                }}
-              >
-                {isGithubUser ? 'GitHub' : 'Local'}
+            <div className="flex justify-center sm:justify-start">
+              <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-sm border font-mono tracking-wider ${isGithubUser
+                ? 'bg-white/[0.04] border-white/[0.05] text-slate-400'
+                : 'bg-[#c8f135]/10 border-[#c8f135]/20 text-[#c8f135]'
+                }`}>
+                {isGithubUser ? 'GITHUB_OAUTH' : 'LOCAL_CLUSTER'}
               </span>
             </div>
-            <p className="text-xs" style={{ color: '#6b7280' }}>
-              Member since {formatDate(user?.createdAt)}
+            <p className="text-xs font-medium text-slate-400/50 pt-1">
+              Cluster node synchronized {formatDate(user?.createdAt)}
             </p>
             {isGithubUser && (
-              <p className="text-xs mt-2" style={{ color: '#9ca3af' }}>
-                Name, email, and profile picture are managed by GitHub.
+              <p className="text-[11px] font-medium text-slate-400/60 max-w-sm mt-2.5 bg-black/10 p-2 rounded-lg border border-[#1e1b6e]/20">
+                Core structures like names, indices, and profile assets are locked by upstream GitHub validation protocols.
               </p>
             )}
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Input Profile Forms */}
+        <div className="space-y-5">
           <div>
-            <label className="block text-xs font-bold tracking-[0.1em] uppercase mb-2" style={{ color: '#9ca3af' }}>
-              Full Name
+            <label className="block text-[10px] font-bold tracking-widest uppercase text-slate-400/40 mb-2">
+              Full System Handle
             </label>
             {isEditing && !isGithubUser ? (
               <input
@@ -275,53 +257,40 @@ export function Profile() {
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 rounded-xl text-sm text-white"
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  outline: 'none',
-                }}
-                placeholder="Enter your full name"
+                className="w-full px-4 py-2.5 rounded-xl text-xs bg-black/20 text-white border border-[#1e1b6e]/20 focus:border-[#c8f135]/40 transition-all outline-none placeholder:text-slate-600 font-medium"
+                placeholder="Declare active full name identity"
                 disabled={loading}
               />
             ) : (
-              <p className="text-sm text-white py-3">{formData.fullName || '-'}</p>
+              <p className="text-xs font-semibold text-slate-300 bg-white/[0.005] border border-[#1e1b6e]/10 px-4 py-2.5 rounded-xl">{formData.fullName || '—'}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-bold tracking-[0.1em] uppercase mb-2" style={{ color: '#9ca3af' }}>
-              Email Address
+            <label className="block text-[10px] font-bold tracking-widest uppercase text-slate-400/40 mb-2">
+              Routing Email Endpoint
             </label>
-            <p className="text-sm text-white py-3">{formData.email || '-'}</p>
+            <p className="text-xs font-mono text-slate-300 bg-white/[0.005] border border-[#1e1b6e]/10 px-4 py-2.5 rounded-xl select-all">{formData.email || '—'}</p>
           </div>
 
+          {/* Action Trigger Block */}
           {!isGithubUser && (
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-2.5 pt-3">
               {isEditing ? (
                 <>
                   <button
                     type="button"
                     onClick={handleUpdateProfile}
                     disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-black transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-                    style={{
-                      background: 'linear-gradient(135deg, #00e5ff, #00b8cc)',
-                      boxShadow: '0 4px 16px rgba(0,229,255,0.2)',
-                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-[#1a2000] bg-[#c8f135] hover:bg-[#b0d52b] active:scale-98 transition-all disabled:opacity-40"
                   >
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    {loading ? 'Committing...' : 'Commit Mutation'}
                   </button>
                   <button
                     type="button"
                     onClick={handleCancelEdit}
                     disabled={loading}
-                    className="px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 disabled:opacity-50"
-                    style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      color: '#9ca3af',
-                    }}
+                    className="px-4 py-2 rounded-xl font-bold text-xs text-slate-400 bg-white/[0.02] border border-white/[0.04] hover:text-white transition-all active:scale-98 disabled:opacity-40"
                   >
                     Cancel
                   </button>
@@ -334,17 +303,12 @@ export function Profile() {
                     setSuccess(null)
                     setIsEditing(true)
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105"
-                  style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#fff',
-                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-slate-300 bg-white/[0.01] border border-white/[0.04] hover:text-white hover:border-[#c8f135]/30 hover:bg-[#c8f135]/[0.01] active:scale-98 transition-all group"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  <svg className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#c8f135] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.25}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
-                  Edit Profile
+                  Modify Credentials
                 </button>
               )}
             </div>
@@ -352,24 +316,22 @@ export function Profile() {
         </div>
       </div>
 
-      <div
-        className="rounded-2xl p-6"
-        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
-      >
-        <h2 className="font-syne font-bold text-lg text-white mb-4">Account Details</h2>
+      {/* Meta Context Analytics Card */}
+      <div className="rounded-2xl p-6 bg-black/10 border border-[#1e1b6e]/30 shadow-xl">
+        <h2 className="font-['Outfit'] font-extrabold text-base text-white tracking-tight mb-4">Metadata Analysis</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <p className="text-xs font-bold tracking-[0.1em] uppercase mb-1" style={{ color: '#9ca3af' }}>
-              Account Age
+          <div className="p-4 rounded-xl bg-black/5 border border-[#1e1b6e]/10 shadow-inner">
+            <p className="text-[9px] font-bold tracking-widest uppercase text-slate-400/40 mb-1">
+              Active Lifetime Runtime
             </p>
-            <p className="text-lg font-syne font-bold text-white">{accountAge} days</p>
+            <p className="font-['Outfit'] text-xl font-extrabold text-white tracking-tight">{accountAge} <span className="text-xs text-slate-500 font-sans font-medium">days</span></p>
           </div>
-          <div className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <p className="text-xs font-bold tracking-[0.1em] uppercase mb-1" style={{ color: '#9ca3af' }}>
-              Last Updated
+          <div className="p-4 rounded-xl bg-black/5 border border-[#1e1b6e]/10 shadow-inner">
+            <p className="text-[9px] font-bold tracking-widest uppercase text-slate-400/40 mb-1">
+              Last State Mutated
             </p>
-            <p className="text-sm font-syne font-bold text-white">{formatDate(user?.updatedAt)}</p>
+            <p className="text-xs font-mono font-bold text-slate-300 pt-1">{formatDate(user?.updatedAt)}</p>
           </div>
         </div>
       </div>

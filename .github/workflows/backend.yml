@@ -1,0 +1,209 @@
+name: Backend Services CI/CD
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'backend/services/**'
+      - 'backend/api-gateway/**'
+      - 'backend/shared/**'
+      - 'backend/Dockerfile'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api-gateway
+            image: deployhubapigateway
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=api-gateway
+          - name: identity-service
+            image: deployhubidentityservice
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=services/identity-service
+          - name: project-service
+            image: deployhubprojectservice
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=services/project-service
+          - name: build-service
+            image: deployhubbuildservice
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=services/build-service
+          - name: deploy-service
+            image: deployhubdeployservice
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=services/deploy-service
+          - name: notification-service
+            image: deployhubnotificationservice
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=services/notification-service
+          - name: stream-service
+            image: deployhubstreamservice
+            context: ./backend
+            dockerfile: ./backend/Dockerfile
+            build_args: SERVICE_PATH=services/stream-service
+          - name: secrets-manager
+            image: deployhubsecretsmanager
+            context: ./backend/services/secrets-manager
+            dockerfile: ./backend/services/secrets-manager/Dockerfile
+            build_args: ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: DockerHub login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      - name: Build Docker image
+        run: |
+          BUILD_ARG=""
+          if [ -n "${{ matrix.build_args }}" ]; then
+            BUILD_ARG="--build-arg ${{ matrix.build_args }}"
+          fi
+          docker build $BUILD_ARG \
+            -t ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}:latest \
+            -f ${{ matrix.dockerfile }} \
+            ${{ matrix.context }}
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}:latest
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Push image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy all services via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          BOOTSTRAP_TOKEN: ${{ secrets.BOOTSTRAP_TOKEN }}
+          ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
+          REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
+          CLIENT_ID_GITHUB: ${{ secrets.CLIENT_ID_GITHUB }}
+          CLIENT_SECRET_GITHUB: ${{ secrets.CLIENT_SECRET_GITHUB }}
+          TOKEN_ENCRYPTION_KEY_GITHUB: ${{ secrets.TOKEN_ENCRYPTION_KEY_GITHUB }}
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
+          INTERNAL_SERVICE_TALKING_SECRET: ${{ secrets.INTERNAL_SERVICE_TALKING_SECRET }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          IDENTITY_SERVICE_MONGODB_URI: ${{ secrets.IDENTITY_SERVICE_MONGODB_URI }}
+          BUILD_SERVICE_MONGODB_URI: ${{ secrets.BUILD_SERVICE_MONGODB_URI }}
+          DEPLOY_SERVICE_MONGODB_URI: ${{ secrets.DEPLOY_SERVICE_MONGODB_URI }}
+          PROJECT_SERVICE_MONGODB_URI: ${{ secrets.PROJECT_SERVICE_MONGODB_URI }}
+          MONITORING_MONGODB_URI: ${{ secrets.MONITORING_MONGODB_URI }}
+          NOTIFICATION_MONGODB_URI: ${{ secrets.NOTIFICATION_MONGODB_URI }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          DEVLOAD_API_KEY: ${{ secrets.DEVLOAD_API_KEY }}
+          DEVLOAD_PROJECT_ID: ${{ secrets.DEVLOAD_PROJECT_ID }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          RABBITMQ_URL: ${{ secrets.RABBITMQ_URL }}
+          IDENTITY_SERVICE_URL: ${{ secrets.IDENTITY_SERVICE_URL }}
+          PROJECT_SERVICE_URL: ${{ secrets.PROJECT_SERVICE_URL }}
+          MONITORING_SERVICE_URL: ${{ secrets.MONITORING_SERVICE_URL }}
+          BUILD_SERVICE_URL: ${{ secrets.BUILD_SERVICE_URL }}
+          DEPLOY_SERVICE_URL: ${{ secrets.DEPLOY_SERVICE_URL }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_PUBLIC_HOST: ${{ secrets.MINIO_PUBLIC_HOST }}
+          SECRETS_MANAGER_URL: ${{ secrets.SECRETS_MANAGER_URL }}
+          BUILD_SERVICE_NAME: ${{ secrets.BUILD_SERVICE_NAME }}
+          DEPLOY_SERVICE_NAME: ${{ secrets.DEPLOY_SERVICE_NAME }}
+          IDENTITY_SERVICE_NAME: ${{ secrets.IDENTITY_SERVICE_NAME }}
+          NOTIFICATION_SERVICE_NAME: ${{ secrets.NOTIFICATION_SERVICE_NAME }}
+          PROJECT_SERVICE_NAME: ${{ secrets.PROJECT_SERVICE_NAME }}
+          STREAM_SERVICE_NAME: ${{ secrets.STREAM_SERVICE_NAME }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: DOCKER_USERNAME,DOCKER_ACCESS_TOKEN,REDIS_HOST,REDIS_PASSWORD,REDIS_URL,BOOTSTRAP_TOKEN,ACCESS_TOKEN_SECRET,REFRESH_TOKEN_SECRET,CLIENT_ID_GITHUB,CLIENT_SECRET_GITHUB,TOKEN_ENCRYPTION_KEY_GITHUB,INTERNAL_SECRET,INTERNAL_SERVICE_TALKING_SECRET,EMAIL_USER,EMAIL_PASS,IDENTITY_SERVICE_MONGODB_URI,BUILD_SERVICE_MONGODB_URI,DEPLOY_SERVICE_MONGODB_URI,PROJECT_SERVICE_MONGODB_URI,MONITORING_MONGODB_URI,NOTIFICATION_MONGODB_URI,RAZORPAY_KEY_ID,RAZORPAY_KEY_SECRET,DEVLOAD_API_KEY,DEVLOAD_PROJECT_ID,FRONTEND_URL,RABBITMQ_URL,IDENTITY_SERVICE_URL,PROJECT_SERVICE_URL,MONITORING_SERVICE_URL,BUILD_SERVICE_URL,DEPLOY_SERVICE_URL,MINIO_BUCKET,MINIO_SECRET_KEY,MINIO_ACCESS_KEY,MINIO_PUBLIC_HOST,SECRETS_MANAGER_URL,BUILD_SERVICE_NAME,DEPLOY_SERVICE_NAME,IDENTITY_SERVICE_NAME,NOTIFICATION_SERVICE_NAME,PROJECT_SERVICE_NAME,STREAM_SERVICE_NAME
+          script: |
+            echo "$DOCKER_ACCESS_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+            SERVICES="api-gateway identity-service project-service build-service deploy-service notification-service stream-service secrets-manager"
+
+            for svc in $SERVICES; do
+              case $svc in
+                api-gateway) IMAGE=deployhubapigateway; PORT_MAP="-p 127.0.0.1:4999:4999" ;;
+                identity-service) IMAGE=deployhubidentityservice; PORT_MAP="" ;;
+                project-service) IMAGE=deployhubprojectservice; PORT_MAP="" ;;
+                build-service) IMAGE=deployhubbuildservice; PORT_MAP="" ;;
+                deploy-service) IMAGE=deployhubdeployservice; PORT_MAP="" ;;
+                notification-service) IMAGE=deployhubnotificationservice; PORT_MAP="" ;;
+                stream-service) IMAGE=deployhubstreamservice; PORT_MAP="-p 127.0.0.1:4008:4008" ;;
+                secrets-manager) IMAGE=deployhubsecretsmanager; PORT_MAP="" ;;
+              esac
+
+              case $svc in
+                secrets-manager)
+                  ENV_ARGS="-e REDIS_HOST=$REDIS_HOST -e REDIS_PASSWORD=$REDIS_PASSWORD -e REDIS_URL=$REDIS_URL -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e ACCESS_TOKEN_SECRET=$ACCESS_TOKEN_SECRET -e REFRESH_TOKEN_SECRET=$REFRESH_TOKEN_SECRET -e GITHUB_CLIENT_ID=$CLIENT_ID_GITHUB -e GITHUB_CLIENT_SECRET=$CLIENT_SECRET_GITHUB -e GITHUB_TOKEN_ENCRYPTION_KEY=$TOKEN_ENCRYPTION_KEY_GITHUB -e INTERNAL_SECRET=$INTERNAL_SECRET -e INTERNAL_SERVICE_TALKING_SECRET=$INTERNAL_SERVICE_TALKING_SECRET -e EMAIL_USER=$EMAIL_USER -e EMAIL_PASS=$EMAIL_PASS -e IDENTITY_SERVICE_MONGODB_URI=$IDENTITY_SERVICE_MONGODB_URI -e BUILD_SERVICE_MONGODB_URI=$BUILD_SERVICE_MONGODB_URI -e DEPLOY_SERVICE_MONGODB_URI=$DEPLOY_SERVICE_MONGODB_URI -e PROJECT_SERVICE_MONGODB_URI=$PROJECT_SERVICE_MONGODB_URI -e MONITORING_MONGODB_URI=$MONITORING_MONGODB_URI -e NOTIFICATION_MONGODB_URI=$NOTIFICATION_MONGODB_URI -e RAZORPAY_KEY_ID=$RAZORPAY_KEY_ID -e RAZORPAY_KEY_SECRET=$RAZORPAY_KEY_SECRET -e DEVLOAD_API_KEY=$DEVLOAD_API_KEY -e DEVLOAD_PROJECT_ID=$DEVLOAD_PROJECT_ID -e FRONTEND_URL=$FRONTEND_URL -e RABBITMQ_URL=$RABBITMQ_URL -e IDENTITY_SERVICE_URL=$IDENTITY_SERVICE_URL -e PROJECT_SERVICE_URL=$PROJECT_SERVICE_URL -e MONITORING_SERVICE_URL=$MONITORING_SERVICE_URL -e BUILD_SERVICE_URL=$BUILD_SERVICE_URL -e DEPLOY_SERVICE_URL=$DEPLOY_SERVICE_URL -e MINIO_BUCKET=$MINIO_BUCKET -e MINIO_SECRET_KEY=$MINIO_SECRET_KEY -e MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY -e MINIO_PUBLIC_HOST=$MINIO_PUBLIC_HOST"
+                  ;;
+                build-service)
+                  ENV_ARGS="-e BUILD_SERVICE_NAME=$BUILD_SERVICE_NAME -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+                deploy-service)
+                  ENV_ARGS="-e DEPLOY_SERVICE_NAME=$DEPLOY_SERVICE_NAME -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+                identity-service)
+                  ENV_ARGS="-e IDENTITY_SERVICE_NAME=$IDENTITY_SERVICE_NAME -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+                notification-service)
+                  ENV_ARGS="-e NOTIFICATION_SERVICE_NAME=$NOTIFICATION_SERVICE_NAME -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+                project-service)
+                  ENV_ARGS="-e PROJECT_SERVICE_NAME=$PROJECT_SERVICE_NAME -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+                stream-service)
+                  ENV_ARGS="-e STREAM_SERVICE_NAME=$STREAM_SERVICE_NAME -e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+                api-gateway)
+                  ENV_ARGS="-e BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN -e SECRETS_MANAGER_URL=$SECRETS_MANAGER_URL"
+                  ;;
+              esac
+
+              docker pull "$DOCKER_USERNAME/$IMAGE:latest"
+              docker stop "deployhub-$svc" || true
+              docker rm "deployhub-$svc" || true
+
+              docker run -d --name deployhub-$svc \
+                $PORT_MAP \
+                --network cloud \
+                --env-file /opt/deployhub/$svc/.env \
+                $ENV_ARGS \
+                --restart always \
+                "$DOCKER_USERNAME/$IMAGE:latest"
+            done
+
+            docker image prune -af
+            docker logout

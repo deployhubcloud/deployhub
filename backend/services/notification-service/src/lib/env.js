@@ -1,5 +1,5 @@
 const required = [
-    'NODE_ENV', 'PORT',
+    'NODE_ENV', 'PORT', 'NOTIFICATION_SERVICE_NAME',
     "MONGODB_URI",
     'REDIS_HOST', 'REDIS_PORT', 'REDIS_PASSWORD',
     'RABBITMQ_URL',
@@ -20,7 +20,7 @@ for (const key of required) {
 export const NOTIFICATION_ENV = {
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT,
-    SERVICE_NAME: process.env.SERVICE_NAME,
+    NOTIFICATION_SERVICE_NAME: process.env.NOTIFICATION_SERVICE_NAME,
     MONGODB_URI: process.env.MONGODB_URI,
     REDIS_HOST: process.env.REDIS_HOST,
     REDIS_PORT: process.env.REDIS_PORT,

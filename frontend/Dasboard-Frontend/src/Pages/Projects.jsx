@@ -4,19 +4,19 @@ import { api } from '../api/apiclient'
 import { useProjectsStatus } from '../hooks/useProjectsStatus'
 
 const STATUS = {
-  queued: { text: 'Queued', color: '#eab308', pulse: false },
-  building: { text: 'Building', color: '#38bdf8', pulse: true },
-  running: { text: 'Live', color: '#22c55e', pulse: true },
-  failed: { text: 'Failed', color: '#ef4444', pulse: false },
-  stopped: { text: 'Stopped', color: '#6b7280', pulse: false },
+  queued: { text: 'Queued', bgClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20', dotClass: 'bg-amber-500', pulse: false },
+  building: { text: 'Building', bgClass: 'bg-sky-500/10 text-sky-500 border-sky-500/20', dotClass: 'bg-sky-500', pulse: true },
+  running: { text: 'Live', bgClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dotClass: 'bg-emerald-500', pulse: true },
+  failed: { text: 'Failed', bgClass: 'bg-rose-500/10 text-rose-400 border-rose-500/20', dotClass: 'bg-rose-500', pulse: false },
+  stopped: { text: 'Stopped', bgClass: 'bg-white/[0.04] text-slate-400 border-white/[0.06]', dotClass: 'bg-slate-500', pulse: false },
 }
 
 const TYPES = [
-  { key: 'static', title: 'Static Site', desc: 'Vite, React, Vue, Astro, docs, portfolios, and marketing sites.', plan: 'Free', color: '#22d3ee', icon: 'M3 5h18M5 5v14h14V5M8 9h8M8 13h5' },
-  { key: 'node', title: 'Node.js App', desc: 'Express, APIs, workers, dashboards, and long-running services.', plan: 'Starter', color: '#22c55e', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18m8-13.5l-8 4.5-8-4.5' },
-  { key: 'go', title: 'Go Service', desc: 'Fast HTTP services, background jobs, and small binaries.', plan: 'Starter', color: '#60a5fa', icon: 'M4 7h10a5 5 0 010 10H4m3-5h11M4 10h3m-3 4h3' },
-  { key: 'python', title: 'Python App', desc: 'FastAPI, Flask, automation services, and ML-backed APIs.', plan: 'Starter', color: '#fbbf24', icon: 'M12 4h4a4 4 0 014 4v2h-8a4 4 0 00-4 4v6H8a4 4 0 01-4-4v-4a4 4 0 014-4h8m-4 12H8a4 4 0 01-4-4v-2h8a4 4 0 004-4V4h4a4 4 0 014 4v4a4 4 0 01-4 4h-8' },
-  { key: 'java', title: 'Java Service', desc: 'Spring Boot and JVM services with Pro resources.', plan: 'Pro', color: '#a78bfa', icon: 'M8 18h8M10 14h4m-5-3h6a3 3 0 000-6H9v13m3-13v13' },
+  { key: 'static', title: 'Static Site', desc: 'Vite, React, Vue, Astro, docs, portfolios, and marketing sites.', plan: 'Free', colorClass: 'text-[#c8f135] bg-[#c8f135]/10 border-[#c8f135]/20', icon: 'M3 5h18M5 5v14h14V5M8 9h8M8 13h5' },
+  { key: 'node', title: 'Node.js App', desc: 'Express, APIs, workers, dashboards, and long-running services.', plan: 'Starter', colorClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18m8-13.5l-8 4.5-8-4.5' },
+  { key: 'go', title: 'Go Service', desc: 'Fast HTTP services, background jobs, and small binaries.', plan: 'Starter', colorClass: 'text-blue-400 bg-blue-500/10 border-blue-500/25', icon: 'M4 7h10a5 5 0 010 10H4m3-5h11M4 10h3m-3 4h3' },
+  { key: 'python', title: 'Python App', desc: 'FastAPI, Flask, automation services, and ML-backed APIs.', plan: 'Starter', colorClass: 'text-amber-400 bg-amber-500/10 border-amber-500/25', icon: 'M12 4h4a4 4 0 014 4v2h-8a4 4 0 00-4 4v6H8a4 4 0 01-4-4v-4a4 4 0 014-4h8m-4 12H8a4 4 0 01-4-4v-2h8a4 4 0 004-4V4h4a4 4 0 014 4v4a4 4 0 01-4 4h-8' },
+  { key: 'java', title: 'Java Service', desc: 'Spring Boot and JVM services with Pro resources.', plan: 'Pro', colorClass: 'text-violet-400 bg-violet-500/10 border-violet-500/25', icon: 'M8 18h8M10 14h4m-5-3h6a3 3 0 000-6H9v13m3-13v13' },
 ]
 
 function Icon({ path, className = 'h-5 w-5' }) {
@@ -87,17 +87,16 @@ function useVisibleProjects(projects) {
   return { visibleIds, rowRefs }
 }
 
-// ── StatusDot ─────────────────────────────────────────────────────────────
-function StatusDot({ status }) {
+// ── StatusPill ─────────────────────────────────────────────────────────────
+function StatusPill({ status }) {
   const s = STATUS[status] || STATUS.stopped
   return (
-    <span className="inline-flex items-center gap-2 text-[12px] font-medium" style={{ color: s.color }}>
-      <span className="relative inline-flex">
-        <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+    <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border ${s.bgClass}`}>
+      <span className="relative flex h-1.5 w-1.5">
         {s.pulse && (
-          <span className="absolute inset-0 w-2 h-2 rounded-full animate-ping"
-            style={{ background: s.color, opacity: 0.6 }} />
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${s.dotClass}`}></span>
         )}
+        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${s.dotClass}`}></span>
       </span>
       {s.text}
     </span>
@@ -122,96 +121,91 @@ function ProjectRow({ project, rowRef }) {
         if (e.target.closest('button') || e.target.closest('a')) return
         navigate(`/project/${project._id}`)
       }}
-      className="group relative grid grid-cols-12 items-center gap-4 px-5 py-4 cursor-pointer transition-colors"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      className="group relative flex flex-col md:grid md:grid-cols-12 items-start md:items-center gap-4 px-5 py-5 md:py-4 cursor-pointer border-t border-[#1e1b6e]/20 hover:bg-white/[0.015] active:bg-white/[0.005] transition-all duration-200"
     >
-      <span className="absolute left-0 top-0 h-full w-[2px] opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ background: s.color }} />
+      {/* Active Left Focus Accent Line */}
+      <span className="absolute left-0 top-0 md:top-1/4 h-[3px] md:h-1/2 w-full md:w-[2.5px] rounded-r-full bg-[#c8f135] opacity-0 group-hover:opacity-100 transition-all duration-200" />
 
-      {/* Identity */}
-      <div className="col-span-12 md:col-span-5 flex items-center gap-3 min-w-0">
-        <div className="w-10 h-10 rounded-lg grid place-items-center text-[13px] font-semibold tracking-tight flex-shrink-0"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: '#e5e7eb' }}>
+      {/* Column 1: Core Identity Layout */}
+      <div className="w-full md:col-span-5 flex items-center gap-4.5 min-w-0">
+        <div className="w-11 h-11 rounded-xl grid place-items-center text-xs font-bold tracking-tight shrink-0 bg-white/[0.02] border border-white/[0.05] text-slate-200 shadow-inner font-mono">
           {TYPE_GLYPH[project.type] || project.name.charAt(0).toUpperCase()}
         </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-semibold text-white text-[14px] truncate">{project.name}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-white text-[15px] tracking-tight truncate group-hover:text-[#c8f135] transition-colors">{project.name}</span>
             {project.plan === 'pro' && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(34,211,238,0.1)', color: '#22d3ee' }}>Pro</span>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-[#c8f135]/10 text-[#c8f135] border border-[#c8f135]/20">Pro</span>
             )}
             {project.isMicroservice && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(168,85,247,0.1)', color: '#c084fc' }}>μSVC</span>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-violet-500/10 text-violet-400 border border-violet-500/20">μSVC</span>
             )}
           </div>
           {isInternal ? (
-            <span className="text-[12px] truncate block mt-0.5" style={{ color: '#6b7280' }}>
-              {displayUrl} · internal
+            <span className="text-xs font-medium text-slate-400/50 truncate block mt-0.5">
+              {displayUrl} <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">· internal</span>
             </span>
           ) : (
             <a href={`https://${displayUrl}`} target="_blank" rel="noreferrer"
-              className="text-[12px] truncate block mt-0.5 transition-colors"
-              style={{ color: '#6b7280' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#e5e7eb')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}>
+              className="text-xs font-medium text-slate-400/50 truncate block mt-0.5 hover:text-white transition-colors">
               {displayUrl}
             </a>
           )}
         </div>
       </div>
 
-      {/* Meta */}
-      <div className="hidden md:flex md:col-span-2 items-center gap-2 text-[12px]" style={{ color: '#9ca3af' }}>
-        <span>{TYPE_LABEL[project.type] || project.type}</span>
-        {showVersion && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono"
-            style={{ background: 'rgba(255,255,255,0.04)', color: '#9ca3af' }}>
-            v{project.version}
-          </span>
-        )}
+      {/* Column 2: Architecture Runtime Meta Info */}
+      <div className="flex items-center justify-between md:justify-start w-full md:w-auto md:col-span-2 text-xs font-semibold text-slate-300 border-t border-[#1e1b6e]/10 md:border-0 pt-3 md:pt-0">
+        <span className="text-[10px] text-slate-400/40 uppercase tracking-widest font-bold md:hidden">Runtime</span>
+        <div className="flex items-center gap-1.5">
+          <span>{TYPE_LABEL[project.type] || project.type}</span>
+          {showVersion && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/[0.03] text-slate-400 border border-white/[0.02]">
+              v{project.version}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Builds */}
-      <div className="hidden md:block md:col-span-1 text-[13px] font-medium tabular-nums" style={{ color: '#d1d5db' }}>
-        {project.totalBuilds ?? 0}
-        <span className="ml-1 text-[10px] uppercase tracking-wider" style={{ color: '#4b5563' }}>blds</span>
-      </div>
-
-      {/* Signals */}
-      <div className="hidden md:flex md:col-span-2 items-center gap-3 text-[11px]" style={{ color: '#6b7280' }}>
-        <span className="inline-flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-              d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          {notifCount}/3
-        </span>
-        <span className="inline-flex items-center gap-1.5"
-          style={{ color: project.monitorEnabled ? '#22c55e' : '#6b7280' }}>
-          <span className="w-1.5 h-1.5 rounded-full"
-            style={{ background: project.monitorEnabled ? '#22c55e' : '#4b5563' }} />
-          {project.monitorEnabled ? 'Monitor' : 'Off'}
+      {/* Column 3: Build Runs Tracker */}
+      <div className="flex items-center justify-between md:justify-start w-full md:w-auto md:col-span-1 text-xs font-semibold text-slate-300 border-t border-[#1e1b6e]/10 md:border-0 pt-3 md:pt-0">
+        <span className="text-[10px] text-slate-400/40 uppercase tracking-widest font-bold md:hidden">Build Runs</span>
+        <span className="font-mono bg-black/20 md:bg-transparent px-2 py-0.5 md:p-0 rounded border border-[#1e1b6e]/20 md:border-0">
+          {project.totalBuilds ?? 0}
+          <span className="ml-1 text-[9px] font-sans uppercase tracking-wider font-extrabold text-slate-500">blds</span>
         </span>
       </div>
 
-      {/* Status */}
-      <div className="col-span-12 md:col-span-2 flex items-center justify-between md:justify-end gap-4">
-        <StatusDot status={project.status} />
-        <div className="flex items-center gap-3">
-          <span className="hidden md:block text-[11px]" style={{ color: '#4b5563' }}>
-            {timeAgo(project.updatedAt)}
+      {/* Column 4: Signals Telemetry Stack */}
+      <div className="flex items-center justify-between md:justify-start w-full md:w-auto md:col-span-2 text-[11px] font-semibold text-slate-400 border-t border-[#1e1b6e]/10 md:border-0 pt-3 md:pt-0">
+        <span className="text-[10px] text-slate-400/40 uppercase tracking-widest font-bold md:hidden">Telemetry</span>
+        <div className="flex items-center gap-3.5">
+          <span className="inline-flex items-center gap-1.5 text-slate-400">
+            <svg className="w-3.5 h-3.5 text-slate-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {notifCount}/3
           </span>
+          <span className={`inline-flex items-center gap-1.5 ${project.monitorEnabled ? 'text-emerald-400' : 'text-slate-400/50'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${project.monitorEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+            {project.monitorEnabled ? 'Monitor' : 'Off'}
+          </span>
+        </div>
+      </div>
+
+      {/* Column 5: Status Control Panel Actions */}
+      <div className="w-full md:col-span-2 flex items-center justify-between md:justify-end gap-4 border-t border-[#1e1b6e]/10 md:border-0 pt-4 md:pt-0 mt-1 md:mt-0">
+        <div className="md:hidden flex flex-col">
+          <span className="text-[9px] text-slate-400/40 uppercase tracking-widest font-bold">Latency Log</span>
+          <span className="text-xs font-mono font-medium text-slate-400/50">{timeAgo(project.updatedAt)}</span>
+        </div>
+        <div className="flex items-center gap-3.5 ml-auto md:ml-0">
+          <span className="hidden md:block text-xs font-mono font-medium text-slate-400/50">{timeAgo(project.updatedAt)}</span>
+          <StatusPill status={project.status} />
           <Link
             to={`/project/${project._id}`}
             onClick={e => e.stopPropagation()}
-            className="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all"
-            style={{ color: '#9ca3af', border: '1px solid rgba(255,255,255,0.08)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-white/[0.04] text-slate-300 bg-white/[0.01] hover:text-white hover:border-[#c8f135]/30 hover:bg-[#c8f135]/[0.02] active:scale-95 shadow-sm transition-all duration-150"
           >
             Open
           </Link>
@@ -224,19 +218,18 @@ function ProjectRow({ project, rowRef }) {
 // ── Skeleton ──────────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
-    <div className="grid grid-cols-12 items-center gap-4 px-5 py-4 animate-pulse"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      <div className="col-span-5 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }} />
+    <div className="grid grid-cols-12 items-center gap-4 px-5 py-4.5 animate-pulse border-t border-[#1e1b6e]/20">
+      <div className="col-span-12 md:col-span-5 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-white/[0.02]" />
         <div className="space-y-2 flex-1">
-          <div className="h-3 rounded w-32" style={{ background: 'rgba(255,255,255,0.05)' }} />
-          <div className="h-2 rounded w-48" style={{ background: 'rgba(255,255,255,0.03)' }} />
+          <div className="h-3.5 rounded-md w-32 bg-white/[0.03]" />
+          <div className="h-2 rounded w-48 bg-white/[0.015]" />
         </div>
       </div>
-      <div className="col-span-2 h-2.5 rounded w-16" style={{ background: 'rgba(255,255,255,0.04)' }} />
-      <div className="col-span-1 h-2.5 rounded w-8" style={{ background: 'rgba(255,255,255,0.04)' }} />
-      <div className="col-span-2 h-2.5 rounded w-20" style={{ background: 'rgba(255,255,255,0.04)' }} />
-      <div className="col-span-2 h-2.5 rounded w-16 justify-self-end" style={{ background: 'rgba(255,255,255,0.04)' }} />
+      <div className="hidden md:block col-span-2 h-3 rounded-md w-20 bg-white/[0.02]" />
+      <div className="hidden md:block col-span-1 h-3 rounded-md w-8 bg-white/[0.02]" />
+      <div className="hidden md:block col-span-2 h-3 rounded-md w-24 bg-white/[0.02]" />
+      <div className="col-span-12 md:col-span-2 h-7 rounded-lg w-20 justify-self-end bg-white/[0.02]" />
     </div>
   )
 }
@@ -244,20 +237,18 @@ function SkeletonRow() {
 // ── Empty State ───────────────────────────────────────────────────────────
 function EmptyState({ onNew }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-14 h-14 rounded-2xl grid place-items-center mb-5"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <svg className="w-7 h-7" style={{ color: '#22d3ee' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+      <div className="w-14 h-14 rounded-2xl grid place-items-center mb-5 bg-white/[0.01] border border-white/[0.04] shadow-xl">
+        <svg className="w-7 h-7 text-[#c8f135]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
       </div>
-      <h3 className="font-semibold text-lg text-white mb-1.5">Nothing deployed yet</h3>
-      <p className="text-sm mb-6" style={{ color: '#6b7280' }}>Ship your first project in under a minute.</p>
+      <h3 className="font-['Outfit'] font-extrabold text-lg text-white mb-1.5 tracking-tight">No deployments discovered</h3>
+      <p className="text-sm max-w-sm mb-6 text-slate-400/60 font-medium leading-relaxed">Ship your frontend application layers or persistent server binaries in under a minute.</p>
       <button onClick={onNew}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-black transition-transform hover:scale-[1.02]"
-        style={{ background: '#22d3ee' }}>
-        <Icon path="M12 4v16m8-8H4" className="w-4 h-4" />
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm text-[#1a2000] bg-[#c8f135] hover:bg-[#b0d52b] active:scale-[0.98] transition-all shadow-md shadow-[#c8f135]/10">
+        <Icon path="M12 4v16m8-8H4" className="w-4 h-4 stroke-[2.5]" />
         New Deployment
       </button>
     </div>
@@ -268,44 +259,39 @@ function EmptyState({ onNew }) {
 function NewDeployModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-xl rounded-2xl overflow-hidden"
-        style={{ background: '#0b0f15', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="relative w-full max-w-xl rounded-2xl overflow-hidden bg-[#0c0a2a] border border-[#1e1b6e]/40 shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#1e1b6e]/20 bg-black/10">
           <div>
-            <h2 className="text-base font-semibold text-white">New deployment</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Pick a runtime to get started</p>
+            <h2 className="font-['Outfit'] text-base font-extrabold text-white tracking-tight">Provision Infrastructure Kernel</h2>
+            <p className="text-xs font-semibold text-slate-400/60 mt-0.5">Pick a runtime blueprint execution layout</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-white/5" style={{ color: '#9ca3af' }}>
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+            <svg className="h-4 w-4 stroke-[2.25]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="p-3 max-h-[65vh] overflow-y-auto">
+        <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2 bg-black/5">
           {TYPES.map(type => (
             <Link key={type.key} to={`/projects/new/${type.key}`} onClick={onClose}
-              className="flex items-center gap-3 rounded-xl p-3 transition-colors"
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-                style={{ color: type.color, background: `${type.color}12`, border: `1px solid ${type.color}25` }}>
+              className="flex items-start sm:items-center gap-4 rounded-xl p-3.5 border border-transparent hover:border-[#1e1b6e]/30 hover:bg-white/[0.015] transition-all duration-150 group">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${type.colorClass}`}>
                 <Icon path={type.icon} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white text-sm">{type.title}</h3>
-                  <span className="text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: type.plan === 'Pro' ? '#22d3ee' : '#6b7280' }}>
+                  <h3 className="font-bold text-white text-sm group-hover:text-[#c8f135] transition-colors">{type.title}</h3>
+                  <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-sm border ${
+                    type.plan === 'Pro' ? 'bg-violet-500/10 text-violet-400 border-violet-500/20' : 'bg-white/[0.04] text-slate-400 border-white/[0.04]'
+                  }`}>
                     {type.plan}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs leading-relaxed" style={{ color: '#6b7280' }}>{type.desc}</p>
+                <p className="mt-0.5 text-xs font-medium leading-relaxed text-slate-400/60">{type.desc}</p>
               </div>
-              <svg className="w-4 h-4 flex-shrink-0" style={{ color: '#4b5563' }}
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg className="w-4 h-4 shrink-0 text-slate-500 group-hover:text-[#c8f135] group-hover:translate-x-0.5 transition-all self-center hidden sm:block" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </Link>
           ))}
@@ -329,11 +315,10 @@ export function Projects() {
     setLoading(true)
     api.get('/project/projects')
       .then(res => setProjects(res.data?.projects || []))
-      .catch(() => setError('Failed to load projects.'))
+      .catch(() => setError('Failed to load telemetry clusters.'))
       .finally(() => setLoading(false))
   }, [])
 
-  // Status update handler
   const handleStatusUpdate = useCallback((projectId, status) => {
     setProjects(prev =>
       prev.map(p => p._id === projectId ? { ...p, status } : p)
@@ -361,108 +346,97 @@ export function Projects() {
       })
   }, [projects, filter, sort, query])
 
-  // Visible projects track + WS subscribe
   const { visibleIds, rowRefs } = useVisibleProjects(filtered)
   useProjectsStatus(visibleIds, handleStatusUpdate)
 
   const FILTERS = [
-    { k: 'all', l: 'All', c: counts.all, color: '#9ca3af' },
-    { k: 'running', l: 'Live', c: counts.running, color: '#22c55e' },
-    { k: 'building', l: 'Building', c: counts.building, color: '#38bdf8' },
-    { k: 'queued', l: 'Queued', c: counts.queued, color: '#eab308' },
-    { k: 'failed', l: 'Failed', c: counts.failed, color: '#ef4444' },
-    { k: 'stopped', l: 'Stopped', c: counts.stopped, color: '#6b7280' },
+    { k: 'all', l: 'All', c: counts.all, color: 'bg-slate-400' },
+    { k: 'running', l: 'Live', c: counts.running, color: 'bg-emerald-400' },
+    { k: 'building', l: 'Building', c: counts.building, color: 'bg-sky-400' },
+    { k: 'queued', l: 'Queued', c: counts.queued, color: 'bg-amber-400' },
+    { k: 'failed', l: 'Failed', c: counts.failed, color: 'bg-rose-400' },
+    { k: 'stopped', l: 'Stopped', c: counts.stopped, color: 'bg-slate-500' },
   ]
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }} className="space-y-6 px-1">
+    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
 
-      {/* Header */}
-      <div className="flex items-end justify-between gap-4 flex-wrap pt-2">
+      {/* Header Pipeline Controller Panel */}
+      <div className="flex items-center justify-between gap-4 flex-wrap pt-4">
         <div>
+          <h1 className="font-['Outfit'] text-xl font-extrabold tracking-tight text-white sm:text-2xl">Infrastructure Matrix</h1>
           {!loading && (
-            <p className="text-[13px] mt-1" style={{ color: '#6b7280' }}>
-              {projects.length} {projects.length === 1 ? 'project' : 'projects'}
-              {counts.running > 0 && <> · <span style={{ color: '#22c55e' }}>{counts.running} live</span></>}
-              {counts.building > 0 && <> · <span style={{ color: '#38bdf8' }}>{counts.building} building</span></>}
-              {counts.failed > 0 && <> · <span style={{ color: '#ef4444' }}>{counts.failed} failed</span></>}
+            <p className="text-xs sm:text-sm mt-1.5 font-medium text-slate-400/50 flex items-center gap-1.5 flex-wrap">
+              <span>{projects.length} system {projects.length === 1 ? 'cluster' : 'clusters'} mapped</span>
+              {counts.running > 0 && <><span className="text-[#1e1b6e]/60">·</span> <span className="text-emerald-400 font-bold">{counts.running} online</span></>}
+              {counts.building > 0 && <><span className="text-[#1e1b6e]/60">·</span> <span className="text-sky-400 font-bold">{counts.building} building</span></>}
+              {counts.failed > 0 && <><span className="text-[#1e1b6e]/60">·</span> <span className="text-rose-400 font-bold">{counts.failed} terminal</span></>}
             </p>
           )}
         </div>
         <button onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold text-sm text-black transition-transform hover:scale-[1.02] active:scale-95"
-          style={{ background: '#22d3ee' }}>
-          <Icon path="M12 4v16m8-8H4" className="h-4 w-4" />
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold text-sm text-[#1a2000] bg-[#c8f135] hover:bg-[#b0d52b] active:scale-[0.98] shadow-md shadow-[#c8f135]/10 transition-all">
+          <Icon path="M12 4v16m8-8H4" className="h-4 w-4 stroke-[2.5]" />
           New Deployment
         </button>
       </div>
 
       {error && (
-        <div className="px-4 py-3 rounded-lg text-sm"
-          style={{ color: '#fca5a5', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+        <div className="px-4 py-3.5 rounded-xl text-sm font-semibold bg-rose-500/5 text-rose-400 border border-rose-500/15">
           {error}
         </div>
       )}
 
-      {/* Controls */}
+      {/* Control Input Manipulations Layer */}
       {!loading && projects.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-              style={{ color: '#6b7280' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-1.5 rounded-xl bg-black/10 border border-[#1e1b6e]/30 shadow-xs">
+          <div className="relative flex-1">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400/40 stroke-[2.25]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Search projects or domains…"
-              className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none transition-colors"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#e5e7eb' }}
-              onFocus={e => (e.currentTarget.style.borderColor = 'rgba(34,211,238,0.4)')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')} />
+              placeholder="Search unique pipelines or structural domains…"
+              className="w-full pl-9.5 pr-4 py-2 text-xs bg-black/20 border border-[#1e1b6e]/20 rounded-lg text-white outline-none placeholder-slate-500/60 focus:border-[#c8f135]/40 focus:bg-black/40 transition-all" />
           </div>
           <select value={sort} onChange={e => setSort(e.target.value)}
-            className="text-sm rounded-lg px-3 py-2 outline-none cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#d1d5db' }}>
-            <option value="recent">Recent</option>
-            <option value="name">Name</option>
-            <option value="builds">Most builds</option>
+            className="text-xs font-bold rounded-lg px-3 py-2 bg-black/20 border border-[#1e1b6e]/20 text-slate-400 outline-none cursor-pointer hover:border-[#1e1b6e]/40 hover:text-white transition-all">
+            <option value="recent">Order: Recent</option>
+            <option value="name">Order: Name</option>
+            <option value="builds">Order: Total Runs</option>
           </select>
         </div>
       )}
 
-      {/* Filter chips */}
+      {/* Filter Chips Layer */}
       {!loading && projects.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
           {FILTERS.map(t => {
             const active = filter === t.k
             return (
               <button key={t.k} onClick={() => setFilter(t.k)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={active
-                  ? { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }
-                  : { background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: '#9ca3af' }
-                }>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.color }} />
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap border ${
+                  active
+                    ? 'bg-[#1e1b6e]/30 border-[#1e1b6e]/60 text-white shadow-xs'
+                    : 'bg-transparent border-transparent text-slate-400/60 hover:text-white'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${t.color}`} />
                 {t.l}
-                <span className="tabular-nums" style={{ color: active ? '#9ca3af' : '#4b5563' }}>{t.c}</span>
+                <span className={`tabular-nums font-mono text-[10px] ml-0.5 ${active ? 'text-slate-300' : 'text-slate-500'}`}>{t.c}</span>
               </button>
             )
           })}
         </div>
       )}
 
-      {/* List */}
-      <div className="rounded-xl overflow-hidden"
-        style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)' }}>
-
+      {/* Structural Data Cluster Grid Layout Container */}
+      <div className="rounded-xl overflow-hidden bg-black/10 border border-[#1e1b6e]/30 shadow-xl">
         {!loading && filtered.length > 0 && (
-          <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: '#4b5563', background: 'rgba(255,255,255,0.02)' }}>
-            <div className="col-span-5">Project</div>
-            <div className="col-span-2">Runtime</div>
-            <div className="col-span-1">Builds</div>
-            <div className="col-span-2">Signals</div>
-            <div className="col-span-2 text-right">Status</div>
+          <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400/40 bg-black/20 border-b border-[#1e1b6e]/20">
+            <div className="col-span-5">Infrastructure Topology</div>
+            <div className="col-span-2">Deployment Class</div>
+            <div className="col-span-1">Build Stack</div>
+            <div className="col-span-2">Telemetry Signals</div>
+            <div className="col-span-2 text-right">Cluster Status</div>
           </div>
         )}
 
@@ -471,7 +445,7 @@ export function Projects() {
         ) : filtered.length === 0 ? (
           projects.length === 0
             ? <EmptyState onNew={() => setModalOpen(true)} />
-            : <div className="py-16 text-center text-sm" style={{ color: '#6b7280' }}>No projects match your filters.</div>
+            : <div className="py-16 text-center text-xs font-bold tracking-wide text-slate-500/60 bg-black/5">No clusters match active query bounds.</div>
         ) : (
           filtered.map(p => (
             <ProjectRow

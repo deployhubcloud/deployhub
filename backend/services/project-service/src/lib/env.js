@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const required = ['PORT', 'NODE_ENV', 'SERVICE_NAME', 'SECRETS_MANAGER_URL', 'BOOTSTRAP_TOKEN', 'MONGODB_URI', 'REDIS_HOST',
+const required = ['PORT', 'NODE_ENV', 'PROJECT_SERVICE_NAME', 'SECRETS_MANAGER_URL', 'BOOTSTRAP_TOKEN', 'MONGODB_URI', 'REDIS_HOST',
     'REDIS_PORT', 'REDIS_PASSWORD', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RABBITMQ_URL',
     'INTERNAL_SERVICE_TALKING_SECRET',
     'IDENTITY_SERVICE_URL', 'BUILD_SERVICE_URL',
@@ -17,7 +17,7 @@ for (const key of required) {
 export const project_env = {
     PORT: process.env.PORT,
     NODE_ENV: process.env.NODE_ENV,
-    SERVICE_NAME: process.env.SERVICE_NAME,
+    PROJECT_SERVICE_NAME: process.env.PROJECT_SERVICE_NAME,
     SECRETS_MANAGER_URL: process.env.SECRETS_MANAGER_URL,
     BOOTSTRAP_TOKEN: process.env.BOOTSTRAP_TOKEN,
     MONGODB_URI: process.env.MONGODB_URI,
