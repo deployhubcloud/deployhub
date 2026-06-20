@@ -57,7 +57,7 @@ jobs:
           - name: secrets-manager
             image: deployhubsecretsmanager
             context: ./backend/services/secrets-manager
-            dockerfile: ./backend/services/secrets-manager/Dockerfile
+            dockerfile: ./backend/Dockerfile
             build_args: ''
 
     steps:
