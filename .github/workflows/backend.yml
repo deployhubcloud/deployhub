@@ -195,10 +195,10 @@ jobs:
               esac
 
               docker pull "$DOCKER_USERNAME/$IMAGE:latest"
-              docker stop "deployhub-$svc" || true
-              docker rm "deployhub-$svc" || true
+              docker stop "$IMAGE" || true
+              docker rm "$IMAGE" || true
 
-              docker run -d --name deployhub$svc \
+              docker run -d --name "$IMAGE" \
                 $PORT_MAP \
                 --network cloud \
                 $ENV_ARGS \
