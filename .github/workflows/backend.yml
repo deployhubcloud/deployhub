@@ -102,6 +102,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          NODE_ENV: ${{secrets.NODE_ENV}}
           DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
           REDIS_HOST: ${{ secrets.REDIS_HOST }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
@@ -157,13 +158,13 @@ jobs:
             for svc in $SERVICES; do
               case $svc in
                 api-gateway) IMAGE=deployhubapigateway; PORT_MAP="-p 127.0.0.1:4999:4999" ;;
-                identity-service) IMAGE=deployhubidentityservice; PORT_MAP="" ;;
-                project-service) IMAGE=deployhubprojectservice; PORT_MAP="" ;;
-                build-service) IMAGE=deployhubbuildservice; PORT_MAP="" ;;
-                deploy-service) IMAGE=deployhubdeployservice; PORT_MAP="" ;;
-                notification-service) IMAGE=deployhubnotificationservice; PORT_MAP="" ;;
+                identity-service) IMAGE=deployhubidentityservice; PORT_MAP="-p 127.0.0.1:4001:4001" ;;
+                project-service) IMAGE=deployhubprojectservice; PORT_MAP="-p 127.0.0.1:4002:4002" ;;
+                build-service) IMAGE=deployhubbuildservice; PORT_MAP="-p 127.0.0.1:4003:4003" ;;
+                deploy-service) IMAGE=deployhubdeployservice; PORT_MAP="-p 127.0.0.1:4004:4004" ;;
+                notification-service) IMAGE=deployhubnotificationservice; PORT_MAP="-p 127.0.0.1:4006:4006" ;;
                 stream-service) IMAGE=deployhubstreamservice; PORT_MAP="-p 127.0.0.1:4008:4008" ;;
-                secrets-manager) IMAGE=deployhubsecretsmanager; PORT_MAP="" ;;
+                secrets-manager) IMAGE=deployhubsecretsmanager; PORT_MAP="-p 127.0.0.1:4000:4000" ;;
               esac
 
               case $svc in
@@ -200,7 +201,6 @@ jobs:
               docker run -d --name deployhub-$svc \
                 $PORT_MAP \
                 --network cloud \
-                --env-file /opt/deployhub/$svc/.env \
                 $ENV_ARGS \
                 --restart always \
                 "$DOCKER_USERNAME/$IMAGE:latest"
