@@ -6,7 +6,6 @@ on:
       - master
     paths:
       - 'frontend/frontend/**'
-      - '.github/workflows/frontend.yml'
 
 permissions:
   contents: read
