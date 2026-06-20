@@ -14,6 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,7 +24,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: DockerHub login (access token)
+      - name: DockerHub login
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -32,45 +33,52 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:${{ github.sha }} \
             -t ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:latest \
             ./frontend/frontend
 
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:${{ github.sha }}
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:latest
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
 
       - name: Push image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/deployhubfrontend:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
+
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: DOCKER_USERNAME,DOCKER_ACCESS_TOKEN,IMAGE_TAG
+          envs: DOCKER_USERNAME,DOCKER_ACCESS_TOKEN
+
           script: |
             echo "$DOCKER_ACCESS_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
-            docker pull "$DOCKER_USERNAME/deployhubfrontend:$IMAGE_TAG"
+
+            docker pull "$DOCKER_USERNAME/deployhubfrontend:latest"
+
             docker stop deployhub || true
             docker rm deployhub || true
-            docker run -d --name deployhub \
+
+            docker run -d \
+              --name deployhub \
               -p 127.0.0.1:3002:80 \
               --network cloud \
               --restart always \
-              "$DOCKER_USERNAME/deployhubfrontend:$IMAGE_TAG"
+              "$DOCKER_USERNAME/deployhubfrontend:latest"
+
+            docker image prune -af
+
             docker logout
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_ACCESS_TOKEN: ${{ secrets.DOCKER_ACCESS_TOKEN }}
-          IMAGE_TAG: ${{ github.sha }}
