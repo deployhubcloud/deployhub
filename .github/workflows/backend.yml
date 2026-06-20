@@ -9,6 +9,7 @@ on:
       - 'backend/api-gateway/**'
       - 'backend/shared/**'
       - 'backend/Dockerfile'
+      - '.github/workflows/backend.yml'
 
 permissions:
   contents: read
