@@ -1,5 +1,5 @@
 const required = [
-    'NODE_ENV', 'PORT',
+    'NODE_ENV', 'PORT', 'IDENTITY_SERVICE_NAME',
     "MONGODB_URI",
     'REDIS_HOST', 'REDIS_PORT', 'REDIS_PASSWORD',
     'RABBITMQ_URL',
@@ -17,7 +17,7 @@ for (const key of required) {
         throw new Error(`Missing Env: ${key}`);
     }
 };
- 
+
 export const AUTH_ENV = {
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT,
@@ -31,6 +31,7 @@ export const AUTH_ENV = {
     REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
+    SERVICE_NAME: process.env.IDENTITY_SERVICE_NAME,
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     FRONTEND_URL: process.env.FRONTEND_URL,
