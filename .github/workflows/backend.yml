@@ -20,42 +20,42 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: api-gateway
+          - name: apigateway
             image: deployhubapigateway
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=api-gateway
-          - name: identity-service
+          - name: identityservice
             image: deployhubidentityservice
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=services/identity-service
-          - name: project-service
+          - name: projectservice
             image: deployhubprojectservice
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=services/project-service
-          - name: build-service
+          - name: buildservice
             image: deployhubbuildservice
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=services/build-service
-          - name: deploy-service
+          - name: deployservice
             image: deployhubdeployservice
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=services/deploy-service
-          - name: notification-service
+          - name: notificationservice
             image: deployhubnotificationservice
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=services/notification-service
-          - name: stream-service
+          - name: streamservice
             image: deployhubstreamservice
             context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: SERVICE_PATH=services/stream-service
-          - name: secrets-manager
+          - name: secretsmanager
             image: deployhubsecretsmanager
             context: ./backend
             dockerfile: ./backend/Dockerfile
@@ -198,7 +198,7 @@ jobs:
               docker stop "deployhub-$svc" || true
               docker rm "deployhub-$svc" || true
 
-              docker run -d --name deployhub-$svc \
+              docker run -d --name deployhub$svc \
                 $PORT_MAP \
                 --network cloud \
                 $ENV_ARGS \
