@@ -4,6 +4,8 @@ ARG SERVICE_PATH
 
 RUN apk --no-cache upgrade
 
+RUN npm install -g npm@latest
+
 WORKDIR /app
 
 COPY shared ./shared
