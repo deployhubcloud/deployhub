@@ -57,7 +57,7 @@ jobs:
             build_args: SERVICE_PATH=services/stream-service
           - name: secrets-manager
             image: deployhubsecretsmanager
-            context: ./backend/services/secrets-manager
+            context: ./backend
             dockerfile: ./backend/Dockerfile
             build_args: ''
 
