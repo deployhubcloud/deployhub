@@ -59,7 +59,7 @@ jobs:
             image: deployhubsecretsmanager
             context: ./backend
             dockerfile: ./backend/Dockerfile
-            build_args: ''
+            build_args: 'SERVICE_PATH=services/secrets-manager'
 
     steps:
       - name: Checkout code
