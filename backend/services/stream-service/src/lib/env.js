@@ -11,7 +11,6 @@ const requiredEnvVars = [
     "REDIS_PASSWORD",
     "BOOTSTRAP_TOKEN",
     "SECRETS_MANAGER_URL",
-    "SERVICE_NAME",
     "PORT",
     "NODE_ENV",
     "ACCESS_TOKEN_SECRET",
