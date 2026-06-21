@@ -41,5 +41,5 @@ export const env = {
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
     REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
     REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
-    FRONTEND_URI: process.env.FRONTEND_URI,
+    FRONTEND_URL: process.env.FRONTEND_URL,
 };
