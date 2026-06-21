@@ -17,7 +17,7 @@ const requiredEnvVars = [
     "ACCESS_TOKEN_EXPIRY",
     "REFRESH_TOKEN_SECRET",
     "REFRESH_TOKEN_EXPIRY",
-    "FRONTEND_URI",
+    "FRONTEND_URL",
     'STREAM_SERVICE_NAME'
 ]
 
