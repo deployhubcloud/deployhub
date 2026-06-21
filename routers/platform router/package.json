@@ -1,0 +1,17 @@
+{
+  "name": "deployhub-platform-router",
+  "version": "1.0.0",
+  "description": "Independent platform router for fixed DeployHub service domains.",
+  "license": "ISC",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "compression": "^1.8.1",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "http-proxy": "^1.18.1"
+  }
+}
