@@ -168,7 +168,6 @@ jobs:
 
               case $svc in
                 secrets-manager)
-                  # 2. यहाँ सभी वेरिएबल्स को प्रोटेक्टेड कोट्स (\") दिए हैं और NOTIFICATION_MONGODB_URI भी जोड़ दिया है
                   ENV_ARGS="-e REDIS_HOST=\"$REDIS_HOST\" \
                             -e REDIS_PASSWORD=\"$REDIS_PASSWORD\" \
                             -e REDIS_URL=\"$REDIS_URL\" \
@@ -207,12 +206,26 @@ jobs:
                             -e MINIO_PUBLIC_HOST=\"$MINIO_PUBLIC_HOST\" \
                             -e NODE_ENV=\"$NODE_ENV\""
                   ;;
-                *)
-                  # बाकी सर्विसेज के लिए डायनामिक एसाइनमेंट ताकि बार-बार न लिखना पड़े
-                  SVC_UPPER=$(echo "$svc" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
-                  NAME_VAR="${SVC_UPPER}_NAME"
-                  eval SVC_NAME=\$$NAME_VAR
-                  ENV_ARGS="-e ${SVC_UPPER}_NAME=\"$SVC_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                build-service)
+                  ENV_ARGS="-e BUILD_SERVICE_NAME=\"$BUILD_SERVICE_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                  ;;
+                deploy-service)
+                  ENV_ARGS="-e DEPLOY_SERVICE_NAME=\"$DEPLOY_SERVICE_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                  ;;
+                identity-service)
+                  ENV_ARGS="-e IDENTITY_SERVICE_NAME=\"$IDENTITY_SERVICE_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                  ;;
+                notification-service)
+                  ENV_ARGS="-e NOTIFICATION_SERVICE_NAME=\"$NOTIFICATION_SERVICE_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                  ;;
+                project-service)
+                  ENV_ARGS="-e PROJECT_SERVICE_NAME=\"$PROJECT_SERVICE_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                  ;;
+                stream-service)
+                  ENV_ARGS="-e STREAM_SERVICE_NAME=\"$STREAM_SERVICE_NAME\" -e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
+                  ;;
+                api-gateway)
+                  ENV_ARGS="-e BOOTSTRAP_TOKEN=\"$BOOTSTRAP_TOKEN\" -e SECRETS_MANAGER_URL=\"$SECRETS_MANAGER_URL\""
                   ;;
               esac
 
