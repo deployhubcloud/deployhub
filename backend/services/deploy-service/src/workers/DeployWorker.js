@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import { connection } from '../utils/connection.js';
+import { connection } from '../utils/queues/queues.js';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { plans } from '../../../../shared/constants/plan.js';
 import { DEPLOY_SERVICE_ENV } from '../lib/env.js';

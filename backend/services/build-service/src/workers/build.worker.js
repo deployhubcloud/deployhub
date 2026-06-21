@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
-import { connection } from '../utils/connection.js';
+import { connection } from '../utils/queues/queues.js';
 import { GitCloner } from '../../../../shared/git/gitrepoCloner.js';
 import { getProjectDataById } from '../../../../shared/utils/getProjectDataById.js';
 import axios from 'axios';
