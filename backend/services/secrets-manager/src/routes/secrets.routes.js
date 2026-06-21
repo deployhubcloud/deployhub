@@ -11,7 +11,7 @@ const router = Router();
 router.get('/meta/health', healthCheck);
 
 router.use(authenticate);
-router.use(secretsFetchLimiter);
+//router.use(secretsFetchLimiter);
 
 router.get('/:serviceName', fetchSecrets);
 router.post('/invalidate/:serviceName', invalidateServiceCache);
