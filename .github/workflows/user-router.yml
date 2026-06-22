@@ -26,7 +26,7 @@ jobs:
 
             cd routers/user-router
 
-            npm ci
+            npm i
 
             npx pm2 stop user-router || true
             npx pm2 delete user-router || true
