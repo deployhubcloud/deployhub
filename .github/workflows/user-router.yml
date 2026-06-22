@@ -20,17 +20,20 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd ~/deployhub/routers/user-router
+            if [ ! -d "$HOME/deployhub" ]; then
+              git clone https://${{ secrets.GH_PAT }}@github.com/deployhubcloud/deployhub.git $HOME/deployhub
+            fi
 
-            git pull origin master
+            cd $HOME/deployhub
+            git pull https://${{ secrets.GH_PAT }}@github.com/deployhubcloud/deployhub.git master
 
             cd routers/user-router
 
-            npm i
+            npm install
 
-            npx pm2 stop user-router || true
-            npx pm2 delete user-router || true
+            pm2 stop user-router || true
+            pm2 delete user-router || true
 
-            npx pm2 start index.js --name user-router
+            pm2 start index.js --name user-router
 
-            npx pm2 save
+            pm2 save
