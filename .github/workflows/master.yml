@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'routers/platform-router/**'
+      - '.github/workflows/master.yml'
 
 env:
   IMAGE: ${{ secrets.DOCKER_USERNAME }}/platformrouter:latest
