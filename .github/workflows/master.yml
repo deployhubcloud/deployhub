@@ -67,4 +67,4 @@ jobs:
               --network cloud \
               --network proxy-net \
               --network users \
-              ${{ secrets.DOCKER_USERNAME }}/masterrouter:latest
+              ${{ secrets.DOCKER_USERNAME }}/platformrouter:latest
