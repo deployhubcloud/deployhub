@@ -21,10 +21,10 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             if [ ! -d "$HOME/deployhub" ]; then
-              git clone https://${{ secrets.GH_PAT }}@github.com/deployhubcloud/deployhub.git $HOME/deployhub
+              git clone https://${{ secrets.GH_PAT }}@github.com/deployhubcloud/deployhub.git deployhub
             fi
 
-            cd $HOME/deployhub
+            cd deployhub
             git pull https://${{ secrets.GH_PAT }}@github.com/deployhubcloud/deployhub.git master
 
             cd routers/user-router
