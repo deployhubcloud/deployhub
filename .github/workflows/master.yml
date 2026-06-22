@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - 'routers/platform-router**'
+      - 'routers/platform-router/**'
 
 env:
   IMAGE: ${{ secrets.DOCKER_USERNAME }}/platformrouter:latest
@@ -66,5 +66,4 @@ jobs:
               -e HTTP_MAX_SOCKETS=${{ secrets.HTTP_MAX_SOCKETS }} \
               --network cloud \
               --network proxy-net \
-              --network users \
               ${{ secrets.DOCKER_USERNAME }}/platformrouter:latest
