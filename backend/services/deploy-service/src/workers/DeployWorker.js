@@ -4,7 +4,6 @@ import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { plans } from '../../../../shared/constants/plan.js';
 import { DEPLOY_SERVICE_ENV } from '../lib/env.js';
 import axios from 'axios';
-import { writeNginxConfig } from '../../../../shared/nginx/writeNginx.js';
 import { getProjectDataById } from '../../../../shared/utils/getProjectDataById.js';
 import { getBuildDataById } from '../../../../shared/utils/getBuildDataById.js';
 import { buildZipUrl } from '../utils/minio/minio.js';
@@ -21,7 +20,6 @@ import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.j
 import { deleteDockerHubImage } from '../../../../shared/docker/deleteDockerHubImage.js';
 import { Deployment } from '../model/deployment.model.js';
 import { docker } from '../utils/docker.js';
-import { writeNginxFileToHost } from '../utils/nginx/writeNginxFileToHost.js';
 import { execInContainer } from '../utils/execInContainer.js';
 import { getRedis } from '../core/redis/client.js';
 import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
@@ -360,84 +358,6 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 containerId: container.id,
                 internalUrl: projectData.isMicroservice ? deploymentUrl : null
             }));
-        }
-
-        if (firstTime && !projectData.isMicroservice) {
-
-            const isProduction = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? true : false
-
-            const localNginxSubdomainDir = path.join(process.cwd(), 'nginx/subdomains')
-            if (!fs.existsSync(localNginxSubdomainDir)) {
-                fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
-            }
-
-            const nginxSubdomainDir = isProduction
-                ? '/home/rahul/userdata/docker/nginx/subdomains'
-                : localNginxSubdomainDir;
-
-            fs.mkdirSync(nginxSubdomainDir, { recursive: true });
-
-            let nginxConfig;
-            if (projectData.type === 'static') {
-                nginxConfig = writeNginxConfig({
-                    type: 'static',
-                    staticPath: `/data/static/${projectId}`,
-                    domain: `${projectData.subdomain}.deployhub.online`,
-                    sslDomain: 'deployhub.online',
-                    outputPath: null
-                });
-            } else {
-                nginxConfig = writeNginxConfig({
-                    type: 'backend',
-                    domain: `${projectData.subdomain}.deployhub.online`,
-                    sslDomain: 'deployhub.online',
-                    target: `http://localhost:${projectData.assignedPort}`,
-                    outputPath: null
-                });
-            }
-
-            // helper container banao sirf nginx conf dir mount karke
-            await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`);
-
-            let nginxContainer = null;
-            try {
-                nginxContainer = await docker.createContainer({
-                    Image: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
-                    name: `deployhub-nginx-helper-${projectId}`,
-                    HostConfig: {
-                        Binds: [`${nginxSubdomainDir}:/data/nginx/subdomains`],
-                        AutoRemove: false,
-                    },
-                });
-                await nginxContainer.start();
-
-                // container ke through host pe likho
-                await writeNginxFileToHost(
-                    nginxContainer,
-                    nginxConfig,
-                    '/data/nginx/subdomains',
-                    `${projectData.subdomain}.conf`
-                );
-
-            } finally {
-                if (nginxContainer) {
-
-                    try {
-                        const info = await nginxContainer.inspect();
-                        if (info.State.Running) await nginxContainer.stop({ t: 5 });
-                    } catch (e) {
-                        console.warn(`[nginx-helper] stop failed: ${e.message}`);
-                    }
-
-                    try {
-                        await nginxContainer.remove({ force: true });
-                    } catch (e) {
-                        console.warn(`[nginx-helper] remove failed: ${e.message}`);
-                    }
-                }
-            }
-
-            if (isProduction) await reloadNginx(docker);
         }
 
         if (firstTime) {

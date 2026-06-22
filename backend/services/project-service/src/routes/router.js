@@ -7,6 +7,8 @@ import { project_env } from '../lib/env.js';
 import { getProjectByIdController } from '../controllers/forOtherService.js';
 import { reDeployController } from '../controllers/reDeploy.js';
 import { getProjectDataByIdConroller, getProjectMetaController, getProjectsController } from '../controllers/getProjects.js';
+import { validateChangeSubDomain } from '../validators/domain.js';
+import { changeSubdomainController } from '../controllers/domain.controller.js';
 
 const projectRouter = express.Router();
 
@@ -18,5 +20,6 @@ projectRouter.get('/for-other-service/:projectId', internalApiCallMiddleware({ s
 projectRouter.post('/redeploy/:projectId', reDeployController);
 projectRouter.get('/:projectId/meta', getProjectMetaController)
 projectRouter.get('/overview/:projectId', getProjectDataByIdConroller);
+projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController)
 
 export default projectRouter;

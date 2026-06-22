@@ -10,4 +10,3 @@ const connection = {
 };
 
 export const buildQueue = new Queue(QUEUE_NAMES.BUILD, { connection });
-export const subdomainChangeQueue = new Queue(QUEUE_NAMES.SUBDOMAIN_CHANGE, { connection });

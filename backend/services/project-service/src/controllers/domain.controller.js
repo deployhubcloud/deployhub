@@ -1,0 +1,28 @@
+import { validationResult } from "express-validator";
+import { changeSubdomain } from "../services/domain.service.js";
+
+export const changeSubdomainController = async (req, res) => {
+    try {
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                message: errors.array()[0].msg
+            })
+        }
+
+        const projectId = req.params.projectId;
+        const { oldSubdomain, newSubdoamin } = req.body
+
+        await changeSubdomain(projectId, oldSubdomain, newSubdoamin);
+
+        return res.status(200).json({
+            message: "Success"
+        })
+
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            message: error.message || "Internal server Error"
+        })
+    }
+}

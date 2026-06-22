@@ -3,13 +3,13 @@ name: Backend Services CI/CD
 on:
   push:
     branches:
-      - master
-    paths:
-      - 'backend/services/**'
-      - 'backend/api-gateway/**'
-      - 'backend/shared/**'
-      - 'backend/Dockerfile'
-      - '.github/workflows/backend.yml'
+      - masters
+    paths:    # temp stop workflow
+      - 'backend2/services/**'
+      - 'backend2/api-gateway/**'
+      - 'backend2/shared/**'
+      - 'backend2/Dockerfile'
+      - '.github2/workflows/backend.yml'
 
 permissions:
   contents: read
