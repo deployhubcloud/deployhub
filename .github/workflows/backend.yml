@@ -145,7 +145,7 @@ jobs:
           IDENTITY_SERVICE_NAME: ${{ secrets.IDENTITY_SERVICE_NAME }}
           NOTIFICATION_SERVICE_NAME: ${{ secrets.NOTIFICATION_SERVICE_NAME }}
           PROJECT_SERVICE_NAME: ${{ secrets.PROJECT_SERVICE_NAME }}
-          APIGATEWAY_SERVICE_NAME: ${{ APIGATEWAY_SERVICE_NAME }}
+          APIGATEWAY_SERVICE_NAME: ${{ secrets.APIGATEWAY_SERVICE_NAME }}
           STREAM_SERVICE_NAME: ${{ secrets.STREAM_SERVICE_NAME }}
         with:
           host: ${{ secrets.SERVER_HOST }}
