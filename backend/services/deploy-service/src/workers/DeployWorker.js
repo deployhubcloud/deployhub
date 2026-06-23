@@ -391,7 +391,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     type: 'backend',
                     domain: `${projectData.subdomain}.deployhub.online`,
                     sslDomain: 'deployhub.online',
-                    target: `http://localhost:${projectData.assignedPort}`,
+                    target: `http://host.docker.internal:8081`,
                     outputPath: null
                 });
             }
