@@ -12,9 +12,10 @@ export const changeSubdomainController = async (req, res) => {
         }
 
         const projectId = req.params.projectId;
-        const { oldSubdomain, newSubdoamin } = req.body
+        const { oldSubdomain, newSubdomain } = req.body
+        const userId = req.user._id
 
-        await changeSubdomain(projectId, oldSubdomain, newSubdoamin);
+        await changeSubdomain(projectId, oldSubdomain, userId, newSubdomain);
 
         return res.status(200).json({
             message: "Success"

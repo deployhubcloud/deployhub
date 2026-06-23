@@ -9,11 +9,11 @@ export const validateChangeSubDomain = [
         .withMessage("oldSubDomain is Required")
         .isString()
         .withMessage("oldSubdomain must be String"),
-    body('newSubdoamin')
+    body('newSubdomain')
         .notEmpty()
         .withMessage("newSubdomain is Required")
         .isString()
-        .withMessage("newSubdoamin must be String")
+        .withMessage("newSubdomain must be String")
         .matches(/^[a-z0-9-]{3,40}$/)
         .withMessage("Must be 3-40 characters and contain only lowercase letters, numbers, and hyphens")
 ]

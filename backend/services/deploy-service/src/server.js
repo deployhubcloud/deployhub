@@ -13,4 +13,5 @@ const { ensureBucket } = await import("./utils/minio/minio.js");
 ensureBucket()
 
 
-await import("./workers/DeployWorker.js")
+await import("./workers/DeployWorker.js");
+await import("./workers/subdomainChangeWorker.js");
