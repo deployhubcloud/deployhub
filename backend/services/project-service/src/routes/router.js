@@ -9,6 +9,8 @@ import { reDeployController } from '../controllers/reDeploy.js';
 import { getProjectDataByIdConroller, getProjectMetaController, getProjectsController } from '../controllers/getProjects.js';
 import { validateChangeSubDomain } from '../validators/domain.js';
 import { changeSubdomainController } from '../controllers/domain.controller.js';
+import { projectSettingValidators } from '../validators/projectSettings.js';
+import { projectSettingsController } from '../controllers/projectSettings.controller.js';
 
 const projectRouter = express.Router();
 
@@ -18,8 +20,9 @@ projectRouter.post('/payment/init', paymentInitValidator, paymentInitController)
 projectRouter.post('/payment/verify', paymentVerifyValidator, paymentVerifyController);
 projectRouter.get('/for-other-service/:projectId', internalApiCallMiddleware({ secret: project_env.INTERNAL_SERVICE_TALKING_SECRET }), getProjectByIdController);
 projectRouter.post('/redeploy/:projectId', reDeployController);
-projectRouter.get('/:projectId/meta', getProjectMetaController)
+projectRouter.get('/:projectId/meta', getProjectMetaController);
 projectRouter.get('/overview/:projectId', getProjectDataByIdConroller);
-projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController)
+projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController);
+projectRouter.get('/settings/:projectId', projectSettingValidators, projectSettingsController);
 
 export default projectRouter;

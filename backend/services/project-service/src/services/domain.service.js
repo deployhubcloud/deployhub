@@ -4,7 +4,7 @@ import { getRedis } from '../core/redis/client.js'
 import { clearCacheProjectData } from "../../../../shared/utils/cacheProjectData.js";
 import { subdomainChangeQueue } from "../utils/queues.js";
 
-export const changeSubdomain = (projectId, oldsubDomain, userId, newSubdomain) => {
+export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdomain) => {
 
     const redis = getRedis()
 
