@@ -1,7 +1,15 @@
+import { validationResult } from "express-validator";
 import { projectSettings } from "../services/projectSettings.js";
 
 export const projectSettingsController = async (req, res) => {
     try {
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                message: errors.array()[0].msg
+            })
+        }
 
         const projectId = req.params.projectId;
 

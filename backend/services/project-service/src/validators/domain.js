@@ -17,3 +17,9 @@ export const validateChangeSubDomain = [
         .matches(/^[a-z0-9-]{3,40}$/)
         .withMessage("Must be 3-40 characters and contain only lowercase letters, numbers, and hyphens")
 ]
+
+export const getDomainSettingsValidators = [
+    param(projectId)
+        .isMongoId()
+        .withMessage('invalid ProjectId'),
+]
