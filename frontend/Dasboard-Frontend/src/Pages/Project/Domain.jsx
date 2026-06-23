@@ -18,6 +18,9 @@ export function Domain() {
     const [customDomains, setCustomDomains] = useState([]);
     const [newCustomDomain, setNewCustomDomain] = useState("");
 
+    // Cooldown after subdomain update
+    const [cooldown, setCooldown] = useState(false);
+
     useEffect(() => {
         const fetchDomain = async () => {
             try {
@@ -49,7 +52,11 @@ export function Domain() {
             });
             setOriginalSubdomain(newSubdomain.trim());
             setSuccessMessage("Subdomain updated successfully!");
-            setTimeout(() => setSuccessMessage(""), 3000);
+            setCooldown(true);
+            // Disable for 5 seconds, then allow changes again
+            setTimeout(() => {
+                setCooldown(false);
+            }, 8000);
         } catch (err) {
             setError("Failed to update subdomain.");
         } finally {
@@ -62,12 +69,10 @@ export function Domain() {
         if (!domain || customDomains.includes(domain)) return;
         setCustomDomains([...customDomains, domain]);
         setNewCustomDomain("");
-        // In future: call API to add custom domain
     };
 
     const removeCustomDomain = (domain) => {
         setCustomDomains(customDomains.filter(d => d !== domain));
-        // In future: call API to delete custom domain
     };
 
     if (loading) {
@@ -91,8 +96,8 @@ export function Domain() {
 
     const isMicro = domainSettings.isMicroservice;
     const isFree = domainSettings.plan === "free";
-    const canEditSubdomain = !isMicro;          // microservices subdomain read-only
-    const canManageCustom = !isFree && !isMicro; // free plan blocks all custom domains, microservices read-only
+    const canEditSubdomain = !isMicro;
+    const canManageCustom = !isFree && !isMicro;
 
     return (
         <main className="min-h-screen">
@@ -138,8 +143,8 @@ export function Domain() {
                                         type="text"
                                         value={newSubdomain}
                                         onChange={(e) => setNewSubdomain(e.target.value)}
-                                        disabled={!canEditSubdomain}
-                                        className={`flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all ${!canEditSubdomain ? "opacity-50 cursor-not-allowed" : ""
+                                        disabled={!canEditSubdomain || cooldown}
+                                        className={`flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all ${!canEditSubdomain || cooldown ? "opacity-50 cursor-not-allowed" : ""
                                             }`}
                                     />
                                     <span className="text-[#c2c6d6] text-sm">.deployhub.online</span>
@@ -150,7 +155,13 @@ export function Domain() {
                                         Subdomain cannot be changed for microservices
                                     </p>
                                 )}
-                                {!isMicro && newSubdomain !== originalSubdomain && (
+                                {cooldown && (
+                                    <p className="mt-2 text-xs text-[#c2c6d6] opacity-70 flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                                        Changes are being processed. This may take up to 2 minutes.
+                                    </p>
+                                )}
+                                {!isMicro && newSubdomain !== originalSubdomain && !cooldown && (
                                     <button
                                         onClick={handleSubdomainSave}
                                         disabled={saving || !newSubdomain.trim()}
@@ -163,6 +174,12 @@ export function Domain() {
                                         )}
                                         {saving ? "Saving..." : "Save Subdomain"}
                                     </button>
+                                )}
+                                {cooldown && (
+                                    <div className="mt-3 px-6 py-1.5 bg-[#adc6ff]/20 text-[#adc6ff] rounded text-xs font-semibold uppercase tracking-wider flex items-center gap-2 opacity-70">
+                                        <span className="material-symbols-outlined text-[16px]">schedule</span>
+                                        Processing – wait a moment
+                                    </div>
                                 )}
                             </div>
                         </div>

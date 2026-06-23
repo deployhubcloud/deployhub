@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/apiclient'
 
+// Helpers
 function formatDate(dateString) {
   if (!dateString) return '—'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -42,6 +43,12 @@ export function Profile() {
 
   const isGithubUser = formData.provider === 'github'
 
+  // Calculate account age (safe, memoized)
+  const accountAge = useMemo(() => {
+    if (!user?.createdAt) return 0
+    return Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
+  }, [user])
+
   useEffect(() => {
     setFormData({
       fullName: user?.fullName || user?.fullname || '',
@@ -69,15 +76,10 @@ export function Profile() {
 
   const handleUpdateProfile = async () => {
     const fullName = formData.fullName.trim()
-
     if (!fullName) {
       setError('Full name is required')
       return
     }
-
-    let accountAge = userData?.createdAt
-      ? Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
-      : 0
 
     setLoading(true)
     setError(null)
@@ -86,7 +88,6 @@ export function Profile() {
     try {
       const res = await api.put('/auth/user/fullname', { fullname: fullName })
       const updatedUser = res.data?.userData
-
       if (updatedUser) {
         setFormData((prev) => ({
           ...prev,
@@ -96,9 +97,8 @@ export function Profile() {
           provider: updatedUser.provider || prev.provider,
         }))
       }
-
       await fetchUser()
-      setSuccess('Profile identity records updated successfully')
+      setSuccess('Profile updated successfully')
       setIsEditing(false)
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update profile'))
@@ -114,17 +114,15 @@ export function Profile() {
     if (!file) return
 
     if (isGithubUser) {
-      setError('OAuth profile assets are managed by GitHub directly.')
+      setError('GitHub OAuth users cannot change profile picture.')
       return
     }
-
     if (!file.type.startsWith('image/')) {
-      setError('Please provide a valid image format template.')
+      setError('Please select a valid image file.')
       return
     }
-
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image asset boundaries must scale beneath 2MB.')
+      setError('Image must be under 2MB.')
       return
     }
 
@@ -139,14 +137,12 @@ export function Profile() {
       const res = await api.put('/auth/user/profile-pic', body, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-
       const updatedUser = res.data?.userData
       if (updatedUser?.profilePic) {
         setFormData((prev) => ({ ...prev, profilePic: updatedUser.profilePic }))
       }
-
       await fetchUser()
-      setSuccess('Profile picture updated successfully')
+      setSuccess('Profile picture updated')
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to upload image'))
     } finally {
@@ -155,187 +151,192 @@ export function Profile() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 px-4 py-2">
-      {/* View Title Panel Header */}
-      <div>
-        <p className="text-[10px] font-extrabold tracking-[0.2em] uppercase mb-1 text-[#c8f135]">
-          Identity Core
-        </p>
-        <h1 className="font-['Outfit'] font-extrabold text-2xl text-white tracking-tight leading-none sm:text-3xl">Profile Settings</h1>
-      </div>
+    <main className="min-h-screen">
+      <div className="p-6 max-w-[800px] mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 text-[#c2c6d6] mb-1">
+            <span className="text-xs uppercase tracking-wider font-semibold">Identity</span>
+            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+            <span className="text-xs font-semibold">Profile</span>
+          </div>
+          <h3 className="text-2xl font-semibold text-[#dae2fd]">Profile Settings</h3>
+        </div>
 
-      {/* Main Configurations Dashboard Shell */}
-      <div className="rounded-2xl p-6 bg-black/10 border border-[#1e1b6e]/30 shadow-xl">
-
-        {/* Status Messaging Systems */}
         {error && (
-          <div className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 bg-rose-500/[0.05] border border-rose-500/15 text-rose-400">
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.25}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-xs font-bold font-mono tracking-wide">{error}</span>
+          <div className="mb-6 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2 rounded flex items-center gap-2">
+            <span className="material-symbols-outlined">error</span>
+            {error}
           </div>
         )}
-
         {success && (
-          <div className="mb-5 p-3.5 rounded-xl flex items-center gap-2.5 bg-emerald-500/[0.05] border border-emerald-500/15 text-emerald-400">
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.25}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="text-xs font-bold font-mono tracking-wide">{success}</span>
+          <div className="mb-6 bg-green-900/10 border border-green-500/30 text-green-400 px-4 py-2 rounded flex items-center gap-2">
+            <span className="material-symbols-outlined">check_circle</span>
+            {success}
           </div>
         )}
 
-        {/* Identity Profiler Meta Info Row */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8 pb-6 border-b border-[#1e1b6e]/20">
-          <div className="relative group shrink-0">
-            <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white/[0.02] border border-white/[0.06] shadow-inner flex items-center justify-center">
-              {formData.profilePic ? (
-                <img src={formData.profilePic} alt={formData.fullName} className="w-full h-full object-cover" />
-              ) : (
-                <span className="font-['Outfit'] font-extrabold text-2xl text-slate-200">
-                  {getInitials(formData.fullName)}
-                </span>
+        {/* Profile Card */}
+        <div className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
+          <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className="w-24 h-24 rounded-full border-2 border-[#adc6ff]/30 bg-[#0b1326] flex items-center justify-center overflow-hidden">
+                {formData.profilePic ? (
+                  <img src={formData.profilePic} alt={formData.fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-[#adc6ff]">
+                    {getInitials(formData.fullName)}
+                  </span>
+                )}
+              </div>
+              {!isGithubUser && (
+                <>
+                  <label
+                    htmlFor="profile-pic-upload"
+                    className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-[#adc6ff] flex items-center justify-center cursor-pointer hover:bg-[#8cb5f0] transition shadow-lg"
+                  >
+                    <span className="material-symbols-outlined text-[#00285d] text-[20px]">photo_camera</span>
+                  </label>
+                  <input
+                    type="file"
+                    id="profile-pic-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={loading}
+                  />
+                </>
               )}
             </div>
 
-            {!isGithubUser && (
-              <>
-                <label
-                  htmlFor="profile-pic-upload"
-                  className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-[#c8f135] shadow-md shadow-[#c8f135]/10 hover:scale-105 active:scale-95 hover:bg-[#b0d52b]"
-                >
-                  <svg className="w-4 h-4 text-[#1a2000]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </label>
+            {/* Info */}
+            <div className="text-center sm:text-left space-y-1">
+              <h2 className="text-xl font-semibold text-[#dae2fd]">
+                {formData.fullName || 'Unnamed User'}
+              </h2>
+              <div className="flex justify-center sm:justify-start">
+                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${isGithubUser
+                    ? 'bg-[#2d3449] text-[#8c909f]'
+                    : 'bg-[#adc6ff]/10 text-[#adc6ff]'
+                  }`}>
+                  {isGithubUser ? 'GitHub OAuth' : 'Local Account'}
+                </span>
+              </div>
+              <p className="text-xs text-[#c2c6d6] opacity-60">
+                Joined {formatDate(user?.createdAt)}
+              </p>
+              {isGithubUser && (
+                <p className="text-[11px] text-[#c2c6d6]/50 max-w-xs mt-2 bg-[#0b1326] p-2 rounded border border-[#424754]/50">
+                  Name and photo are managed by GitHub. You cannot change them here.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="px-6 pb-6 space-y-4">
+            {/* Full Name */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
+                Full Name
+              </label>
+              {isEditing && !isGithubUser ? (
                 <input
-                  type="file"
-                  id="profile-pic-upload"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageUpload}
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
+                  placeholder="Enter your name"
                   disabled={loading}
                 />
-              </>
-            )}
-          </div>
-
-          <div className="text-center sm:text-left space-y-1">
-            <h2 className="font-['Outfit'] font-extrabold text-xl text-white tracking-tight">
-              {formData.fullName || 'Unassigned Identifier'}
-            </h2>
-            <div className="flex justify-center sm:justify-start">
-              <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-sm border font-mono tracking-wider ${isGithubUser
-                ? 'bg-white/[0.04] border-white/[0.05] text-slate-400'
-                : 'bg-[#c8f135]/10 border-[#c8f135]/20 text-[#c8f135]'
-                }`}>
-                {isGithubUser ? 'GITHUB_OAUTH' : 'LOCAL_CLUSTER'}
-              </span>
-            </div>
-            <p className="text-xs font-medium text-slate-400/50 pt-1">
-              Cluster node synchronized {formatDate(user?.createdAt)}
-            </p>
-            {isGithubUser && (
-              <p className="text-[11px] font-medium text-slate-400/60 max-w-sm mt-2.5 bg-black/10 p-2 rounded-lg border border-[#1e1b6e]/20">
-                Core structures like names, indices, and profile assets are locked by upstream GitHub validation protocols.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Input Profile Forms */}
-        <div className="space-y-5">
-          <div>
-            <label className="block text-[10px] font-bold tracking-widest uppercase text-slate-400/40 mb-2">
-              Full System Handle
-            </label>
-            {isEditing && !isGithubUser ? (
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 rounded-xl text-xs bg-black/20 text-white border border-[#1e1b6e]/20 focus:border-[#c8f135]/40 transition-all outline-none placeholder:text-slate-600 font-medium"
-                placeholder="Declare active full name identity"
-                disabled={loading}
-              />
-            ) : (
-              <p className="text-xs font-semibold text-slate-300 bg-white/[0.005] border border-[#1e1b6e]/10 px-4 py-2.5 rounded-xl">{formData.fullName || '—'}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold tracking-widest uppercase text-slate-400/40 mb-2">
-              Routing Email Endpoint
-            </label>
-            <p className="text-xs font-mono text-slate-300 bg-white/[0.005] border border-[#1e1b6e]/10 px-4 py-2.5 rounded-xl select-all">{formData.email || '—'}</p>
-          </div>
-
-          {/* Action Trigger Block */}
-          {!isGithubUser && (
-            <div className="flex items-center gap-2.5 pt-3">
-              {isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleUpdateProfile}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-[#1a2000] bg-[#c8f135] hover:bg-[#b0d52b] active:scale-98 transition-all disabled:opacity-40"
-                  >
-                    {loading ? 'Committing...' : 'Commit Mutation'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    disabled={loading}
-                    className="px-4 py-2 rounded-xl font-bold text-xs text-slate-400 bg-white/[0.02] border border-white/[0.04] hover:text-white transition-all active:scale-98 disabled:opacity-40"
-                  >
-                    Cancel
-                  </button>
-                </>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null)
-                    setSuccess(null)
-                    setIsEditing(true)
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs text-slate-300 bg-white/[0.01] border border-white/[0.04] hover:text-white hover:border-[#c8f135]/30 hover:bg-[#c8f135]/[0.01] active:scale-98 transition-all group"
-                >
-                  <svg className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#c8f135] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.25}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Modify Credentials
-                </button>
+                <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 text-sm text-[#dae2fd]">
+                  {formData.fullName || '—'}
+                </div>
               )}
             </div>
-          )}
+
+            {/* Email (read-only) */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
+                Email
+              </label>
+              <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 font-mono text-sm text-[#dae2fd] select-all">
+                {formData.email || '—'}
+              </div>
+            </div>
+
+            {/* Actions */}
+            {!isGithubUser && (
+              <div className="flex gap-3 pt-2">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleUpdateProfile}
+                      disabled={loading}
+                      className="px-6 py-2 bg-[#adc6ff] text-[#00285d] rounded text-xs font-bold uppercase tracking-wider hover:shadow-[0_0_15px_rgba(173,198,255,0.3)] disabled:opacity-50 transition flex items-center gap-2"
+                    >
+                      {loading ? (
+                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[16px]">save</span>
+                      )}
+                      {loading ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={loading}
+                      className="px-6 py-2 border border-[#424754] text-[#c2c6d6] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#222a3d] transition"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setError(null)
+                      setSuccess(null)
+                      setIsEditing(true)
+                    }}
+                    className="px-6 py-2 border border-[#424754] text-[#c2c6d6] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#222a3d] transition flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                    Edit Name
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Metadata Card */}
+        <div className="mt-6 bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
+          <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#adc6ff]">analytics</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Account Metadata</span>
+          </div>
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
+                Account Age
+              </label>
+              <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 text-sm text-[#dae2fd]">
+                {accountAge} days
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
+                Last Updated
+              </label>
+              <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 text-sm text-[#dae2fd]">
+                {formatDate(user?.updatedAt)}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Meta Context Analytics Card */}
-      <div className="rounded-2xl p-6 bg-black/10 border border-[#1e1b6e]/30 shadow-xl">
-        <h2 className="font-['Outfit'] font-extrabold text-base text-white tracking-tight mb-4">Metadata Analysis</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-black/5 border border-[#1e1b6e]/10 shadow-inner">
-            <p className="text-[9px] font-bold tracking-widest uppercase text-slate-400/40 mb-1">
-              Active Lifetime Runtime
-            </p>
-            <p className="font-['Outfit'] text-xl font-extrabold text-white tracking-tight">{accountAge} <span className="text-xs text-slate-500 font-sans font-medium">days</span></p>
-          </div>
-          <div className="p-4 rounded-xl bg-black/5 border border-[#1e1b6e]/10 shadow-inner">
-            <p className="text-[9px] font-bold tracking-widest uppercase text-slate-400/40 mb-1">
-              Last State Mutated
-            </p>
-            <p className="text-xs font-mono font-bold text-slate-300 pt-1">{formatDate(user?.updatedAt)}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    </main>
   )
 }
 
