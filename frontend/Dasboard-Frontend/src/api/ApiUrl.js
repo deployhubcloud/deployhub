@@ -2,5 +2,5 @@ const defaultBaseUrl = import.meta.env.PROD ? 'https://api.deployhub.cloud/api/v
 export const BaseUrl = (import.meta.env.VITE_AUTH_API_URL || defaultBaseUrl).replace(/\/$/, '')
 
 
-const defaultWsUrl = import.meta.env.PROD ? 'https://sse.deployhub.cloud' : 'http://localhost:4008'
+const defaultWsUrl = import.meta.env.PROD ? 'https://ws.deployhub.cloud' : 'http://localhost:4008'
 export const WS_URL = (import.meta.env.VITE_WS_URL || defaultWsUrl).replace(/\/$/, '')
