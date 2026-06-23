@@ -2,6 +2,7 @@ import { AppError } from "../../../../shared/errors/AppError.js";
 import { Project } from "../models/project.model.js";
 import { getRedis } from '../core/redis/client.js'
 import { clearCacheProjectData } from "../../../../shared/utils/cacheProjectData.js";
+import { subdomainChangeQueue } from "../utils/queues.js";
 
 export const changeSubdomain = (projectId, oldsubDomain, userId, newSubdomain) => {
 
@@ -26,6 +27,15 @@ export const changeSubdomain = (projectId, oldsubDomain, userId, newSubdomain) =
     await project.save({ validateBeforeSave: false });
 
     await clearCacheProjectData(projectId, redis)
+
+    await subdomainChangeQueue.add('subdomain-change', {
+        projectId,
+        userId,
+        oldSubdomain: oldSubdomainSaved,
+        newSubdomain,
+        projectType: project.type,
+        assignedPort: project.assignedPort,
+    });
 
     await redis.hset(`deployhub:users:subdomain:${newSubdomain}`, {
         port: assignedPort,
