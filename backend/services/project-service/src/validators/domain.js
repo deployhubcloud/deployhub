@@ -19,7 +19,7 @@ export const validateChangeSubDomain = [
 ]
 
 export const getDomainSettingsValidators = [
-    param(projectId)
+    param("projectId")
         .isMongoId()
         .withMessage('invalid ProjectId'),
 ]

@@ -47,7 +47,7 @@ export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdom
 }
 
 
-export const getDomainSettings = (projectId) => {
+export const getDomainSettings = async (projectId) => {
     const domainSettings = await Project.findById(projectId).select("subdomain customDomains internalUrl isMicroservice").lean();
 
     if (!domainSettings) {
