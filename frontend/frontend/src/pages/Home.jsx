@@ -49,10 +49,6 @@ export default function Home() {
         <div className="absolute inset-0 -z-10 dot-grid opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-20 pt-20 sm:pt-28">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#111827]/70 px-3 py-1 text-xs text-gray-600 dark:text-gray-400 backdrop-blur reveal">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
-              New: AI diagnostics for failed builds
-            </div>
             <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-6xl reveal">
               Deploy from GitHub. <span className="grad-text">Live in seconds.</span>
             </h1>
