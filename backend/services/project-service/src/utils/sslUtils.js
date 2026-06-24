@@ -1,5 +1,5 @@
 import dns from "dns/promises";
-import docker from "./docker.js";
+import { docker } from "./docker.js";
 import fs from "fs";
 import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
 import { SslCertificate } from "../models/sslCertificate.js";
