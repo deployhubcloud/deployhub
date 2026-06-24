@@ -3,7 +3,7 @@ name: Backend Services CI/CD
 on:
   push:
     branches:
-      - masters
+      - master
     paths:  
       - 'backend/services/**'
       - 'backend/api-gateway/**'
