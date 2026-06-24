@@ -6,7 +6,7 @@ on:
       - master
     paths:
       - 'frontend/Dasboard-Frontend/**'
-      - '.github2/workflows/dahboard-frontend.yml'
+      - '.github2/workflows/dashboard-frontend.yml'
 
 permissions:
   contents: read
