@@ -73,7 +73,6 @@ jobs:
 
             docker run -d \
               --name deployhub \
-              -p 127.0.0.1:3002:80 \
               --network cloud \
               --restart always \
               "$DOCKER_USERNAME/deployhubfrontend:latest"
