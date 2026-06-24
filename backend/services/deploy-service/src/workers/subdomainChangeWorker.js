@@ -23,7 +23,7 @@ const subdomainChangeWorker = new Worker(QUEUE_NAMES.SUBDOMAIN_CHANGE, async (jo
         fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
     };
 
-    const nginxSubdomainDir = isProduction ? '/home/rahul/userdata/docker/nginx/subdomains' : localNginxSubdomainDir
+    const nginxSubdomainDir = isProduction ? '/home/rahul/docker/nginx/subdomains' : localNginxSubdomainDir
 
     await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`);
 

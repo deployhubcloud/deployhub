@@ -242,7 +242,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             if (!fs.existsSync(localStaticRoot)) {
                 fs.mkdirSync(localStaticRoot, { recursive: true });
             }
-            const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/userdata/docker/data/static' : `${localStaticRoot}`;
+            const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/docker/data/static' : `${localStaticRoot}`;
             console.log(staticRoot);
 
             const buildsZipUrl = await buildZipUrl(`buildzip/${projectId}/${buildId}.zip`);
@@ -372,7 +372,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             }
 
             const nginxSubdomainDir = isProduction
-                ? '/home/rahul/userdata/docker/nginx/subdomains'
+                ? '/home/rahul/docker/nginx/subdomains'
                 : localNginxSubdomainDir;
 
             fs.mkdirSync(nginxSubdomainDir, { recursive: true });

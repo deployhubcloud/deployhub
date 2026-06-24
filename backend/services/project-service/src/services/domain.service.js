@@ -108,7 +108,7 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
             fs.mkdirSync(localNginxCustomDomainDir, { recursive: true })
         };
 
-        const nginxCustomDomainDir = isProduction ? '/home/rahul/userdata/docker/nginx/custom-domains' : localNginxCustomDomainDir
+        const nginxCustomDomainDir = isProduction ? '/home/rahul/docker/nginx/custom-domains' : localNginxCustomDomainDir
 
         const result = await generateCertificate(domain, projectId);
         if (!result) {
