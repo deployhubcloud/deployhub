@@ -3,6 +3,7 @@ FROM node:24 AS build
 
 WORKDIR /app
 
+ARG VITE_RAZORPAY_KEY_ID
 
 COPY package*.json ./
 
