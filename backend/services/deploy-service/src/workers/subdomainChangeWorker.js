@@ -49,7 +49,7 @@ const subdomainChangeWorker = new Worker(QUEUE_NAMES.SUBDOMAIN_CHANGE, async (jo
             staticPath: projectType === 'static' ? `/data/static/${projectId}` : undefined,
             target: projectType !== 'static' ? `http://host.docker.internal:8081` : undefined,
             domain: `${newSubdomain}.deployhub.online`,
-            sslDomain: 'deployhub.online',
+            sslDomain: 'deployhub.cloud',
             outputPath: null,
         });
 

@@ -383,14 +383,14 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     type: 'static',
                     staticPath: `/data/static/${projectId}`,
                     domain: `${projectData.subdomain}.deployhub.online`,
-                    sslDomain: 'deployhub.online',
+                    sslDomain: 'deployhub.cloud',
                     outputPath: null
                 });
             } else {
                 nginxConfig = writeNginxConfig({
                     type: 'backend',
                     domain: `${projectData.subdomain}.deployhub.online`,
-                    sslDomain: 'deployhub.online',
+                    sslDomain: 'deployhub.cloud',
                     target: `http://host.docker.internal:8081`,
                     outputPath: null
                 });
