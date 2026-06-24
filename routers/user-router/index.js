@@ -9,6 +9,9 @@ import { createProxyServers } from "./src/proxy.js";
 import { createUserRateLimiters, isRateLimitError } from "./src/rateLimit.js";
 import { redisclient, redisConnect } from "./src/redis.js";
 import { createRequestCounter } from "./src/requestCounter.js";
+import { createThreatIntelligence } from "./src/threatIntel.js";
+import { createSecurityMiddleware, runProjectLevelAnalysis } from "./src/security.js";
+import { createSecurityAdminRouter } from "./src/securityAdmin.js";
 
 dotenv.config();
 await redisConnect();
@@ -19,11 +22,19 @@ const server = http.createServer(app);
 app.set("trust proxy", true);
 app.disable("x-powered-by");
 app.use(compression());
+app.use(express.json()); 
 
 const { httpProxyServer, wsProxyServer, close: closeProxyServers } = createProxyServers("user-router");
 const domainResolver = createUserDomainResolver({ redisclient });
 const rateLimiters = createUserRateLimiters({ redisclient });
 const requestCounter = createRequestCounter();
+
+const threatIntel = createThreatIntelligence({ redisclient });
+const securityMiddleware = createSecurityMiddleware({ threatIntel });
+
+app.use(securityMiddleware);
+
+app.use("/admin/security", createSecurityAdminRouter({ threatIntel, redisclient }));
 
 app.get(["/routerhealth"], (_req, res) => {
   res.status(200).json({
@@ -33,6 +44,7 @@ app.get(["/routerhealth"], (_req, res) => {
   });
 });
 
+
 app.use(async (req, res) => {
   const host = getRequestHost(req.headers.host);
   if (!host) return res.status(400).send("Invalid host");
@@ -40,6 +52,21 @@ app.use(async (req, res) => {
   try {
     const resolved = await domainResolver.resolve(host);
     if (!resolved) return res.status(404).send("User domain not configured");
+
+    if (resolved.projectId && req.security) {
+      const threat = await runProjectLevelAnalysis({
+        threatIntel,
+        req,
+        projectId: resolved.projectId,
+      });
+
+      if (threat.shouldBlock) {
+        const status = threat.blockType === "bot" ? 403 : 429;
+        return res.status(status).send(
+          status === 429 ? "Too many requests" : "Access denied"
+        );
+      }
+    }
 
     if (resolved.projectId) {
       await rateLimiters.consume(resolved.projectId, resolved.plan);
@@ -58,6 +85,7 @@ app.use(async (req, res) => {
   }
 });
 
+// WebSocket upgrades
 server.on("upgrade", async (req, socket, head) => {
   const host = getRequestHost(req.headers.host);
   if (!host) return socket.destroy();
@@ -78,6 +106,7 @@ server.on("upgrade", async (req, socket, head) => {
   }
 });
 
+// Graceful shutdown
 let shuttingDown = false;
 
 async function shutdown(signal) {

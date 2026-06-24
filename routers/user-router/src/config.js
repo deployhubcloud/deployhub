@@ -19,11 +19,15 @@ export const REDIS_CONNECTION = {
 
 export const PLAN_LIMITS = {
   free: {
-    dailyRequests: Number(process.env.FREE_DAILY_REQUESTS || 2000),
-    burstRequests: Number(process.env.FREE_BURST_REQUESTS || 150),
+    dailyRequests: Number(10000),
+    burstRequests: Number(150),
+  },
+  starter: {
+    dailyRequests: Number(200000),
+    burstRequests: Number(500),
   },
   pro: {
-    dailyRequests: Number(process.env.PRO_DAILY_REQUESTS || 100000),
-    burstRequests: Number(process.env.PRO_BURST_REQUESTS || 500),
+    dailyRequests: Number(1000000),
+    burstRequests: Number(1000),
   },
 };
