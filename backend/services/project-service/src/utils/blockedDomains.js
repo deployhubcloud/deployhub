@@ -1,7 +1,7 @@
 export const BLOCKED_DOMAINS = [
     'deployhub.cloud',
     'deployhub.online',
-    'cloudcoderhub.in',
+    // 'cloudcoderhub.in',
     /\.deployhub\.cloud$/,
     /\.deployhub\.online$/,
     /\.cloudcoderhub\.in$/,

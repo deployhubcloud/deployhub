@@ -25,7 +25,7 @@ projectRouter.get('/overview/:projectId', getProjectDataByIdConroller);
 projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController);
 projectRouter.get('/settings/:projectId', projectSettingValidators, projectSettingsController);
 projectRouter.get('/settings/domain/:projectId', getDomainSettingsValidators, getDomainSettingsController);
-projectRouter.post("/custom-domain/:projectId", addCustomDomainValidator, addCustomDomainCOntroller)
+projectRouter.post('/custom-domain/:projectId', addCustomDomainValidator, addCustomDomainCOntroller)
 
 
 export default projectRouter;

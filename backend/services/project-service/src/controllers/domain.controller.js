@@ -56,11 +56,12 @@ export const getDomainSettingsController = async (req, res) => {
 export const addCustomDomainCOntroller = async (req, res) => {
     try {
 
-
+        console.log("req reached")
         const { domain } = req.body;
-        const { projectId } = req.params.projectId;
+        const projectId = req.params.projectId;
+        const userId = req.user._id;
 
-        await addCustomDomainService(domain, projectId);
+        await addCustomDomainService(domain, projectId, userId);
 
         return res.status(200).json({
             Success: true,

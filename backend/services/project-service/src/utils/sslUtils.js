@@ -1,10 +1,13 @@
-import dns from "dns/promises";
 import { docker } from "./docker.js";
 import fs from "fs";
 import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
 import { SslCertificate } from "../models/sslCertificate.js";
 import { Project } from '../models/project.model.js';
+import { error } from "console";
+import { Resolver } from 'dns/promises';
 
+const resolver = new Resolver();
+resolver.setServers(['8.8.8.8', '1.1.1.1']);
 
 const SERVER_IP = process.env.SERVER_IP
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL
@@ -17,79 +20,91 @@ const NETWORK_MODE = 'proxy-net'
 
 export async function isDomainPointingToServer(domain) {
     try {
-        const records = await dns.resolve4(domain)
-        return records.includes(SERVER_IP)
-    } catch {
+        const records = await resolver.resolve4(domain);
+        return records.includes(SERVER_IP);
+    } catch (error) {
+        console.log(error)
         return false
     }
 }
 
 export async function generateCertificate(domain, projectId) {
 
-    const isValid = await isDomainPointingToServer(domain)
-    if (!isValid) return null;
+    try {
 
-    const certPath = `${LETSENCRYPT_DIR}/${domain}/fullchain.pem`;
-    const existing = fs.existsSync(certPath);
+        const isValid = await isDomainPointingToServer(domain)
+        console.log(isValid)
+        if (!isValid) return null;
 
-    if (!existing) {
+        if (!fs.existsSync(LETSENCRYPT_DIR)) {
+            fs.mkdirSync(LETSENCRYPT_DIR, { recursive: true })
+        };
+        const certPath = `${LETSENCRYPT_DIR}/${domain}/fullchain.pem`;
+        const existing = fs.existsSync(certPath);
 
-        await checkAndPullImage(docker, `certbot/certbot`);
+        if (!existing) {
 
-        const container = await docker.createContainer({
-            Image: 'certbot/certbot',
-            Cmd: [
-                'certonly',
-                '--webroot',
-                '--webroot-path', '/var/www/html',
-                '--non-interactive',
-                '--agree-tos',
-                '--no-eff-email',
-                '--email', CERTBOT_EMAIL,
-                '--cert-name', domain,
-                '-d', domain,
-            ],
-            HostConfig: {
-                Binds: [LETSENCRYPT_BIND, NGINX_HTML_BIND],
-                AutoRemove: true,
-                NetworkMode: NETWORK_MODE,
-            }
-        })
+            await checkAndPullImage(docker, `certbot/certbot`);
 
-        await container.start()
-        const result = await container.wait()
-        if (result.StatusCode !== 0) return null
+            const container = await docker.createContainer({
+                Image: 'certbot/certbot',
+                Cmd: [
+                    'certonly',
+                    '--webroot',
+                    '--webroot-path', '/var/www/html',
+                    '--non-interactive',
+                    '--agree-tos',
+                    '--no-eff-email',
+                    '--email', CERTBOT_EMAIL,
+                    '--cert-name', domain,
+                    '-d', domain,
+                ],
+                HostConfig: {
+                    Binds: [LETSENCRYPT_BIND, NGINX_HTML_BIND],
+                    AutoRemove: true,
+                    NetworkMode: NETWORK_MODE,
+                }
+            })
 
-        await container.stop();
-        await container.remove({ force: true })
+            await container.start()
+            const result = await container.wait()
+            console.log(result)
+            if (result.StatusCode !== 0) return null
+
+            await container.stop();
+            await container.remove({ force: true })
+        }
+
+        const issuedAt = new Date()
+        const expiresAt = new Date(issuedAt)
+        expiresAt.setDate(expiresAt.getDate() + 90)
+        const nextRenewAt = new Date(expiresAt)
+        nextRenewAt.setDate(nextRenewAt.getDate() - 5)
+
+        const project = await Project.findById(projectId).select('userId').lean()
+
+        await SslCertificate.findOneAndUpdate(
+            { domain },
+            {
+                $set: {
+                    userId: project?.userId,
+                    projectId,
+                    domain,
+                    issuedAt: issuedAt.toISOString(),
+                    expiresAt: expiresAt.toISOString(),
+                    nextRenewAt,
+                    lastRenewAttempt: new Date(),
+                    status: 'active',
+                }
+            },
+            { upsert: true, new: true }
+        )
+
+        return { issuedAt: issuedAt.toISOString(), expiresAt: expiresAt.toISOString() }
+
+    } catch (error) {
+        throw error
     }
-
-    const issuedAt = new Date()
-    const expiresAt = new Date(issuedAt)
-    expiresAt.setDate(expiresAt.getDate() + 90)
-    const nextRenewAt = new Date(expiresAt)
-    nextRenewAt.setDate(nextRenewAt.getDate() - 5)
-
-    const project = await Project.findById(projectId).select('userId').lean()
-
-    await SslCertificate.findOneAndUpdate(
-        { domain },
-        {
-            $set: {
-                userId: project?.userId,
-                projectId,
-                domain,
-                issuedAt: issuedAt.toISOString(),
-                expiresAt: expiresAt.toISOString(),
-                nextRenewAt,
-                lastRenewAttempt: new Date(),
-                status: 'active',
-            }
-        },
-        { upsert: true, new: true }
-    )
-
-    return { issuedAt: issuedAt.toISOString(), expiresAt: expiresAt.toISOString() }
 }
 
 export async function renewCertificate(domain) {

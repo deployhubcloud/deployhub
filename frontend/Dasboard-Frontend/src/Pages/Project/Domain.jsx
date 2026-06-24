@@ -14,9 +14,14 @@ export function Domain() {
     const [originalSubdomain, setOriginalSubdomain] = useState("");
     const [newSubdomain, setNewSubdomain] = useState("");
 
-    // Custom domains management (UI only – no API yet)
+    // Custom domains state
     const [customDomains, setCustomDomains] = useState([]);
     const [newCustomDomain, setNewCustomDomain] = useState("");
+
+    // Operation states for custom domains
+    const [customDomainSaving, setCustomDomainSaving] = useState(false);
+    const [customDomainRemoving, setCustomDomainRemoving] = useState(null); // domain currently being removed
+    const [customDomainError, setCustomDomainError] = useState(null);
 
     // Cooldown after subdomain update
     const [cooldown, setCooldown] = useState(false);
@@ -53,7 +58,6 @@ export function Domain() {
             setOriginalSubdomain(newSubdomain.trim());
             setSuccessMessage("Subdomain updated successfully!");
             setCooldown(true);
-            // Disable for 5 seconds, then allow changes again
             setTimeout(() => {
                 setCooldown(false);
             }, 8000);
@@ -64,15 +68,39 @@ export function Domain() {
         }
     };
 
-    const addCustomDomain = () => {
+    // --- Custom domain API integration ---
+    const addCustomDomain = async () => {
         const domain = newCustomDomain.trim().toLowerCase();
         if (!domain || customDomains.includes(domain)) return;
-        setCustomDomains([...customDomains, domain]);
-        setNewCustomDomain("");
+
+        setCustomDomainError(null);
+        setCustomDomainSaving(true);
+        try {
+            await api.post(`/project/custom-domain/${projectId}`, { domain });
+            setCustomDomains(prev => [...prev, domain]);
+            setNewCustomDomain("");
+            setSuccessMessage(`Domain ${domain} added successfully.`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err) {
+            setCustomDomainError(err.response?.data?.message || "Failed to add custom domain.");
+        } finally {
+            setCustomDomainSaving(false);
+        }
     };
 
-    const removeCustomDomain = (domain) => {
-        setCustomDomains(customDomains.filter(d => d !== domain));
+    const removeCustomDomain = async (domain) => {
+        setCustomDomainError(null);
+        setCustomDomainRemoving(domain);
+        try {
+            await api.delete(`/project/custom-domain/${projectId}`, { data: { domain } });
+            setCustomDomains(prev => prev.filter(d => d !== domain));
+            setSuccessMessage(`Domain ${domain} removed successfully.`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err) {
+            setCustomDomainError(err.response?.data?.message || "Failed to remove custom domain.");
+        } finally {
+            setCustomDomainRemoving(null);
+        }
     };
 
     if (loading) {
@@ -127,6 +155,12 @@ export function Domain() {
                         {successMessage}
                     </div>
                 )}
+                {customDomainError && (
+                    <div className="mb-6 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2 rounded flex items-center gap-2">
+                        <span className="material-symbols-outlined">error</span>
+                        {customDomainError}
+                    </div>
+                )}
 
                 <div className="space-y-6">
                     {/* Subdomain Section */}
@@ -144,8 +178,7 @@ export function Domain() {
                                         value={newSubdomain}
                                         onChange={(e) => setNewSubdomain(e.target.value)}
                                         disabled={!canEditSubdomain || cooldown}
-                                        className={`flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all ${!canEditSubdomain || cooldown ? "opacity-50 cursor-not-allowed" : ""
-                                            }`}
+                                        className={`flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all ${!canEditSubdomain || cooldown ? "opacity-50 cursor-not-allowed" : ""}`}
                                     />
                                     <span className="text-[#c2c6d6] text-sm">.deployhub.online</span>
                                 </div>
@@ -240,9 +273,14 @@ export function Domain() {
                                     {canManageCustom && (
                                         <button
                                             onClick={() => removeCustomDomain(domain)}
-                                            className="material-symbols-outlined text-[#c2c6d6] hover:text-[#ffb4ab] transition"
+                                            disabled={customDomainRemoving === domain}
+                                            className="material-symbols-outlined text-[#c2c6d6] hover:text-[#ffb4ab] transition disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            delete
+                                            {customDomainRemoving === domain ? (
+                                                <span className="animate-spin text-[16px]">progress_activity</span>
+                                            ) : (
+                                                "delete"
+                                            )}
                                         </button>
                                     )}
                                     {!canManageCustom && (
@@ -251,7 +289,6 @@ export function Domain() {
                                 </div>
                             ))}
 
-                            {/* Add new custom domain (only if allowed) */}
                             {canManageCustom && (
                                 <div className="flex gap-3 mt-4">
                                     <input
@@ -259,14 +296,18 @@ export function Domain() {
                                         value={newCustomDomain}
                                         onChange={(e) => setNewCustomDomain(e.target.value)}
                                         placeholder="api.example.com"
-                                        className="flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none"
+                                        disabled={customDomainSaving}
+                                        className="flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none disabled:opacity-50"
                                     />
                                     <button
                                         onClick={addCustomDomain}
-                                        disabled={!newCustomDomain.trim()}
-                                        className="px-6 py-2 bg-[#adc6ff]/10 text-[#adc6ff] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#adc6ff]/20 transition disabled:opacity-50"
+                                        disabled={!newCustomDomain.trim() || customDomainSaving}
+                                        className="px-6 py-2 bg-[#adc6ff]/10 text-[#adc6ff] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#adc6ff]/20 transition disabled:opacity-50 flex items-center gap-2"
                                     >
-                                        Add
+                                        {customDomainSaving ? (
+                                            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                        ) : null}
+                                        {customDomainSaving ? "Adding..." : "Add"}
                                     </button>
                                 </div>
                             )}
