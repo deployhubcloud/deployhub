@@ -5,12 +5,12 @@ import { clearCacheProjectData } from "../../../../shared/utils/cacheProjectData
 import { subdomainChangeQueue } from "../utils/queues.js";
 import { isBlockedDomain } from "../utils/blockedDomains.js";
 import { writeNginxConfig } from "../../../../shared/nginx/writeNginx.js";
-import { writeNginxFileToHost } from "../../../deploy-service/src/utils/nginx/writeNginxFileToHost.js";
 import { execInContainer } from "../utils/execInContainer.js";
 import { generateCertificate } from "../utils/sslUtils.js";
 import { project_env } from "../lib/env.js";
 import path from 'path';
 import fs from 'fs';
+import { writeNginxFileToHost } from "../utils/nginx/writeNginxFileToHost.js";
 
 
 export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdomain) => {
