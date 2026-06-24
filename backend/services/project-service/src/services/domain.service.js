@@ -3,6 +3,12 @@ import { Project } from "../models/project.model.js";
 import { getRedis } from '../core/redis/client.js'
 import { clearCacheProjectData } from "../../../../shared/utils/cacheProjectData.js";
 import { subdomainChangeQueue } from "../utils/queues.js";
+import { isBlockedDomain } from "../utils/blockedDomains.js";
+import { writeNginxConfig } from "../../../../shared/nginx/writeNginx.js";
+import { writeNginxFileToHost } from "../../../deploy-service/src/utils/nginx/writeNginxFileToHost.js";
+import { execInContainer } from "../utils/execInContainer.js";
+import { generateCertificate } from "../utils/sslUtils.js";
+import { project_env } from "../lib/env.js";
 
 export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdomain) => {
 
@@ -63,5 +69,90 @@ export const getDomainSettings = async (projectId) => {
     }
 
     return domainSettings
+
+}
+
+
+export const addCustomDomainService = async (domain, projectId) => {
+    if (!domain) throw new AppError("Domain required", 400);
+
+    if (isBlockedDomain(domain)) {
+        return res.status(403).json({
+            success: false,
+            message: 'This domain is reserved and cannot be used'
+        })
+    }
+
+
+    const project = await Project.findOne({ _id: projectId, userId: req.user._id })
+    if (!project) throw new AppError('Project not found', 404)
+
+
+    if (project.plan === 'free') {
+        throw new AppError("Custom domains not Applied for free Plan", 403)
+    }
+
+
+    const conflict = await Project.findOne({ customDomains: domain, _id: { $ne: projectId } })
+    if (conflict) throw new AppError("Domain already in use", 409);
+
+
+    let nginxContainer = null;
+
+    (async () => {
+
+        try {
+            const isProduction = project_env.NODE_ENV === 'production';
+
+            const localNginxSubdomainDir = path.join(process.cwd(), 'nginx/custom-domains')
+            if (!fs.existsSync(localNginxSubdomainDir)) {
+                fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
+            };
+
+            const nginxSubdomainDir = isProduction ? '/home/rahul/userdata/docker/nginx/custom-domains' : localNginxSubdomainDir
+
+            const result = await generateCertificate(domain, projectId);
+            if (!result) {
+                throw new AppError("Error While Generating Your SSl Certificated, please check Domain is not pointing to this server", 400)
+            }
+
+            await checkAndPullImage(docker, `${project_env.DOCKER_USERNAME}/deployhub-static-helper`);
+
+            nginxContainer = await docker.createContainer({
+                Image: `${project_env.DOCKER_USERNAME}/deployhub-static-helper`,
+                name: `deployhub-nginx-helper-${projectId}-custom-domain`,
+                HostConfig: {
+                    Binds: [`${nginxSubdomainDir}:/data/nginx/custom-domains`],
+                    AutoRemove: false,
+                },
+            });
+            await nginxContainer.start();
+
+
+            const nginxConfig = writeNginxConfig({
+                type: projectType === 'static' ? 'static' : 'backend',
+                staticPath: projectType === 'static' ? `/data/static/${projectId}` : undefined,
+                target: projectType !== 'static' ? `http://host.docker.internal:8081` : undefined,
+                domain: `${domain}`,
+                sslDomain: `${domain}`,
+                outputPath: null,
+            });
+
+            await writeNginxFileToHost(nginxContainer, nginxConfig, '/data/nginx/custom-domains', `${domain}.conf`);
+            console.log(`[subdomain-change] Written: ${newSubdomain}.conf`);
+        } catch (error) {
+            if (nginxContainer) {
+                try {
+                    const info = await nginxContainer.inspect();
+                    if (info.State.Running) await nginxContainer.stop({ t: 5 });
+                } catch (e) { console.warn(`[custom domain] stop failed: ${e.message}`); }
+                try {
+                    await nginxContainer.remove({ force: true });
+                } catch (e) { console.warn(`[custom domain] remove failed: ${e.message}`); }
+            }
+        }
+    })()
+
+
 
 }

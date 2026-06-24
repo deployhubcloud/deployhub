@@ -8,7 +8,7 @@ import { execInContainer } from '../utils/execInContainer.js';
 import { docker } from '../utils/docker.js';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { connection } from '../utils/queues/queues.js';
-import fs from 'fs'
+import fs from 'fs';
 import path from 'path';
 
 
