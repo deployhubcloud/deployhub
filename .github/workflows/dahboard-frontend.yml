@@ -76,7 +76,7 @@ jobs:
               --network cloud \
               --restart always \
               -e VITE_RAZORPAY_KEY_ID="${{ secrets.VITE_RAZORPAY_KEY_ID }}" \
-              "$DOCKER_USERNAME/deployhubfrontend:latest"
+              "$DOCKER_USERNAME//deployhub-dashboard-frontend:latest"
 
             docker image prune -af
 
