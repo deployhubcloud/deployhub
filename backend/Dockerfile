@@ -6,6 +6,10 @@ RUN apk --no-cache upgrade
 
 RUN npm install -g npm@latest
 
+RUN if [ "$SERVICE_PATH" = "services/build-service" ]; then \
+      apk add --no-cache git; \
+    fi
+
 WORKDIR /app
 
 COPY shared ./shared
