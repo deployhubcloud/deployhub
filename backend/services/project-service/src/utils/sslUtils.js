@@ -10,7 +10,6 @@ const SERVER_IP = process.env.SERVER_IP
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL
 
 const LETSENCRYPT_DIR = '/etc/letsencrypt/live'
-const NGINX_CUSTOM_DIR = '/etc/nginx/conf.d/custom-domains'
 
 const LETSENCRYPT_BIND = '/home/rahul/docker/letsencrypt:/etc/letsencrypt'
 const NGINX_HTML_BIND = '/home/rahul/docker/nginx/html:/var/www/html'

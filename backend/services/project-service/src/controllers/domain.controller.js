@@ -1,5 +1,5 @@
 import { validationResult } from "express-validator";
-import { changeSubdomain, getDomainSettings } from "../services/domain.service.js";
+import { addCustomDomainService, changeSubdomain, getDomainSettings } from "../services/domain.service.js";
 
 export const changeSubdomainController = async (req, res) => {
     try {
@@ -52,3 +52,24 @@ export const getDomainSettingsController = async (req, res) => {
         })
     }
 }
+
+export const addCustomDomainCOntroller = async (req, res) => {
+    try {
+
+
+        const { domain } = req.body;
+        const { projectId } = req.params.projectId;
+
+        await addCustomDomainService(domain, projectId);
+
+        return res.status(200).json({
+            Success: true,
+            message: "Domain Added Successfully"
+        })
+
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            message: error.message || "Internal server Error"
+        })
+    }
+};

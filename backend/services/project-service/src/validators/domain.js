@@ -23,3 +23,20 @@ export const getDomainSettingsValidators = [
         .isMongoId()
         .withMessage('invalid ProjectId'),
 ]
+
+export const addCustomDomainValidator = [
+    body("domain")
+        .trim()
+        .notEmpty()
+        .withMessage("Domain is required")
+        .isLength({ max: 253 })
+        .withMessage("Invalid domain length")
+        .matches(
+            /^(?!:\/\/)(?!.*:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/
+        )
+        .withMessage("Invalid domain format"),
+
+    param("projectId")
+        .isMongoId()
+        .withMessage("Invalid project id"),
+];

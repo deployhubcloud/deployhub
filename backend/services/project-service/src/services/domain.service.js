@@ -104,12 +104,12 @@ export const addCustomDomainService = async (domain, projectId) => {
         try {
             const isProduction = project_env.NODE_ENV === 'production';
 
-            const localNginxSubdomainDir = path.join(process.cwd(), 'nginx/custom-domains')
-            if (!fs.existsSync(localNginxSubdomainDir)) {
-                fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
+            const localNginxCustomDomainDir = path.join(process.cwd(), 'nginx/custom-domains')
+            if (!fs.existsSync(localNginxCustomDomainDir)) {
+                fs.mkdirSync(localNginxCustomDomainDir, { recursive: true })
             };
 
-            const nginxSubdomainDir = isProduction ? '/home/rahul/userdata/docker/nginx/custom-domains' : localNginxSubdomainDir
+            const nginxCustomDomainDir = isProduction ? '/home/rahul/userdata/docker/nginx/custom-domains' : localNginxCustomDomainDir
 
             const result = await generateCertificate(domain, projectId);
             if (!result) {
@@ -122,7 +122,7 @@ export const addCustomDomainService = async (domain, projectId) => {
                 Image: `${project_env.DOCKER_USERNAME}/deployhub-static-helper`,
                 name: `deployhub-nginx-helper-${projectId}-custom-domain`,
                 HostConfig: {
-                    Binds: [`${nginxSubdomainDir}:/data/nginx/custom-domains`],
+                    Binds: [`${nginxCustomDomainDir}:/data/nginx/custom-domains`],
                     AutoRemove: false,
                 },
             });
@@ -139,7 +139,6 @@ export const addCustomDomainService = async (domain, projectId) => {
             });
 
             await writeNginxFileToHost(nginxContainer, nginxConfig, '/data/nginx/custom-domains', `${domain}.conf`);
-            console.log(`[subdomain-change] Written: ${newSubdomain}.conf`);
         } catch (error) {
             if (nginxContainer) {
                 try {
@@ -152,7 +151,6 @@ export const addCustomDomainService = async (domain, projectId) => {
             }
         }
     })()
-
 
 
 }
