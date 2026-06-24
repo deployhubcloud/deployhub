@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/apiclient";
 
@@ -39,12 +39,12 @@ const TYPE_LABELS = {
 const RUNTIME_VERSIONS = {
   static: {
     label: "Node.js (build)",
-    versions: [ "22" , "24"],
+    versions: ["22", "24"],
     default: "24",
   },
   node: {
     label: "Node.js",
-    versions: [ "22" , "24"],
+    versions: ["22", "24"],
     default: "24",
   },
   go: {
@@ -158,6 +158,9 @@ export default function NewProject() {
   const [repoQuery, setRepoQuery] = useState("");
   const [visibleRepoCount, setVisibleRepoCount] = useState(REPO_PAGE_SIZE);
 
+  const navigate = useNavigate();
+
+
   const [form, setForm] = useState({
     projectName: "",
     repoUrl: "",
@@ -209,6 +212,15 @@ export default function NewProject() {
     };
     fetchRepos();
   }, [user]);
+
+  useEffect(() => {
+    if (created) {
+      const projectId = created.projectId || created?.project?._id;
+      if (projectId) {
+        navigate(`/project/${projectId}/logs`);
+      }
+    }
+  }, [created, navigate]);
 
   const allowedTypes = PLAN_OPTIONS[plan].types;
   const isStatic = selectedType === "static";
@@ -389,7 +401,7 @@ export default function NewProject() {
         {/* Header */}
         <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <Link to="/projects" className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition">
+            <Link to="/" className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition">
               ← Back to projects
             </Link>
             <h1 className="mt-3 text-3xl font-bold bg-gradient-to-r from-white to-violet-300 bg-clip-text text-transparent">
@@ -419,8 +431,8 @@ export default function NewProject() {
                     key={key}
                     onClick={() => selectPlan(key)}
                     className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${selected
-                        ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
-                        : "border-white/10 bg-white/5 hover:bg-white/10"
+                      ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
+                      : "border-white/10 bg-white/5 hover:bg-white/10"
                       }`}
                   >
                     <div className="flex items-start justify-between">
@@ -486,8 +498,8 @@ export default function NewProject() {
                           type="button"
                           onClick={() => setField("runtimeVersion", v)}
                           className={`rounded-lg border px-3 py-1.5 text-sm font-mono font-semibold transition-all duration-150 ${active
-                              ? "border-violet-500 bg-violet-500/20 text-violet-200 shadow shadow-violet-500/20"
-                              : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                            ? "border-violet-500 bg-violet-500/20 text-violet-200 shadow shadow-violet-500/20"
+                            : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:bg-white/10 hover:text-white"
                             }`}
                         >
                           {v}
@@ -590,16 +602,16 @@ export default function NewProject() {
                                   type="button"
                                   onClick={() => handleRepoSelect(repo)}
                                   className={`min-w-0 rounded-lg border p-3 text-left transition ${selected
-                                      ? "border-violet-400 bg-violet-500/15"
-                                      : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                                    ? "border-violet-400 bg-violet-500/15"
+                                    : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
                                     }`}
                                 >
                                   <div className="flex min-w-0 items-center justify-between gap-2">
                                     <span className="truncate text-sm font-semibold text-white">{repo.full_name}</span>
                                     <span
                                       className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${repo.private
-                                          ? "bg-amber-400/15 text-amber-200"
-                                          : "bg-cyan-400/15 text-cyan-200"
+                                        ? "bg-amber-400/15 text-amber-200"
+                                        : "bg-cyan-400/15 text-cyan-200"
                                         }`}
                                     >
                                       {repo.private ? "Private" : "Public"}
