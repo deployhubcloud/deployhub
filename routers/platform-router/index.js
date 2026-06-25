@@ -45,9 +45,10 @@ server.on("upgrade", (req, socket, head) => {
   const route = getPlatformRoute(host);
   if (!route) return socket.destroy();
 
+  console.log('reaced route')
   wsProxyServer.ws(req, socket, head, {
     target: route.target,
-    changeOrigin: false,
+    changeOrigin: true,
   });
 });
 
