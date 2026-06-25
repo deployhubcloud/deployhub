@@ -65,7 +65,7 @@ jobs:
               -e PLATFORM_ROUTER_PORT=${{ secrets.PLATFORM_ROUTER_PORT }} \
               -e PROXY_TIMEOUT_MS=${{ secrets.PROXY_TIMEOUT_MS }} \
               -e HTTP_MAX_SOCKETS=${{ secrets.HTTP_MAX_SOCKETS }} \
-              --add-host host.docker.internal:host-gateway \
+              --add-host host.docker.internal:172.17.0.1 \
               --network cloud \
               --network proxy-net \
               ${{ secrets.DOCKER_USERNAME }}/platformrouter:latest
