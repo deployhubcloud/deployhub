@@ -6,12 +6,24 @@ import { registerLogsStreamHandler } from './handlers/logsStreamHandler.js'
 
 export function initWS(server, corsOrigins) {
     const io = new Server(server, {
-        path: '/ws/',
+        path: '/ws',
         cors: {
             origin: corsOrigins,
             credentials: true
         }
     })
+
+    io.engine.on("connection", (rawSocket) => {
+        console.log("Engine connection:", rawSocket.id);
+    });
+
+    io.on("connection", (socket) => {
+        console.log("Socket connected:", socket.id);
+    });
+
+    io.on("connect_error", (err) => {
+        console.log("Connect error:", err.message);
+    });
 
     setIO(io)
     applyAuthMiddleware(io)
