@@ -158,7 +158,7 @@ function trackRequest(projectId) {
 
 const flushQueue = new Queue("request-count-flush", {
     connection: {
-        host: "redis",
+        host: "localhost",
         port: 6379,
     },
 });
@@ -266,6 +266,6 @@ async function shutdown() {
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
-server.listen(8080, () => {
-    console.log("Production Router running on port 8080");
+server.listen(8081, () => {
+    console.log("Production Router running on port 8081");
 });
