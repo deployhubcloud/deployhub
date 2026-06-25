@@ -6,7 +6,7 @@ let socket = null
 export function getSocket() {
     if (!socket) {
         socket = io(WS_URL, {
-            path: '/ws',
+            path: '/ws/',
             withCredentials: true,
             reconnection: true,
             reconnectionDelay: 2000,
