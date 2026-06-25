@@ -14,15 +14,6 @@ export function getSocket() {
             autoConnect: false,
         })
     }
-
-    socket.on("connect", () => {
-        console.log("Connected", socket.id);
-    });
-
-    socket.on("connect_error", (err) => {
-        console.log(err.message);
-        console.log(err);
-    });
     return socket
 }
 
