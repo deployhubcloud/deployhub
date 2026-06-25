@@ -201,7 +201,7 @@ jobs:
               # Volume mounts per service
               VOLUME_ARGS=""
               case $svc in
-                build-service|deploy-service|project-service)
+                build-service|deploy-service|project-service|stream-service)
                   VOLUME_ARGS="-v /var/run/docker.sock:/var/run/docker.sock"
                   ;;
               esac
