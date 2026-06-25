@@ -60,6 +60,8 @@ export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdom
         plan: project.plan,
     });
 
+    await redis.del(`deployhub:users:subdomain:${oldsubDomain}`);
+
     return true
 }
 
@@ -78,6 +80,10 @@ export const getDomainSettings = async (projectId) => {
 
 export const addCustomDomainService = async (domain, projectId, userId) => {
     console.log(domain, projectId, userId)
+
+    const redis = getRedis()
+
+
     if (!domain) throw new AppError("Domain required", 400);
 
     if (isBlockedDomain(domain)) {
@@ -138,6 +144,13 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
         });
 
         await writeNginxFileToHost(nginxContainer, nginxConfig, '/data/nginx/custom-domains', `${domain}.conf`);
+
+        await redis.hset(`deployhub:users:customdomain:${domain}`, {
+            port: project.assignedPort,
+            projectId: project._id.toString(),
+            plan: project.plan,
+        });
+
     } catch (error) {
         if (nginxContainer) {
             try {

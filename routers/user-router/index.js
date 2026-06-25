@@ -133,7 +133,7 @@ async function resolveDomain(domain) {
         }
     }
 
-    const custom = await redisclient.hgetall(`customdomain:${domain}`);
+    const custom = await redisclient.hgetall(`deployhub:users:customdomain:${domain}`);
     if (custom?.port) {
         const resolved = {
             target: `http://${custom.subdomain}:${custom.port}`,
