@@ -61,14 +61,12 @@ const staticMap = {
 
 
 async function resolveDomain(domain) {
-  const host = domain.split(":")[0];
-
-  const cached = getCache(host);
+  const cached = getCache(domain);
   if (cached) return cached;
 
-  if (staticMap[host]) {
-    const resolved = { target: staticMap[host], projectId: null };
-    setCache(host, resolved);
+  if (staticMap[domain]) {
+    const resolved = { target: staticMap[domain], projectId: null };
+    setCache(domain, resolved);
     return resolved;
   }
 
@@ -95,17 +93,13 @@ app.use(async (req, res) => {
 // ── WebSocket routing ────────────────────────────────────
 server.on("upgrade", async (req, socket, head) => {
   try {
-    const rawHost = req.headers.host?.toLowerCase().split(":")[0];
-    if (!rawHost) return socket.destroy();
+    const host = req.headers.host?.toLowerCase();
+    if (!host) return socket.destroy();
 
-    const resolved = await resolveDomain(rawHost);
-    if (!resolved) {
-      console.log("No route for WS host:", rawHost);
-      return socket.destroy();
-    }
+    const resolved = await resolveDomain(host);
+    if (!resolved) return socket.destroy();
 
-    console.log("WS upgrade →", rawHost, "→", resolved.target);
-    wsProxyServer.ws(req, socket, head, { target: resolved.target });
+    wsProxyServer.ws(req, socket, head, { target: resolved.target, changeOrigin: false });
   } catch (err) {
     console.error("WS Error:", err);
     socket.destroy();
