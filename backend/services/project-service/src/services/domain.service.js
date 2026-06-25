@@ -11,6 +11,7 @@ import { project_env } from "../lib/env.js";
 import path from 'path';
 import fs from 'fs';
 import { writeNginxFileToHost } from "../utils/nginx/writeNginxFileToHost.js";
+import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
 
 
 export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdomain) => {
