@@ -22,7 +22,7 @@ const server = http.createServer(app);
 app.set("trust proxy", true);
 app.disable("x-powered-by");
 app.use(compression());
-app.use(express.json()); 
+app.use(express.json());
 
 const { httpProxyServer, wsProxyServer, close: closeProxyServers } = createProxyServers("user-router");
 const domainResolver = createUserDomainResolver({ redisclient });
@@ -98,7 +98,7 @@ server.on("upgrade", async (req, socket, head) => {
 
     wsProxyServer.ws(req, socket, head, {
       target: resolved.target,
-      changeOrigin: false,
+      changeOrigin: true,
     });
   } catch (err) {
     console.error("[UserRouter] WS error:", err);
