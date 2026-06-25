@@ -5,7 +5,6 @@ import { HTTP_MAX_SOCKETS, PROXY_TIMEOUT_MS } from "./config.js";
 export function createProxyServers(routerName) {
   const httpAgent = new http.Agent({
     keepAlive: true,
-    maxSockets: HTTP_MAX_SOCKETS,
   });
 
   const httpProxyServer = httpProxy.createProxyServer({
