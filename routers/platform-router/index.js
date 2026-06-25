@@ -37,16 +37,12 @@ app.use((req, res) => {
 });
 
 server.on("upgrade", (req, socket, head) => {
-  console.log('req reacehd on upgrade')
   const host = getRequestHost(req.headers.host);
-  console.log(host)
   if (!host) return socket.destroy();
 
   const route = getPlatformRoute(host);
   if (!route) return socket.destroy();
 
-  console.log('reaced route')
-  console.log(route.target)
 
   wsProxyServer.ws(req, socket, head, {
     target: route.target,
