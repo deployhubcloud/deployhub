@@ -161,6 +161,18 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
             .map(d => d.trim().toLowerCase())
             .filter(Boolean)
         )];
+
+        await project.save();
+
+        if (nginxContainer) {
+            try {
+                const info = await nginxContainer.inspect();
+                if (info.State.Running) await nginxContainer.stop({ t: 5 });
+            } catch (e) { console.warn(`[custom domain] stop failed: ${e.message}`); }
+            try {
+                await nginxContainer.remove({ force: true });
+            } catch (e) { console.warn(`[custom domain] remove failed: ${e.message}`); }
+        }
     } catch (error) {
         if (nginxContainer) {
             try {
