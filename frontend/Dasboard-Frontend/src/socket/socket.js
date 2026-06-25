@@ -8,7 +8,6 @@ export function getSocket() {
         socket = io(WS_URL, {
             path: '/ws/',
             withCredentials: true,
-            transports: ['polling', 'websocket'],
             reconnection: true,
             reconnectionDelay: 2000,
             reconnectionAttempts: Infinity,
