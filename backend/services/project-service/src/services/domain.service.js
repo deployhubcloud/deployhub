@@ -12,7 +12,7 @@ import path from 'path';
 import fs from 'fs';
 import { writeNginxFileToHost } from "../utils/nginx/writeNginxFileToHost.js";
 import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
-
+import { docker } from "../utils/docker.js";
 
 export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdomain) => {
 
