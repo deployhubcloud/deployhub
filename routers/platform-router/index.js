@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Router } from "express";
 import http from "http";
 import compression from "compression";
 import dotenv from "dotenv";
@@ -37,12 +37,15 @@ app.use((req, res) => {
 });
 
 server.on("upgrade", (req, socket, head) => {
+
+  console.log("upgrade req received")
   const host = getRequestHost(req.headers.host);
   if (!host) return socket.destroy();
 
   const route = getPlatformRoute(host);
   if (!route) return socket.destroy();
 
+  console.log(route.target)
 
   wsProxyServer.ws(req, socket, head, {
     target: route.target,
