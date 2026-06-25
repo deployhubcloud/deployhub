@@ -13,6 +13,7 @@ import fs from 'fs';
 import { writeNginxFileToHost } from "../utils/nginx/writeNginxFileToHost.js";
 import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
 import { docker } from "../utils/docker.js";
+import { reloadNginx } from "../../../../shared/nginx/reloadNginx.js";
 
 export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdomain) => {
 
@@ -101,7 +102,9 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
     }
 
 
-    const conflict = await Project.findOne({ customDomains: domain, _id: { $ne: projectId } })
+    const normalizedDomain = domain.trim().toLowerCase();
+
+    const conflict = await Project.findOne({ customDomains: normalizedDomain, _id: { $ne: projectId } })
     if (conflict) throw new AppError("Domain already in use", 409);
 
 
@@ -152,6 +155,12 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
             plan: project.plan,
         });
 
+        if (isProduction) await reloadNginx(docker);
+
+        project.customDomains = [...new Set(project.customDomains
+            .map(d => d.trim().toLowerCase())
+            .filter(Boolean)
+        )];
     } catch (error) {
         if (nginxContainer) {
             try {

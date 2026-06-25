@@ -36,9 +36,6 @@ export async function generateCertificate(domain, projectId) {
         console.log(isValid)
         if (!isValid) return null;
 
-        if (!fs.existsSync(LETSENCRYPT_DIR)) {
-            fs.mkdirSync(LETSENCRYPT_DIR, { recursive: true })
-        };
         const certPath = `${LETSENCRYPT_DIR}/${domain}/fullchain.pem`;
         const existing = fs.existsSync(certPath);
 
