@@ -6,7 +6,7 @@ import { registerLogsStreamHandler } from './handlers/logsStreamHandler.js'
 
 export function initWS(server, corsOrigins) {
     const io = new Server(server, {
-        path: '/ws',
+        path: '/ws/',
         cors: {
             origin: corsOrigins,
             credentials: true
