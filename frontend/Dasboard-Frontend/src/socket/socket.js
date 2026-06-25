@@ -8,8 +8,21 @@ export function getSocket() {
         socket = io(WS_URL, {
             transports: ['websocket'],
             reconnectionAttempts: 5,
+            withCredentials: true,
+            reconnection: true,
+            reconnectionDelay: 2000,
+            autoConnect: false,
         })
     }
+
+    socket.on("connect", () => {
+        console.log("Connected", socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+        console.log(err.message);
+        console.log(err);
+    });
     return socket
 }
 
