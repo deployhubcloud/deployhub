@@ -5,13 +5,9 @@ let socket = null
 
 export function getSocket() {
     if (!socket) {
-        socket = io(WS_URL, {
-            path: '/ws',
-            withCredentials: true,
-            reconnection: true,
-            reconnectionDelay: 2000,
-            reconnectionAttempts: Infinity,
-            autoConnect: false,
+        const socket = io(WS_URL, {
+            transports: ['websocket'],
+            reconnectionAttempts: 5,
         })
     }
     return socket
