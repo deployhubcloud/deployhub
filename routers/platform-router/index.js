@@ -48,7 +48,7 @@ server.on("upgrade", (req, socket, head) => {
   console.log('reaced route')
   wsProxyServer.ws(req, socket, head, {
     target: route.target,
-    changeOrigin: true,
+    changeOrigin: false,
   });
 });
 
