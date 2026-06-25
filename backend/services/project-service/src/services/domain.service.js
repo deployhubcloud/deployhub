@@ -136,9 +136,9 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
 
 
         const nginxConfig = writeNginxConfig({
-            type: projectType === 'static' ? 'static' : 'backend',
-            staticPath: projectType === 'static' ? `/data/static/${projectId}` : undefined,
-            target: projectType !== 'static' ? `http://host.docker.internal:8081` : undefined,
+            type: project.type === 'static' ? 'static' : 'backend',
+            staticPath: project.type === 'static' ? `/data/static/${projectId}` : undefined,
+            target: project.type !== 'static' ? `http://host.docker.internal:8081` : undefined,
             domain: `${domain}`,
             sslDomain: `${domain}`,
             outputPath: null,
