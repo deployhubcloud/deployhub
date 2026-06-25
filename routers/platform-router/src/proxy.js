@@ -20,8 +20,6 @@ export function createProxyServers(routerName) {
     changeOrigin: true,
     ws: true,
     xfwd: true,
-    proxyTimeout: PROXY_TIMEOUT_MS,
-    timeout: PROXY_TIMEOUT_MS,
   });
 
   httpProxyServer.on("proxyReq", (proxyReq) => {
