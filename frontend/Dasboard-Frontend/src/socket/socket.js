@@ -5,7 +5,7 @@ let socket = null
 
 export function getSocket() {
     if (!socket) {
-        const socket = io(WS_URL, {
+        socket = io(WS_URL, {
             transports: ['websocket'],
             reconnectionAttempts: 5,
         })
