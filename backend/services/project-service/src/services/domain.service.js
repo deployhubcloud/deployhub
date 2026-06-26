@@ -278,10 +278,8 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
     const project = await Project.findOne({ _id: projectId, userId: userId })
     if (!project) throw new AppError('Project not found', 404)
 
-
-    const normalisedDomain = domain.toLowerCase();
-    console.log(normalisedDomain)
-    if (project.customDomains.includes(normalisedDomain)) {
+    const normalizedDomain = domain.toLowerCase();
+    if (project.customDomains.includes(normalizedDomain)) {
         let nginxContainer = null;
         try {
             const isProduction = project_env.NODE_ENV === 'production';
@@ -305,13 +303,13 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
             });
             await nginxContainer.start();
 
-            await execInContainer(nginxContainer, ['rm', '-f', `/data/nginx/custom-domains/${normalisedDomain}.conf`]);
+            await execInContainer(nginxContainer, ['rm', '-f', `/data/nginx/custom-domains/${normalizedDomain}.conf`]);
 
 
             project.customDomains = project.customDomains.filter(d => d !== normalizedDomain);
             await project.save();
 
-            await SslCertificate.findByIdAndDelete({ domain: normalisedDomain });
+            await SslCertificate.findByIdAndDelete({ domain: normalizedDomain });
 
             if (nginxContainer) {
                 try {
