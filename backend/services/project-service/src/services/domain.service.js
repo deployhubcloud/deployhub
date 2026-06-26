@@ -43,12 +43,12 @@ export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdom
 
     const redis = getRedis()
 
+    const normalizedNewSubDomain = newSubdomain.toLowerCase()
+
     console.log()
     const existing = await Project.exists({
-        subdomain: newSubdomain
+        subdomain: normalizedNewSubDomain
     })
-
-    console.log(existing)
 
     if (existing) {
         throw new AppError("This subdomain is already taken. Please choose another", 409)
@@ -66,7 +66,7 @@ export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdom
     if (project.isMicroservice) throw new AppError("You cant add or change subdomain");
     if (project.status === "building" || project.status === "queued") throw new AppError("you cant change subdomain while proejct is building or in queued")
 
-    project.subdomain = newSubdomain;
+    project.subdomain = normalizedNewSubDomain;
     await project.save({ validateBeforeSave: false });
 
     await clearCacheProjectData(projectId, redis)
@@ -75,7 +75,7 @@ export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdom
         projectId,
         userId,
         oldSubdomain: oldsubDomain,
-        newSubdomain,
+        newSubdomain: normalizedNewSubDomain,
         projectType: project.type,
         assignedPort: project.assignedPort,
     });
@@ -271,6 +271,7 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
 
 export const removeCustomDomainService = async (domain, projectId, userId) => {
 
+    const redis = getRedis()
 
     if (!domain) throw new AppError("Domain required", 400);
 
@@ -322,6 +323,8 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
             }
 
             if (isProduction) await reloadNginx(docker);
+
+            await redis.del(`deployhub:users:customdomain:${domain}`)
         } catch (error) {
             if (nginxContainer) {
                 try {
