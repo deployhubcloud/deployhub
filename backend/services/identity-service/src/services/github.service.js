@@ -80,7 +80,7 @@ export const githubCallback = async (data) => {
 
     if (!user) {
 
-
+        const networkName = generateNetworkName(user._id);
 
         user = new User({
             email: primaryEmail,
@@ -92,12 +92,8 @@ export const githubCallback = async (data) => {
             provider: "github",
             status: "active",
             password: null,
+            networkName
         });
-
-        const networkName = generateNetworkName(user._id);
-
-        user.networkName = networkName;
-        await user.save();
 
         await welcomeQueue.add('sendWelcomeMessage', {
             fullname: user.fullName,

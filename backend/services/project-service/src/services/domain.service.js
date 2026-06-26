@@ -302,6 +302,7 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
                     AutoRemove: false,
                 },
             });
+
             await nginxContainer.start();
 
             await execInContainer(nginxContainer, ['rm', '-f', `/data/nginx/custom-domains/${normalizedDomain}.conf`]);
@@ -315,7 +316,7 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
             if (nginxContainer) {
                 try {
                     const info = await nginxContainer.inspect();
-                    if (info.State.Running) await nginxContainer.stop({ t: 5 });
+                    if (info.State.Running) await nginxContainer.stop();
                 } catch (e) { console.warn(`[custom domain] stop failed: ${e.message}`); }
                 try {
                     await nginxContainer.remove({ force: true });
@@ -329,7 +330,7 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
             if (nginxContainer) {
                 try {
                     const info = await nginxContainer.inspect();
-                    if (info.State.Running) await nginxContainer.stop({ t: 5 });
+                    if (info.State.Running) await nginxContainer.stop();
                 } catch (e) { console.warn(`[custom domain] stop failed: ${e.message}`); }
                 try {
                     await nginxContainer.remove({ force: true });
