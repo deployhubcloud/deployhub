@@ -102,7 +102,9 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
     }
 
 
-    const conflict = await Project.findOne({ customDomains: normalizedDomain, _id: { $ne: projectId } })
+    const normalizedDomain = domain.trim().toLowerCase();
+
+    const conflict = await Project.exists({ customDomains: normalizedDomain, _id: { $ne: projectId } })
     if (conflict) throw new AppError("Domain already in use", 409);
 
 
@@ -155,7 +157,6 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
 
         if (isProduction) await reloadNginx(docker);
 
-        const normalizedDomain = domain.trim().toLowerCase();
         project.customDomains = [...new Set([...project.customDomains, normalizedDomain])];
 
         await project.save();
