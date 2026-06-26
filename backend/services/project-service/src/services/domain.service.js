@@ -320,6 +320,8 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
                     await nginxContainer.remove({ force: true });
                 } catch (e) { console.warn(`[custom domain] remove failed: ${e.message}`); }
             }
+
+            if (isProduction) await reloadNginx(docker);
         } catch (error) {
             if (nginxContainer) {
                 try {
@@ -330,7 +332,6 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
                     await nginxContainer.remove({ force: true });
                 } catch (e) { console.warn(`[custom domain] remove failed: ${e.message}`); }
             }
-            throw error;
         }
 
     } else {
