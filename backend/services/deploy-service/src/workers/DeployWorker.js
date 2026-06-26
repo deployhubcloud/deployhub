@@ -117,14 +117,15 @@ async function deployStaticProject({ docker, projectId, buildId, buildsZipUrl, s
 
 const insertEnv = (projectEnv) => {
     const envVariables = [];
+
     if (projectEnv) {
         for (const [key, value] of Object.entries(projectEnv)) {
-            envVariables.push(`${key}=${encryptedValue}`);
+            envVariables.push(`${key}=${value}`);
         }
     }
 
-    return envVariables
-}
+    return envVariables;
+};
 
 export const ensureNetworkExists = async (networkName) => {
     try {
