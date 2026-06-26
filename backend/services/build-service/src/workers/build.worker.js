@@ -164,7 +164,7 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
             let viteEnvContent = '';
 
             for (const envVar of project.env || []) {
-                viteEnvContent += `${envVar.key}=${encryptedValue}\n`;
+                viteEnvContent += `${envVar.key}=${envVar.value}\n`;
             }
 
             dynamicBuildArgs.VITE_ENV_CONTENT = viteEnvContent;
