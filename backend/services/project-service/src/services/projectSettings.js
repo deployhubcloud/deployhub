@@ -204,7 +204,8 @@ export const updateHealthMonitoringAndNotification = async (userId, projectId, b
 
         await startStopHealthCheck.add('start-stop-health-check', {
             projectId: projectId,
-            enabled: monitor.enabled
+            enabled: monitor.enabled,
+            intervalSeconds: monitor.intervalSeconds
         })
     }
 
