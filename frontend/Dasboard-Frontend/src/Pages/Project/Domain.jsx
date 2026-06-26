@@ -62,7 +62,7 @@ export function Domain() {
                 setCooldown(false);
             }, 8000);
         } catch (err) {
-            setError("Failed to update subdomain.");
+            setError(`${err.response?.data?.message}`);
         } finally {
             setSaving(false);
         }
