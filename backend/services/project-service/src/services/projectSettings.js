@@ -202,11 +202,13 @@ export const updateHealthMonitoringAndNotification = async (userId, projectId, b
         if (monitor.healthPath) update['monitor.healthPath'] = monitor.healthPath;
         if (monitor.failedTries) update['monitor.failedTries'] = monitor.failedTries;
 
-        await startStopHealthCheck.add('start-stop-health-check', {
-            projectId: projectId,
-            enabled: monitor.enabled,
-            intervalSeconds: monitor.intervalSeconds
-        })
+        if (monitor.enabled !== undefined && projectPlan === 'pro') {
+            await startStopHealthCheck.add('start-stop-health-check', {
+                projectId: projectId,
+                enabled: monitor.enabled,
+                intervalSeconds: monitor.intervalSeconds
+            })
+        }
     }
 
     if (notifications?.email) {
