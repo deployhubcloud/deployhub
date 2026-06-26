@@ -101,7 +101,7 @@ export const deleteCustomDomainController = async (req, res) => {
 
         return res.status(200).json({
             Success: true,
-            message: "Domain Added Successfully"
+            message: "doamin remove successfully"
         })
 
     } catch (error) {

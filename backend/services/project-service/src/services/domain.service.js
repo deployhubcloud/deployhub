@@ -35,7 +35,6 @@ const SERVER_IP = process.env.SERVER_IP
 const CERTBOT_EMAIL = process.env.CERTBOT_EMAIL
 
 const LETSENCRYPT_DIR = '/etc/letsencrypt/live'
-
 const LETSENCRYPT_BIND = '/home/rahul/docker/letsencrypt:/etc/letsencrypt'
 const NGINX_HTML_BIND = '/home/rahul/docker/nginx/html:/var/www/html'
 const NETWORK_MODE = 'proxy-net'
@@ -281,16 +280,10 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
 
 
     const normalisedDomain = domain.toLowerCase();
-
+    console.log(normalisedDomain)
     if (project.customDomains.includes(normalisedDomain)) {
         let nginxContainer = null;
         try {
-            const file = `${NGINX_CUSTOM_DIR}/${domain}.conf`
-            if (fs.existsSync(file)) {
-                fs.unlinkSync(file)
-                console.log(`[ssl] Nginx config removed for ${domain}`)
-            }
-
             const isProduction = project_env.NODE_ENV === 'production';
 
             const localNginxCustomDomainDir = path.join(process.cwd(), 'nginx/custom-domains')
@@ -339,6 +332,7 @@ export const removeCustomDomainService = async (domain, projectId, userId) => {
                     await nginxContainer.remove({ force: true });
                 } catch (e) { console.warn(`[custom domain] remove failed: ${e.message}`); }
             }
+            throw error;
         }
 
     } else {
