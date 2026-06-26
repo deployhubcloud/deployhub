@@ -6,5 +6,6 @@ export const QUEUE_NAMES = {
     ALERT: 'deployhub-Alert',
     SUBDOMAIN_CHANGE: 'subdomain-change',
     MONITORING: 'deplyhub-monitoring',
-    HEALTH_CHECK_QUEUE: 'healthCheckQueue'
+    HEALTH_CHECK_QUEUE: 'healthCheckQueue',
+    START_STOP_HEALTH_CHECK: 'start-stop-health-check'
 }

@@ -2,19 +2,104 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/apiclient";
 
+// ─── tiny helpers ────────────────────────────────────────────────────────────
+
+function Toggle({ value, onChange }) {
+    return (
+        <button
+            type="button"
+            onClick={() => onChange(!value)}
+            className={`w-11 h-6 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#adc6ff]/40 ${value ? "bg-[#adc6ff]" : "bg-[#2d3449]"}`}
+        >
+            <span
+                className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-200 ${value ? "left-[calc(100%-20px)] bg-[#00285d]" : "left-1 bg-[#424754]"}`}
+            />
+        </button>
+    );
+}
+
+function SectionHeader({ icon, label, right }) {
+    return (
+        <div className="px-5 py-3 border-b border-[#424754] bg-[#1c2438] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#adc6ff] text-[18px]">{icon}</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#c2c6d6]">{label}</span>
+            </div>
+            {right}
+        </div>
+    );
+}
+
+function FieldLabel({ children }) {
+    return <label className="block text-[11px] font-bold uppercase tracking-widest text-[#8891a8] mb-1.5">{children}</label>;
+}
+
+function MonoInput({ icon, ...props }) {
+    return (
+        <div className="relative">
+            {icon && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#424754] text-[16px]">{icon}</span>
+            )}
+            <input
+                className={`w-full bg-[#0b1326] border border-[#2d3449] rounded-lg py-2 font-mono text-sm text-[#dae2fd] placeholder-[#424754] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff]/30 outline-none transition-all ${icon ? "pl-9 pr-3" : "px-3"}`}
+                {...props}
+            />
+        </div>
+    );
+}
+
+// Save button states
+function SaveBtn({ saving, saved, onClick, label = "Save" }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={saving}
+            className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all disabled:cursor-not-allowed
+                ${saved
+                    ? "bg-green-500/10 text-green-400 border border-green-500/30"
+                    : "bg-[#adc6ff]/10 text-[#adc6ff] border border-[#adc6ff]/20 hover:bg-[#adc6ff]/20"
+                } disabled:opacity-50`}
+        >
+            {saving ? (
+                <span className="material-symbols-outlined animate-spin text-[15px]">progress_activity</span>
+            ) : saved ? (
+                <span className="material-symbols-outlined text-[15px]">check</span>
+            ) : (
+                <span className="material-symbols-outlined text-[15px]">save</span>
+            )}
+            {saving ? "Saving…" : saved ? "Saved" : label}
+        </button>
+    );
+}
+
+// ─── main component ───────────────────────────────────────────────────────────
+
 export function Settings() {
     const { id: projectId } = useParams();
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState("");
+    const [projectPlan, setProjectPlan] = useState("free");
 
-    // Form state
+    // General (read-only display)
     const [projectName, setProjectName] = useState("");
     const [projectType, setProjectType] = useState("node");
     const [repoUrl, setRepoUrl] = useState("");
     const [branch, setBranch] = useState("master");
+
+    // Build & start
     const [rootDirectory, setRootDirectory] = useState(".");
+    const [startCommand, setStartCommand] = useState("");
+    const [port, setPort] = useState(3000);
+    const [publishDir, setPublishDir] = useState("");
+    const [buildCommand, setBuildCommand] = useState("");
+    const [savingBuild, setSavingBuild] = useState(false);
+    const [savedBuild, setSavedBuild] = useState(false);
+
+    // Env vars
+    const [envVars, setEnvVars] = useState([{ key: "", value: "" }]);
+    const [savingEnv, setSavingEnv] = useState(false);
+    const [savedEnv, setSavedEnv] = useState(false);
 
     // Monitor
     const [monitorEnabled, setMonitorEnabled] = useState(false);
@@ -30,32 +115,35 @@ export function Settings() {
     const [telegramChatId, setTelegramChatId] = useState("");
     const [emailEnabled, setEmailEnabled] = useState(false);
     const [emailAddress, setEmailAddress] = useState("");
+    const [savingNotif, setSavingNotif] = useState(false);
+    const [savedNotif, setSavedNotif] = useState(false);
+    const [notifError, setNotifError] = useState(null);
 
-    // Project-type specific
-    const [startCommand, setStartCommand] = useState("");
-    const [port, setPort] = useState(3000);
-    const [publishDir, setPublishDir] = useState("");
-    const [buildCommand, setBuildCommand] = useState("");
-
-    // Environment variables
-    const [envVars, setEnvVars] = useState([{ key: "", value: "" }]);
-
+    // Delete
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [confirmName, setConfirmName] = useState("");
     const [deleting, setDeleting] = useState(false);
+
+    // ── fetch ────────────────────────────────────────────────────────────────
 
     useEffect(() => {
         const fetchSettings = async () => {
             try {
                 setLoading(true);
                 const response = await api.get(`/project/settings/${projectId}`);
-                const s = response.data.settings; // adjust if your API returns differently
+                const s = response.data.settings;
 
                 setProjectName(s.projectName || "");
                 setProjectType(s.projectType || "node");
                 setRepoUrl(s.repoUrl || "");
                 setBranch(s.branch || "master");
+                setProjectPlan(s.projectPlan || "free");
+
                 setRootDirectory(s.rootDirectory || ".");
+                if (s.startCommand) setStartCommand(s.startCommand);
+                if (s.port) setPort(s.port);
+                if (s.publishDir) setPublishDir(s.publishDir);
+                if (s.buildCommand) setBuildCommand(s.buildCommand);
 
                 if (s.monitor) {
                     setMonitorEnabled(s.monitor.enabled || false);
@@ -65,31 +153,22 @@ export function Settings() {
                 }
 
                 if (s.notifications) {
-                    if (s.notifications.discord) {
-                        setDiscordEnabled(s.notifications.discord.enabled || false);
-                        setDiscordWebhook(s.notifications.discord.webhookUrl || "");
-                    }
-                    if (s.notifications.telegram) {
-                        setTelegramEnabled(s.notifications.telegram.enabled || false);
-                        setTelegramBotToken(s.notifications.telegram.botToken || "");
-                        setTelegramChatId(s.notifications.telegram.chatId || "");
-                    }
-                    if (s.notifications.email) {
-                        setEmailEnabled(s.notifications.email.enabled || false);
-                        setEmailAddress(s.notifications.email.emailAddress || "");
-                    }
+                    const n = s.notifications;
+                    if (n.discord) { setDiscordEnabled(n.discord.enabled || false); setDiscordWebhook(n.discord.webhookUrl || ""); }
+                    if (n.telegram) { setTelegramEnabled(n.telegram.enabled || false); setTelegramBotToken(n.telegram.botToken || ""); setTelegramChatId(n.telegram.chatId || ""); }
+                    if (n.email) { setEmailEnabled(n.email.enabled || false); setEmailAddress(n.email.emailAddress || ""); }
                 }
 
-                if (s.startCommand) setStartCommand(s.startCommand);
-                if (s.port) setPort(s.port);
-                if (s.publishDir) setPublishDir(s.publishDir);
-                if (s.buildCommand) setBuildCommand(s.buildCommand);
-
+                // env is [{key, encryptedValue}] from backend — show keys only, values masked
                 if (s.env && typeof s.env === "object") {
-                    const envArray = Object.entries(s.env).map(([key, value]) => ({ key, value }));
-                    setEnvVars(envArray.length ? envArray : [{ key: "", value: "" }]);
+                    setEnvVars(
+                        Object.entries(s.env).map(([key, value]) => ({
+                            key,
+                            value
+                        }))
+                    );
                 }
-            } catch (err) {
+            } catch {
                 setError("Failed to load project settings.");
             } finally {
                 setLoading(false);
@@ -98,81 +177,100 @@ export function Settings() {
         fetchSettings();
     }, [projectId]);
 
-    const handleEnvChange = (index, field, value) => {
-        const updated = [...envVars];
-        updated[index][field] = value;
-        setEnvVars(updated);
-    };
+    // ── save: build & start ──────────────────────────────────────────────────
 
-    const addEnvRow = () => setEnvVars([...envVars, { key: "", value: "" }]);
-    const removeEnvRow = (index) => {
-        if (envVars.length === 1) return;
-        const updated = envVars.filter((_, i) => i !== index);
-        setEnvVars(updated);
-    };
-
-    const handleSave = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setSuccessMessage("");
-        setSaving(true);
-
-        const envObject = envVars.reduce((acc, { key, value }) => {
-            if (key.trim()) acc[key.trim()] = value;
-            return acc;
-        }, {});
-
-        const payload = {
-            projectName,
-            projectType,
-            repoUrl,
-            branch,
-            rootDirectory,
-            monitor: {
-                enabled: monitorEnabled,
-                intervalSeconds,
-                healthPath,
-                failedTries,
-            },
-            notifications: {
-                discord: {
-                    enabled: discordEnabled,
-                    webhookUrl: discordEnabled ? discordWebhook : null,
-                },
-                telegram: {
-                    enabled: telegramEnabled,
-                    botToken: telegramEnabled ? telegramBotToken : null,
-                    chatId: telegramEnabled ? telegramChatId : null,
-                },
-                email: {
-                    enabled: emailEnabled,
-                    emailAddress: emailEnabled ? emailAddress : null,
-                },
-            },
-            env: envObject,
-            ...(projectType === "static"
-                ? { publishDir, buildCommand }
-                : { startCommand, port }),
-        };
-
+    const handleSaveBuild = async () => {
+        setSavingBuild(true);
+        setSavedBuild(false);
         try {
-            await api.updateProjectSettings(projectId, payload);
-            setSuccessMessage("Settings saved successfully!");
-            setTimeout(() => setSuccessMessage(""), 3000);
+            await api.patch(`/project/settings/build-and-start/${projectId}`, {
+                buildCommand,
+                publishDir,
+                startCommand,
+                port,
+                rootDirectory,
+            });
+            setSavedBuild(true);
+            setTimeout(() => setSavedBuild(false), 3000);
         } catch (err) {
-            setError("Failed to save settings. Please try again.");
+            setError(err?.response?.data?.message || "Failed to save build settings.");
         } finally {
-            setSaving(false);
+            setSavingBuild(false);
         }
     };
+
+    // ── save: env vars ───────────────────────────────────────────────────────
+
+    const handleSaveEnv = async () => {
+        setSavingEnv(true);
+        setSavedEnv(false);
+        const env = envVars.reduce((acc, { key, value }) => {
+            if (key.trim() && value.trim()) acc[key.trim()] = value.trim();
+            return acc;
+        }, {});
+        try {
+            await api.patch(`/project/settings/env/${projectId}`, { env });
+            setSavedEnv(true);
+            setTimeout(() => setSavedEnv(false), 3000);
+        } catch (err) {
+            setError(err?.response?.data?.message || "Failed to save environment variables.");
+        } finally {
+            setSavingEnv(false);
+        }
+    };
+
+    // ── save: notifications & monitor ────────────────────────────────────────
+
+    const handleSaveNotif = async () => {
+        setNotifError(null);
+        setSavingNotif(true);
+        setSavedNotif(false);
+
+        // client-side guard for pro plan
+        if (monitorEnabled && projectPlan !== "pro") {
+            setNotifError("Health monitoring requires a Pro plan.");
+            setSavingNotif(false);
+            return;
+        }
+
+        try {
+            await api.patch(`/project/settings/notification/${projectId}`, {
+                projectPlan,
+                monitor: { enabled: monitorEnabled, intervalSeconds, healthPath, failedTries },
+                notifications: {
+                    discord: { enabled: discordEnabled, webhookUrl: discordEnabled ? discordWebhook : undefined },
+                    telegram: { enabled: telegramEnabled, botToken: telegramEnabled ? telegramBotToken : undefined, chatId: telegramEnabled ? telegramChatId : undefined },
+                    email: { enabled: emailEnabled, emailAddress: emailEnabled ? emailAddress : undefined },
+                },
+            });
+            setSavedNotif(true);
+            setTimeout(() => setSavedNotif(false), 3000);
+        } catch (err) {
+            setNotifError(err?.response?.data?.message || "Failed to save notification settings.");
+        } finally {
+            setSavingNotif(false);
+        }
+    };
+
+    // ── env helpers ──────────────────────────────────────────────────────────
+
+    const handleEnvChange = (i, field, val) => {
+        const updated = [...envVars];
+        updated[i][field] = val;
+        setEnvVars(updated);
+    };
+    const addEnvRow = () => setEnvVars([...envVars, { key: "", value: "" }]);
+    const removeEnvRow = (i) => envVars.length > 1 && setEnvVars(envVars.filter((_, idx) => idx !== i));
+
+    // ── delete ───────────────────────────────────────────────────────────────
 
     const handleDelete = async () => {
         if (confirmName !== projectName) return;
         setDeleting(true);
         try {
             await api.delete(`/project/${projectId}`);
-            window.location.href = '/';
-        } catch (err) {
+            window.location.href = "/";
+        } catch {
             setError("Failed to delete project.");
         } finally {
             setDeleting(false);
@@ -180,493 +278,372 @@ export function Settings() {
         }
     };
 
+    // ── loading ──────────────────────────────────────────────────────────────
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <span className="material-symbols-outlined animate-spin text-[32px] text-[#adc6ff]">
-                    progress_activity
-                </span>
+                <span className="material-symbols-outlined animate-spin text-[32px] text-[#adc6ff]">progress_activity</span>
             </div>
         );
     }
 
+    // ── render ───────────────────────────────────────────────────────────────
+
     return (
         <main className="min-h-screen">
-            <div className="p-6 max-w-[1200px] mx-auto">
-                {/* Page Header */}
-                <div className="mb-8 flex justify-between items-end">
-                    <div>
-                        <div className="flex items-center gap-2 text-[#c2c6d6] mb-1">
-                            <span className="text-xs uppercase tracking-wider font-semibold">Project Settings</span>
-                            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                            <span className="text-xs font-semibold">{projectName}</span>
-                        </div>
-                        <h3 className="text-2xl font-semibold text-[#dae2fd]">Configuration</h3>
+            <div className="p-6 max-w-[900px] mx-auto space-y-5">
+
+                {/* ── Page Header ── */}
+                <div className="mb-6">
+                    <div className="flex items-center gap-1.5 text-[#424754] mb-1">
+                        <span className="text-[11px] uppercase tracking-widest font-bold">Project Settings</span>
+                        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                        <span className="text-[11px] font-bold text-[#adc6ff]">{projectName}</span>
                     </div>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="px-8 py-2 bg-[#adc6ff] text-[#00285d] rounded text-xs font-bold uppercase tracking-wider transition-all hover:shadow-[0_0_15px_rgba(173,198,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            {saving ? (
-                                <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                            ) : (
-                                <span className="material-symbols-outlined text-[18px]">save</span>
-                            )}
-                            {saving ? "Saving..." : "Save Changes"}
-                        </button>
+                    <div className="flex items-end justify-between">
+                        <h1 className="text-xl font-semibold text-[#dae2fd] tracking-tight">Configuration</h1>
+                        {projectPlan === "pro" && (
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-[#adc6ff]/10 border border-[#adc6ff]/20 text-[#adc6ff] rounded-full">Pro</span>
+                        )}
                     </div>
                 </div>
 
+                {/* global error */}
                 {error && (
-                    <div className="mb-6 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2 rounded flex items-center gap-2">
-                        <span className="material-symbols-outlined">error</span>
+                    <div className="bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm">
+                        <span className="material-symbols-outlined text-[18px]">error</span>
                         {error}
-                    </div>
-                )}
-                {successMessage && (
-                    <div className="mb-6 bg-green-900/10 border border-green-500/30 text-green-400 px-4 py-2 rounded flex items-center gap-2">
-                        <span className="material-symbols-outlined">check_circle</span>
-                        {successMessage}
+                        <button onClick={() => setError(null)} className="ml-auto material-symbols-outlined text-[16px] opacity-60 hover:opacity-100">close</button>
                     </div>
                 )}
 
-                <div className="space-y-6">
-                    {/* Section 1: General Details (full width) */}
-                    <section className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                        <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#adc6ff]">info</span>
-                            <span className="text-xs font-semibold uppercase tracking-wider">General Details</span>
+                {/* ── General (read-only) ── */}
+                <section className="bg-[#131929] rounded-xl border border-[#252d42] overflow-hidden">
+                    <SectionHeader icon="info" label="General" />
+                    <div className="p-5 grid grid-cols-2 gap-4">
+                        <div>
+                            <FieldLabel>Project Name</FieldLabel>
+                            <MonoInput icon="tag" value={projectName} onChange={e => setProjectName(e.target.value)} />
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-6">
+                        <div>
+                            <FieldLabel>Project Type</FieldLabel>
+                            <div className="flex items-center gap-2 bg-[#0b1326] border border-[#2d3449] rounded-lg px-3 py-2">
+                                <span className="material-symbols-outlined text-[#adc6ff] text-[16px]">{projectType === "static" ? "html" : "terminal"}</span>
+                                <span className="font-mono text-sm text-[#8891a8] capitalize">{projectType}</span>
+                            </div>
+                        </div>
+                        <div className="col-span-2">
+                            <FieldLabel>Repository</FieldLabel>
+                            <div className="flex items-center gap-2 bg-[#0b1326] border border-[#2d3449] rounded-lg px-3 py-2">
+                                <span className="material-symbols-outlined text-[#424754] text-[16px]">account_tree</span>
+                                <span className="font-mono text-sm text-[#dae2fd] flex-1 truncate">{repoUrl}</span>
+                                <span className="px-2 py-0.5 bg-[#1c2438] border border-[#2d3449] rounded text-[11px] font-bold text-[#adc6ff]">{branch}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Build & Start ── */}
+                <section className="bg-[#131929] rounded-xl border border-[#252d42] overflow-hidden">
+                    <SectionHeader
+                        icon="build"
+                        label={projectType === "static" ? "Build & Output" : "Start Command & Port"}
+                        right={<SaveBtn saving={savingBuild} saved={savedBuild} onClick={handleSaveBuild} />}
+                    />
+                    <div className="p-5">
+                        {projectType === "static" ? (
+                            <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">Project Name</label>
-                                    <input
-                                        className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                                        type="text"
-                                        value={projectName}
-                                        onChange={(e) => setProjectName(e.target.value)}
-                                    />
+                                    <FieldLabel>Root Directory</FieldLabel>
+                                    <MonoInput icon="folder" value={rootDirectory} onChange={e => setRootDirectory(e.target.value)} placeholder="." />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">Project Type</label>
-                                    <div className="flex items-center gap-2 bg-[#0b1326] border border-[#424754] rounded p-2">
-                                        <span className="material-symbols-outlined text-[#adc6ff] text-[18px]">
-                                            {projectType === "static" ? "html" : "terminal"}
-                                        </span>
-                                        <span className="font-mono text-sm capitalize">{projectType} (v24)</span>
-                                    </div>
+                                    <FieldLabel>Build Command</FieldLabel>
+                                    <MonoInput icon="terminal" value={buildCommand} onChange={e => setBuildCommand(e.target.value)} placeholder="npm run build" />
+                                </div>
+                                <div>
+                                    <FieldLabel>Publish Directory</FieldLabel>
+                                    <MonoInput icon="output" value={publishDir} onChange={e => setPublishDir(e.target.value)} placeholder="dist" />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">Repository Source</label>
-                                <div className="flex items-center gap-2 bg-[#0b1326] border border-[#424754] rounded p-2">
-                                    <span className="material-symbols-outlined text-[#c2c6d6]">account_tree</span>
-                                    <span className="font-mono text-sm flex-1 text-[#dae2fd] truncate">{repoUrl}</span>
-                                    <span className="px-1 py-0.5 bg-[#2d3449] rounded text-xs font-semibold text-[#adc6ff]">{branch}</span>
+                        ) : (
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <FieldLabel>Root Directory</FieldLabel>
+                                    <MonoInput icon="folder" value={rootDirectory} onChange={e => setRootDirectory(e.target.value)} placeholder="." />
                                 </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Section 2: Build & Deployment Settings */}
-                    <section className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                        <div className="p-4 border-b border-[#424754] bg-[#222a3d] border-t-2 border-[#adc6ff] flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#adc6ff]">build</span>
-                            <span className="text-xs font-semibold uppercase tracking-wider">
-                                {projectType === "static" ? "Build & Output Settings" : "Start Command & Port"}
-                            </span>
-                        </div>
-                        <div className="p-6">
-                            {projectType === "static" ? (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="space-y-4">
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Root Directory</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#c2c6d6] text-[18px]">folder</span>
-                                            <input
-                                                className="w-full bg-[#0b1326] border border-[#424754] rounded pl-10 pr-2 py-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                                                type="text"
-                                                value={rootDirectory}
-                                                onChange={(e) => setRootDirectory(e.target.value)}
-                                            />
-                                        </div>
-                                        <p className="text-xs font-semibold text-[#c2c6d6] opacity-60">Directory where the source code resides.</p>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Build Command</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#c2c6d6] text-[18px]">terminal</span>
-                                            <input
-                                                className="w-full bg-[#0b1326] border border-[#424754] rounded pl-10 pr-2 py-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                                                type="text"
-                                                value={buildCommand}
-                                                onChange={(e) => setBuildCommand(e.target.value)}
-                                                placeholder="npm run build"
-                                            />
-                                        </div>
-                                        <p className="text-xs font-semibold text-[#c2c6d6] opacity-60">Command used to generate the build assets.</p>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Publish Directory</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#c2c6d6] text-[18px]">output</span>
-                                            <input
-                                                className="w-full bg-[#0b1326] border border-[#424754] rounded pl-10 pr-2 py-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                                                type="text"
-                                                value={publishDir}
-                                                onChange={(e) => setPublishDir(e.target.value)}
-                                                placeholder="dist"
-                                            />
-                                        </div>
-                                        <p className="text-xs font-semibold text-[#c2c6d6] opacity-60">Folder that contains the static output files.</p>
-                                    </div>
+                                <div>
+                                    <FieldLabel>Start Command</FieldLabel>
+                                    <MonoInput icon="play_arrow" value={startCommand} onChange={e => setStartCommand(e.target.value)} placeholder="node index.js" />
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Start Command</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#c2c6d6] text-[18px]">play_arrow</span>
-                                            <input
-                                                className="w-full bg-[#0b1326] border border-[#424754] rounded pl-10 pr-2 py-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                                                type="text"
-                                                value={startCommand}
-                                                onChange={(e) => setStartCommand(e.target.value)}
-                                                placeholder="node index.js"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Port</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#c2c6d6] text-[18px]">lan</span>
-                                            <input
-                                                className="w-full bg-[#0b1326] border border-[#424754] rounded pl-10 pr-2 py-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                                                type="number"
-                                                value={port}
-                                                onChange={(e) => setPort(parseInt(e.target.value) || 3000)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </section>
-
-                    {/* Environment Variables */}
-                    <section className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                        <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[#adc6ff]">key</span>
-                                <span className="text-xs font-semibold uppercase tracking-wider">Environment Variables</span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={addEnvRow}
-                                className="px-4 py-1 bg-[#adc6ff]/10 text-[#adc6ff] rounded text-xs font-semibold uppercase tracking-wider flex items-center gap-1 hover:bg-[#adc6ff]/20 transition"
-                            >
-                                <span className="material-symbols-outlined text-[16px]">add</span> Add
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            {envVars.map((env, idx) => (
-                                <div key={idx} className="flex gap-4 items-center">
-                                    <input
-                                        type="text"
-                                        placeholder="KEY"
-                                        value={env.key}
-                                        onChange={(e) => handleEnvChange(idx, "key", e.target.value)}
-                                        className="flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="value"
-                                        value={env.value}
-                                        onChange={(e) => handleEnvChange(idx, "value", e.target.value)}
-                                        className="flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeEnvRow(idx)}
-                                        disabled={envVars.length === 1}
-                                        className="text-[#c2c6d6] hover:text-[#ffb4ab] transition disabled:opacity-30"
-                                    >
-                                        <span className="material-symbols-outlined">delete</span>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* Section 3 & 4: Monitoring & Notifications */}
-                    <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Monitoring – only for non-static */}
-                        {projectType !== "static" && (
-                            <div className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                                <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[#adc6ff]">monitoring</span>
-                                        <span className="text-xs font-semibold uppercase tracking-wider">Health Monitoring</span>
-                                    </div>
-                                    <button
-                                        onClick={() => setMonitorEnabled(!monitorEnabled)}
-                                        className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${monitorEnabled ? "bg-[#adc6ff]" : "bg-[#2d3449]"
-                                            }`}
-                                    >
-                                        <span
-                                            className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-200 ${monitorEnabled ? "left-[calc(100%-20px)] bg-white" : "left-1 bg-[#424754]"
-                                                }`}
-                                        ></span>
-                                    </button>
-                                </div>
-                                <div className="p-6">
-                                    {monitorEnabled ? (
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div>
-                                                <label className="text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Interval (s)</label>
-                                                <input
-                                                    type="number"
-                                                    value={intervalSeconds}
-                                                    onChange={(e) => setIntervalSeconds(parseInt(e.target.value) || 60)}
-                                                    className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Health Path</label>
-                                                <input
-                                                    type="text"
-                                                    value={healthPath}
-                                                    onChange={(e) => setHealthPath(e.target.value)}
-                                                    className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-semibold uppercase tracking-wider text-[#c2c6d6]">Failed Tries</label>
-                                                <input
-                                                    type="number"
-                                                    value={failedTries}
-                                                    onChange={(e) => setFailedTries(parseInt(e.target.value) || 2)}
-                                                    className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-between p-4 bg-[#0b1326] border border-[#424754] rounded-lg">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded bg-[#93000a]/10 flex items-center justify-center text-[#ffb4ab]">
-                                                    <span className="material-symbols-outlined">health_metrics</span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold text-[#dae2fd]">Health Checks</p>
-                                                    <p className="text-xs font-semibold text-[#c2c6d6]">Automated endpoint verification</p>
-                                                </div>
-                                            </div>
-                                            <span className="text-xs font-semibold text-[#ffb4ab] bg-[#93000a]/10 px-1 py-0.5 rounded uppercase">Disabled</span>
-                                        </div>
-                                    )}
+                                <div>
+                                    <FieldLabel>Port</FieldLabel>
+                                    <MonoInput icon="lan" type="number" value={port} onChange={e => setPort(parseInt(e.target.value) || 3000)} />
                                 </div>
                             </div>
                         )}
+                    </div>
+                </section>
 
-                        {/* Notifications – always visible */}
-                        <div className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                            <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-[#adc6ff]">notifications</span>
-                                    <span className="text-xs font-semibold uppercase tracking-wider">Notifications</span>
-                                </div>
+                {/* ── Environment Variables ── */}
+                <section className="bg-[#131929] rounded-xl border border-[#252d42] overflow-hidden">
+                    <SectionHeader
+                        icon="key"
+                        label="Environment Variables"
+                        right={
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={addEnvRow}
+                                    className="px-3 py-1 bg-[#1c2438] border border-[#2d3449] text-[#adc6ff] rounded-lg text-[11px] font-bold uppercase tracking-widest flex items-center gap-1 hover:border-[#adc6ff]/40 transition"
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">add</span> Add
+                                </button>
+                                <SaveBtn saving={savingEnv} saved={savedEnv} onClick={handleSaveEnv} />
                             </div>
-                            <div className="p-6 space-y-2">
-                                {/* Discord */}
-                                <div className="flex items-center justify-between p-2 hover:bg-[#0b1326] rounded transition">
-                                    <div className="flex items-center gap-4">
-                                        <span className="material-symbols-outlined text-[#c2c6d6] opacity-40">forum</span>
-                                        <span className="text-sm text-[#dae2fd]">Discord</span>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => setDiscordEnabled(!discordEnabled)}
-                                            className={`w-12 h-6 rounded-full relative transition-colors ${discordEnabled ? "bg-[#adc6ff]" : "bg-[#2d3449]"
-                                                }`}
-                                        >
-                                            <span
-                                                className={`absolute top-1 w-4 h-4 rounded-full transition-all ${discordEnabled ? "left-[calc(100%-20px)] bg-white" : "left-1 bg-[#424754]"
-                                                    }`}
-                                            ></span>
-                                        </button>
-                                        {discordEnabled && (
-                                            <button className="material-symbols-outlined text-[#c2c6d6] hover:text-[#dae2fd]">
-                                                settings
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                {discordEnabled && (
-                                    <div className="pl-10 pr-2 pb-2">
-                                        <input
-                                            type="url"
-                                            value={discordWebhook}
-                                            onChange={(e) => setDiscordWebhook(e.target.value)}
-                                            placeholder="https://discord.com/api/webhooks/..."
-                                            className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Telegram */}
-                                <div className="flex items-center justify-between p-2 hover:bg-[#0b1326] rounded transition">
-                                    <div className="flex items-center gap-4">
-                                        <span className="material-symbols-outlined text-[#c2c6d6] opacity-40">send</span>
-                                        <span className="text-sm text-[#dae2fd]">Telegram</span>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => setTelegramEnabled(!telegramEnabled)}
-                                            className={`w-12 h-6 rounded-full relative transition-colors ${telegramEnabled ? "bg-[#adc6ff]" : "bg-[#2d3449]"
-                                                }`}
-                                        >
-                                            <span
-                                                className={`absolute top-1 w-4 h-4 rounded-full transition-all ${telegramEnabled ? "left-[calc(100%-20px)] bg-white" : "left-1 bg-[#424754]"
-                                                    }`}
-                                            ></span>
-                                        </button>
-                                        {telegramEnabled && (
-                                            <button className="material-symbols-outlined text-[#c2c6d6] hover:text-[#dae2fd]">
-                                                settings
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                {telegramEnabled && (
-                                    <div className="pl-10 pr-2 pb-2 space-y-2">
-                                        <input
-                                            type="text"
-                                            value={telegramBotToken}
-                                            onChange={(e) => setTelegramBotToken(e.target.value)}
-                                            placeholder="Bot Token"
-                                            className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                        />
-                                        <input
-                                            type="text"
-                                            value={telegramChatId}
-                                            onChange={(e) => setTelegramChatId(e.target.value)}
-                                            placeholder="Chat ID"
-                                            className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Email */}
-                                <div className="flex items-center justify-between p-2 bg-[#131b2e] rounded">
-                                    <div className="flex items-center gap-4">
-                                        <span className="material-symbols-outlined text-[#adc6ff]">mail</span>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm text-[#dae2fd]">Email</span>
-                                            {emailEnabled && <span className="text-xs font-semibold text-[#c2c6d6]">{emailAddress}</span>}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => setEmailEnabled(!emailEnabled)}
-                                            className={`w-12 h-6 rounded-full relative transition-colors ${emailEnabled ? "bg-[#adc6ff]" : "bg-[#2d3449]"
-                                                }`}
-                                        >
-                                            <span
-                                                className={`absolute top-1 w-4 h-4 rounded-full transition-all ${emailEnabled ? "left-[calc(100%-20px)] bg-white" : "left-1 bg-[#424754]"
-                                                    }`}
-                                            ></span>
-                                        </button>
-                                        {emailEnabled && (
-                                            <button className="material-symbols-outlined text-[#adc6ff]">edit</button>
-                                        )}
-                                    </div>
-                                </div>
-                                {emailEnabled && (
-                                    <div className="pl-10 pr-2 pb-2">
-                                        <input
-                                            type="email"
-                                            value={emailAddress}
-                                            onChange={(e) => setEmailAddress(e.target.value)}
-                                            placeholder="dev@example.com"
-                                            className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Danger Zone */}
-                    <section className="bg-[#93000a]/5 rounded-xl border border-[#ffb4ab]/20 overflow-hidden mt-12">
-                        <div className="p-4 border-b border-[#ffb4ab]/20 bg-[#93000a]/10 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#ffb4ab]">warning</span>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-[#ffb4ab]">Danger Zone</span>
-                        </div>
-                        <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div>
-                                <p className="font-bold text-[#dae2fd]">Delete Project</p>
-                                <p className="text-xs font-semibold text-[#c2c6d6] opacity-70">
-                                    This will permanently delete the project. This action cannot be undone.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => setShowDeleteModal(true)}
-                                className="px-8 py-2 bg-[#ffb4ab] text-[#690005] rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110 whitespace-nowrap"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </section>
-
-                    {/* Delete Confirmation Modal */}
-                    {showDeleteModal && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                            <div className="bg-[#171f33] border border-[#424754] rounded-xl p-6 w-full max-w-md shadow-2xl">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="material-symbols-outlined text-[#ffb4ab]">warning</span>
-                                    <h2 className="text-lg font-semibold text-[#dae2fd]">Delete Project</h2>
-                                </div>
-                                <p className="text-sm text-[#c2c6d6] mb-4">
-                                    This action <span className="text-[#ffb4ab] font-semibold">cannot be undone</span>. Please type <span className="font-mono text-[#adc6ff] bg-[#0b1326] px-1 rounded">{projectName}</span> to confirm.
-                                </p>
+                        }
+                    />
+                    <div className="p-5 space-y-2">
+                        {envVars.length === 0 && (
+                            <p className="text-[#424754] text-xs font-mono text-center py-4">No environment variables. Click Add to create one.</p>
+                        )}
+                        {envVars.map((env, idx) => (
+                            <div key={idx} className="flex gap-2 items-center group">
                                 <input
                                     type="text"
-                                    value={confirmName}
-                                    onChange={(e) => setConfirmName(e.target.value)}
-                                    placeholder={projectName}
-                                    className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] mb-4 focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none"
+                                    placeholder="KEY"
+                                    value={env.key}
+                                    onChange={e => handleEnvChange(idx, "key", e.target.value)}
+                                    className="w-44 bg-[#0b1326] border border-[#2d3449] rounded-lg px-3 py-2 font-mono text-sm text-[#adc6ff] placeholder-[#2d3449] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff]/30 outline-none"
                                 />
-                                <div className="flex justify-end gap-3">
-                                    <button
-                                        onClick={() => {
-                                            setShowDeleteModal(false);
-                                            setConfirmName("");
-                                        }}
-                                        className="px-4 py-2 border border-[#424754] rounded text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] hover:bg-[#222a3d] transition"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleDelete}
-                                        disabled={confirmName !== projectName || deleting}
-                                        className="px-4 py-2 bg-[#ffb4ab] text-[#690005] rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        {deleting ? (
-                                            <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                                        ) : (
-                                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                                        )}
-                                        {deleting ? "Deleting..." : "Delete"}
-                                    </button>
-                                </div>
+                                <span className="text-[#2d3449] font-mono text-sm">=</span>
+                                <input
+                                    type="text"
+                                    placeholder="value"
+                                    value={env.value}
+                                    onChange={e => handleEnvChange(idx, "value", e.target.value)}
+                                    className="flex-1 bg-[#0b1326] border border-[#2d3449] rounded-lg px-3 py-2 font-mono text-sm text-[#dae2fd] placeholder-[#2d3449] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff]/30 outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeEnvRow(idx)}
+                                    disabled={envVars.length === 1}
+                                    className="opacity-0 group-hover:opacity-100 text-[#424754] hover:text-[#ffb4ab] transition disabled:opacity-20"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">remove_circle</span>
+                                </button>
                             </div>
+                        ))}
+                        <p className="text-[10px] text-[#424754] font-mono pt-1">
+                            Existing values are encrypted — enter new value to update, leave blank to keep current.
+                        </p>
+                    </div>
+                </section>
+
+                {/* ── Monitoring & Notifications ── */}
+                <section className="bg-[#131929] rounded-xl border border-[#252d42] overflow-hidden">
+                    <SectionHeader
+                        icon="notifications_active"
+                        label="Monitoring & Alerts"
+                        right={<SaveBtn saving={savingNotif} saved={savedNotif} onClick={handleSaveNotif} label="Save" />}
+                    />
+
+                    {notifError && (
+                        <div className="mx-5 mt-4 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-3 py-2 rounded-lg flex items-center gap-2 text-xs">
+                            <span className="material-symbols-outlined text-[16px]">error</span>
+                            {notifError}
                         </div>
                     )}
-                </div>
+
+                    <div className="p-5 space-y-5">
+                        {/* Health Monitor — node only */}
+                        {projectType !== "static" && (
+                            <div className="rounded-lg border border-[#252d42] overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 bg-[#0f1624]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[#adc6ff] text-[18px]">monitoring</span>
+                                        <span className="text-sm font-semibold text-[#dae2fd]">Health Monitoring</span>
+                                        {projectPlan !== "pro" && (
+                                            <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-[#adc6ff]/5 border border-[#adc6ff]/20 text-[#adc6ff]/60 rounded">Pro</span>
+                                        )}
+                                    </div>
+                                    <Toggle
+                                        value={monitorEnabled}
+                                        onChange={v => {
+                                            if (v && projectPlan !== "pro") {
+                                                setNotifError("Upgrade to Pro to enable health monitoring.");
+                                                return;
+                                            }
+                                            setNotifError(null);
+                                            setMonitorEnabled(v);
+                                        }}
+                                    />
+                                </div>
+                                {monitorEnabled && (
+                                    <div className="px-4 py-4 grid grid-cols-3 gap-4 border-t border-[#252d42] bg-[#0b1326]/40">
+                                        <div>
+                                            <FieldLabel>Interval (sec)</FieldLabel>
+                                            <MonoInput type="number" value={intervalSeconds} onChange={e => setIntervalSeconds(parseInt(e.target.value) || 60)} />
+                                        </div>
+                                        <div>
+                                            <FieldLabel>Health Path</FieldLabel>
+                                            <MonoInput value={healthPath} onChange={e => setHealthPath(e.target.value)} placeholder="/health" />
+                                        </div>
+                                        <div>
+                                            <FieldLabel>Failed Tries</FieldLabel>
+                                            <MonoInput type="number" value={failedTries} onChange={e => setFailedTries(parseInt(e.target.value) || 2)} />
+                                        </div>
+                                    </div>
+                                )}
+                                {!monitorEnabled && (
+                                    <div className="px-4 py-3 border-t border-[#252d42] bg-[#0b1326]/20">
+                                        <p className="text-xs text-[#424754] font-mono">
+                                            {projectPlan !== "pro"
+                                                ? "Upgrade to Pro to monitor your service's health endpoint automatically."
+                                                : "Enable to periodically ping your health endpoint and alert on failures."}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Notifications */}
+                        <div className="rounded-lg border border-[#252d42] overflow-hidden divide-y divide-[#1c2438]">
+
+                            {/* Discord */}
+                            <div>
+                                <div className="flex items-center justify-between px-4 py-3 hover:bg-[#0b1326]/40 transition">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[#424754] text-[18px]">forum</span>
+                                        <span className="text-sm text-[#c2c6d6]">Discord</span>
+                                    </div>
+                                    <Toggle value={discordEnabled} onChange={setDiscordEnabled} />
+                                </div>
+                                {discordEnabled && (
+                                    <div className="px-4 pb-3 bg-[#0b1326]/30">
+                                        <FieldLabel>Webhook URL</FieldLabel>
+                                        <MonoInput
+                                            type="url"
+                                            value={discordWebhook}
+                                            onChange={e => setDiscordWebhook(e.target.value)}
+                                            placeholder="https://discord.com/api/webhooks/…"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Telegram */}
+                            <div>
+                                <div className="flex items-center justify-between px-4 py-3 hover:bg-[#0b1326]/40 transition">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[#424754] text-[18px]">send</span>
+                                        <span className="text-sm text-[#c2c6d6]">Telegram</span>
+                                    </div>
+                                    <Toggle value={telegramEnabled} onChange={setTelegramEnabled} />
+                                </div>
+                                {telegramEnabled && (
+                                    <div className="px-4 pb-3 bg-[#0b1326]/30 grid grid-cols-2 gap-3">
+                                        <div>
+                                            <FieldLabel>Bot Token</FieldLabel>
+                                            <MonoInput value={telegramBotToken} onChange={e => setTelegramBotToken(e.target.value)} placeholder="123456:ABC-…" />
+                                        </div>
+                                        <div>
+                                            <FieldLabel>Chat ID</FieldLabel>
+                                            <MonoInput value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)} placeholder="-100…" />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Email */}
+                            <div>
+                                <div className="flex items-center justify-between px-4 py-3 hover:bg-[#0b1326]/40 transition">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[#adc6ff] text-[18px]">mail</span>
+                                        <div>
+                                            <span className="text-sm text-[#c2c6d6]">Email</span>
+                                            {emailEnabled && emailAddress && (
+                                                <span className="ml-2 font-mono text-[11px] text-[#424754]">{emailAddress}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Toggle value={emailEnabled} onChange={setEmailEnabled} />
+                                </div>
+                                {emailEnabled && (
+                                    <div className="px-4 pb-3 bg-[#0b1326]/30">
+                                        <FieldLabel>Email Address</FieldLabel>
+                                        <MonoInput
+                                            type="email"
+                                            value={emailAddress}
+                                            onChange={e => setEmailAddress(e.target.value)}
+                                            placeholder="you@example.com"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Danger Zone ── */}
+                <section className="bg-[#93000a]/5 rounded-xl border border-[#ffb4ab]/15 overflow-hidden mt-8">
+                    <SectionHeader icon="warning" label="Danger Zone" />
+                    <div className="p-5 flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-semibold text-[#dae2fd]">Delete Project</p>
+                            <p className="text-xs text-[#8891a8] mt-0.5">Permanently deletes this project and all its data. Cannot be undone.</p>
+                        </div>
+                        <button
+                            onClick={() => setShowDeleteModal(true)}
+                            className="px-5 py-2 bg-[#ffb4ab]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-[#ffb4ab]/20 transition whitespace-nowrap"
+                        >
+                            Delete Project
+                        </button>
+                    </div>
+                </section>
             </div>
+
+            {/* ── Delete Modal ── */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className="bg-[#131929] border border-[#252d42] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-[#ffb4ab] text-[20px]">warning</span>
+                            <h2 className="text-base font-semibold text-[#dae2fd]">Delete Project</h2>
+                        </div>
+                        <p className="text-xs text-[#8891a8] mb-4">
+                            Type <span className="font-mono text-[#adc6ff] bg-[#0b1326] px-1 py-0.5 rounded">{projectName}</span> to confirm.
+                        </p>
+                        <input
+                            type="text"
+                            value={confirmName}
+                            onChange={e => setConfirmName(e.target.value)}
+                            placeholder={projectName}
+                            className="w-full bg-[#0b1326] border border-[#2d3449] rounded-lg px-3 py-2 font-mono text-sm text-[#dae2fd] mb-4 focus:border-[#ffb4ab]/50 focus:ring-1 focus:ring-[#ffb4ab]/20 outline-none"
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => { setShowDeleteModal(false); setConfirmName(""); }}
+                                className="px-4 py-2 border border-[#252d42] rounded-lg text-[11px] font-bold uppercase tracking-widest text-[#8891a8] hover:bg-[#1c2438] transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={confirmName !== projectName || deleting}
+                                className="px-4 py-2 bg-[#ffb4ab]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-[#ffb4ab]/20 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                                {deleting
+                                    ? <span className="material-symbols-outlined animate-spin text-[15px]">progress_activity</span>
+                                    : <span className="material-symbols-outlined text-[15px]">delete</span>
+                                }
+                                {deleting ? "Deleting…" : "Delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

@@ -139,7 +139,7 @@ const projectschema = new mongoose.Schema({
     totalBuilds: {
         type: Number,
         default: 0
-    },
+    }, 
     buildId: {
         type: mongoose.Schema.Types.ObjectId,
     },

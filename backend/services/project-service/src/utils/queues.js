@@ -11,3 +11,4 @@ const connection = {
 
 export const buildQueue = new Queue(QUEUE_NAMES.BUILD, { connection });
 export const subdomainChangeQueue = new Queue(QUEUE_NAMES.SUBDOMAIN_CHANGE, { connection });
+export const startStopHealthCheck = new Queue(QUEUE_NAMES.START_STOP_HEALTH_CHECK, { connection })

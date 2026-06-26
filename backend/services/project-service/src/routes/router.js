@@ -9,8 +9,8 @@ import { reDeployController } from '../controllers/reDeploy.js';
 import { getProjectDataByIdConroller, getProjectMetaController, getProjectsController } from '../controllers/getProjects.js';
 import { addCustomDomainValidator, getDomainSettingsValidators, validateChangeSubDomain, deleteCustomDomainValidator } from '../validators/domain.js';
 import { changeSubdomainController, getDomainSettingsController, addCustomDomainCOntroller, deleteCustomDomainController } from '../controllers/domain.controller.js';
-import { projectSettingValidators } from '../validators/projectSettings.js';
-import { projectSettingsController } from '../controllers/projectSettings.controller.js';
+import { projectSettingValidators, updateBuildandStartSettingsValidators, updateHealthMonitoringAndNotificationValidator, updateEnvSettingsValidators } from '../validators/projectSettings.js';
+import { projectSettingsController, updateBuildandStartSettingsController, updateEnvSettingsController, updateHealthMonitoringAndNotificationController } from '../controllers/projectSettings.controller.js';
 
 const projectRouter = express.Router();
 
@@ -22,9 +22,18 @@ projectRouter.get('/for-other-service/:projectId', internalApiCallMiddleware({ s
 projectRouter.post('/redeploy/:projectId', reDeployController);
 projectRouter.get('/:projectId/meta', getProjectMetaController);
 projectRouter.get('/overview/:projectId', getProjectDataByIdConroller);
-projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController);
+
+
+// setttings
 projectRouter.get('/settings/:projectId', projectSettingValidators, projectSettingsController);
 projectRouter.get('/settings/domain/:projectId', getDomainSettingsValidators, getDomainSettingsController);
+projectRouter.patch('/settings/build-and-start/:projectId', updateBuildandStartSettingsValidators, updateBuildandStartSettingsController);
+projectRouter.patch('/settings/notification/:projectId', updateHealthMonitoringAndNotificationValidator, updateHealthMonitoringAndNotificationController);
+projectRouter.patch('/settings/env/:projectId', updateEnvSettingsValidators, updateEnvSettingsController);
+
+
+// domain
+projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController);
 projectRouter.post('/custom-domain/:projectId', addCustomDomainValidator, addCustomDomainCOntroller)
 projectRouter.delete('/custom-domain/:projectId', deleteCustomDomainValidator, deleteCustomDomainController)
 
