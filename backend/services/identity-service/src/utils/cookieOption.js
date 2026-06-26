@@ -9,7 +9,7 @@ export const getAccessTokenOptions = () => ({
   secure: AUTH_ENV.NODE_ENV === "production",
   sameSite: AUTH_ENV.NODE_ENV === "production" ? "Strict" : "Lax",
   domain: AUTH_ENV.NODE_ENV === "production" ? ".deployhub.cloud" : undefined,
-  expires: new Date(Date.now() + 15 * 60 * 1000)
+  expires: new Date(Date.now() + 2 * 60 * 60 * 1000)
 });
 
 export const getRefreshTokenOptions = () => ({
