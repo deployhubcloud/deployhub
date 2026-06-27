@@ -6,6 +6,8 @@ import dotenv from "dotenv";
 import { Queue } from "bullmq";
 import { redisclient, redisConnect } from "./src/configs/redis.js";
 import { RateLimiterRedis } from "rate-limiter-flexible";
+import { lookup } from "geoip-lite";
+
 
 dotenv.config();
 await redisConnect();
@@ -16,21 +18,15 @@ const server = http.createServer(app);
 app.set("trust proxy", true);
 app.use(compression());
 
-
 app.get("/user-router-health", (_req, res) => {
-    res.status(200).json({
-        status: "ok",
-        router: "User-router"
-    });
+    res.status(200).json({ status: "ok", router: "User-router" });
 });
 
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 1000 });
 
-
 const httpProxyServer = httpProxy.createProxyServer({
     changeOrigin: true, xfwd: true, agent: httpAgent,
 });
-
 
 const wsProxyServer = httpProxy.createProxyServer({
     changeOrigin: true, ws: true, xfwd: true,
@@ -51,67 +47,53 @@ function getCache(key) {
 }
 
 
-// yeha pe maine 12 hr ka ratelimit kiya hai
 const limiters = {
     free: new RateLimiterRedis({
         storeClient: redisclient,
         keyPrefix: "rl_free",
-        points: 20000,          // free plan quota
-        duration: 60 * 60 * 12 // 12h window in seconds
+        points: 20000,
+        duration: 60 * 60 * 12
     }),
     starter: new RateLimiterRedis({
         storeClient: redisclient,
         keyPrefix: "rl_starter",
-        points: 200000,  // starter plan quota
-        duration: 60 * 60 * 12 // 12 hr in seconds
+        points: 200000,
+        duration: 60 * 60 * 12
     }),
     pro: new RateLimiterRedis({
         storeClient: redisclient,
         keyPrefix: "rl_pro",
-        points: 500000, // pro plan quota
-        duration: 60 * 60 * 12  // 12 hr in seconds
+        points: 500000,
+        duration: 60 * 60 * 12
     }),
-
 };
 
-
-// yeha pe maine rate limti kiya hai 1 minute ka 
 const burstLimiters = {
     free: new RateLimiterRedis({
         storeClient: redisclient,
         keyPrefix: "rl_free_burst",
         points: 150,
-        duration: 60  // yeha pe ye seconds hai
+        duration: 60
     }),
     starter: new RateLimiterRedis({
         storeClient: redisclient,
         keyPrefix: "rl_starter_burst",
         points: 500,
-        duration: 60  // yeha pe ye seconds hai
+        duration: 60
     }),
     pro: new RateLimiterRedis({
         storeClient: redisclient,
         keyPrefix: "rl_pro_burst",
         points: 1000,
-        duration: 60  // yeha pe ye seconds hai
+        duration: 60
     })
 };
 
 
-const PLAN_LIMITS = {
-    free: {
-        requests: 20000,
-    },
-    starter: {
-        requests: 200000,
-    },
-    pro: {
-        requests: 500000,
-    }
-}
 function getSubdomain(domain, root) {
-    if (!domain.endsWith(root)) return null;
-    const withoutRoot = domain.slice(0, -(root.length + 1));
+    const cleanDomain = domain.replace(/^\\+/, '');
+    if (!cleanDomain.endsWith(root)) return null;
+    const withoutRoot = cleanDomain.slice(0, -(root.length + 1));
     return withoutRoot || null;
 }
 
@@ -155,20 +137,14 @@ function trackRequest(projectId) {
     requestCounts.set(projectId, (requestCounts.get(projectId) || 0) + 1);
 }
 
-
 const flushQueue = new Queue("request-count-flush", {
-    connection: {
-        host: "localhost",
-        port: 6379,
-    },
+    connection: { host: "localhost", port: 6379 },
 });
-
 
 setInterval(async () => {
     if (requestCounts.size === 0) return;
     const counts = Object.fromEntries(requestCounts);
     requestCounts.clear();
-
     try {
         await flushQueue.add(
             "flush",
@@ -184,26 +160,150 @@ setInterval(async () => {
     }
 }, 5 * 60 * 1000);
 
-// ── HTTP routing ─────────────────────────────────────────
+
+const analyticsBuffer = new Map();
+const previousWindow = new Map();
+
+const spikeQueue = new Queue("spike-alert", {
+    connection: { host: "localhost", port: 6379 }
+});
+
+function getAnalyticsEntry(projectId) {
+    if (!analyticsBuffer.has(projectId)) {
+        analyticsBuffer.set(projectId, {
+            requests: 0,
+            errors4xx: 0,
+            errors5xx: 0,
+            endpoints: {},
+            countries: {},
+        });
+    }
+    return analyticsBuffer.get(projectId);
+}
+
+function trackAnalytics(projectId, statusCode, ip, endpoint) {
+    if (!projectId) return;
+    const entry = getAnalyticsEntry(projectId);
+    entry.requests++;
+    if (statusCode >= 400 && statusCode < 500) entry.errors4xx++;
+    if (statusCode >= 500) entry.errors5xx++;
+
+
+    if (endpoint) {
+        entry.endpoints[endpoint] = (entry.endpoints[endpoint] || 0) + 1;
+    }
+
+
+    const geo = lookup(ip);
+    const country = geo?.country || "unknown";
+    entry.countries[country] = (entry.countries[country] || 0) + 1;
+}
+
+async function checkSpikes() {
+    for (const [projectId, data] of analyticsBuffer.entries()) {
+        const current = data.requests;
+        const prev = previousWindow.get(projectId) || 0;
+
+        if (prev > 0 && current >= prev * 3) {
+            try {
+                await spikeQueue.add("spike", {
+                    projectId,
+                    current,
+                    previous: prev,
+                    detectedAt: new Date().toISOString()
+                }, { attempts: 3, backoff: { type: "exponential", delay: 5000 } });
+                console.log(`[Spike] Project ${projectId} — ${prev} → ${current} requests`);
+            } catch (err) {
+                console.error("[Spike] Queue failed:", err.message);
+            }
+        }
+
+        previousWindow.set(projectId, current);
+    }
+}
+
+async function flushAnalytics() {
+    if (analyticsBuffer.size === 0) return;
+
+    const pipeline = redisclient.pipeline();
+
+    for (const [projectId, data] of analyticsBuffer.entries()) {
+        const base = `deployhub:user:analytics:${projectId}`;
+
+        // existing
+        pipeline.incrby(`${base}:5m:req`, data.requests);
+        pipeline.expire(`${base}:5m:req`, 300);
+
+        pipeline.incrby(`${base}:1h:req`, data.requests);
+        pipeline.expire(`${base}:1h:req`, 3600);
+
+        pipeline.incrby(`${base}:24h:req`, data.requests);
+        pipeline.expire(`${base}:24h:req`, 86400);
+
+        pipeline.incrby(`${base}:5m:err4xx`, data.errors4xx);
+        pipeline.expire(`${base}:5m:err4xx`, 300);
+
+        pipeline.incrby(`${base}:5m:err5xx`, data.errors5xx);
+        pipeline.expire(`${base}:5m:err5xx`, 300);
+
+        // 3. geographic — hash mein store
+        for (const [country, count] of Object.entries(data.countries)) {
+            pipeline.hincrby(`${base}:24h:geo`, country, count);
+        }
+        pipeline.expire(`${base}:24h:geo`, 86400);
+
+        // 4. top endpoints — hash mein store
+        for (const [endpoint, count] of Object.entries(data.endpoints)) {
+            pipeline.hincrby(`${base}:24h:endpoints`, endpoint, count);
+        }
+        pipeline.expire(`${base}:24h:endpoints`, 86400);
+    }
+
+    await pipeline.exec();
+    analyticsBuffer.clear();
+}
+
+setInterval(async () => {
+    await checkSpikes();
+    await flushAnalytics();
+}, 5 * 60 * 1000);
+
+
 app.use(async (req, res) => {
     try {
         const host = req.headers.host?.toLowerCase();
         if (!host) return res.status(400).send("Invalid host");
+        const cleanDomain = host.replace(/^\\+/, '');
 
-        const resolved = await resolveDomain(host);
+        const resolved = await resolveDomain(cleanDomain);
         if (!resolved) return res.status(404).send("Domain not configured");
 
-
         const plan = resolved.plan || "free";
-        const limiter = limiters[plan];
-
-        // ye daily ke liye hai
-        await limiter.consume(resolved.projectId);
-
-        // Burst quota agar eak daam se direct aagya to
+        await limiters[plan].consume(resolved.projectId);
         await burstLimiters[plan].consume(resolved.projectId);
 
         trackRequest(resolved.projectId);
+
+        // 2. unique visitors — HyperLogLog
+        const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
+            || req.socket.remoteAddress
+            || "unknown";
+
+        await redisclient.pfadd(
+            `deployhub:user:analytics:${resolved.projectId}:24h:uv`,
+            ip
+        );
+        await redisclient.expire(
+            `deployhub:user:analytics:${resolved.projectId}:24h:uv`,
+            86400
+        );
+
+        // endpoint normalize — query string hata do
+        const endpoint = req.path || "/";
+
+        res.on("finish", () => {
+            trackAnalytics(resolved.projectId, res.statusCode, ip, endpoint);
+        });
 
         httpProxyServer.web(req, res, { target: resolved.target });
     } catch (err) {
@@ -216,7 +316,7 @@ app.use(async (req, res) => {
     }
 });
 
-// ── WebSocket routing ────────────────────────────────────
+
 server.on("upgrade", async (req, socket, head) => {
     try {
         const host = req.headers.host?.toLowerCase();
@@ -234,7 +334,7 @@ server.on("upgrade", async (req, socket, head) => {
     }
 });
 
-// ── Proxy errors ─────────────────────────────────────────
+
 httpProxyServer.on("error", (err, req, res) => {
     console.error("HTTP Proxy error:", err.message);
     if (res && !res.headersSent) {
@@ -242,13 +342,17 @@ httpProxyServer.on("error", (err, req, res) => {
         res.end("Service unavailable");
     }
 });
+
 wsProxyServer.on("error", (err, req, socket) => {
     console.error("WS Proxy error:", err.message);
     if (socket) socket.destroy();
 });
 
-// ── Graceful shutdown — flush before exit ────────────────
+
 async function shutdown() {
+    await checkSpikes();
+    await flushAnalytics();
+
     if (requestCounts.size > 0) {
         const counts = Object.fromEntries(requestCounts);
         requestCounts.clear();
@@ -259,7 +363,9 @@ async function shutdown() {
             console.error("[Counter] Shutdown flush failed:", err.message);
         }
     }
+
     await flushQueue.close();
+    await spikeQueue.close();
     process.exit(0);
 }
 
