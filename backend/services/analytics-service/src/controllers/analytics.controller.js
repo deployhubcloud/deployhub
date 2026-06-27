@@ -14,12 +14,15 @@ export const summaryController = async (req, res) => {
 
         const projectId = req.params.projectId;
 
-        const { requests, error } = await summaryService(projectId)
+        const { requests, error, uniqueVisitors, topCountries, topEndpoints } = await summaryService(projectId)
 
         return res.status(200).json({
             data: {
                 requests,
-                error
+                error,
+                uniqueVisitors,
+                topCountries,
+                topEndpoints
             }
         })
 
