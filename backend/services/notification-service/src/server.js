@@ -13,3 +13,4 @@ await startApp(NOTIFICATION_ENV.PORT, NOTIFICATION_ENV.SERVICE_NAME);
 // run workers after service dependencies are connected
 await import("./workers/welcomeWorker.js");
 await import("./workers/projectStatus.worker.js");
+await import("./workers/projectReqSpikeAlert.worker.js")

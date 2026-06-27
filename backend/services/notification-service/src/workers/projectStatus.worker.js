@@ -13,7 +13,6 @@ const redisPubSub = new RedisPubSub(
     Redis, {
     host: NOTIFICATION_ENV.REDIS_HOST,
     port: Number(NOTIFICATION_ENV.REDIS_PORT),
-    password: NOTIFICATION_ENV.REDIS_PASSWORD,
     maxRetriesPerRequest: null,
 }
 )

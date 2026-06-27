@@ -13,7 +13,6 @@ export const connectRedis = async () => {
         options: {
             host: NOTIFICATION_ENV.REDIS_HOST,
             port: NOTIFICATION_ENV.REDIS_PORT,
-            password: NOTIFICATION_ENV.REDIS_PASSWORD,
             maxRetriesPerRequest: 3,
             enableReadyCheck: true,
             lazyConnect: true

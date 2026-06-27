@@ -14,7 +14,6 @@ const compiledEmailTemplet = Handlebars.compile(emailTemplet)
 const connection = {
     host: NOTIFICATION_ENV.REDIS_HOST,
     port: Number(NOTIFICATION_ENV.REDIS_PORT),
-    password: NOTIFICATION_ENV.REDIS_PASSWORD,
     maxRetriesPerRequest: null,
 };
 
