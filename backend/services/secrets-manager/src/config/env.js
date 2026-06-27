@@ -75,7 +75,7 @@ const schema = z.object({
   MONITORING_SERVICE_URL: z.string().optional(),
   BUILD_SERVICE_URL: z.string().optional(),
   DEPLOY_SERVICE_URL: z.string().optional(),
-  ANALYTICS_SERIVCE_URL: z.string(),
+  ANALYTICS_SERIVICE_URL: z.string(),
 
   INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
 
