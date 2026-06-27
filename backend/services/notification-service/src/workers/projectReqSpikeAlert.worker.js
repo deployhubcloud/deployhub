@@ -37,7 +37,7 @@ const projectReqSpikeAlertWorker = new Worker("spike-alert", async (job) => {
         if (userNotificationSettings?.email?.enabled) {
             await sendEmail({
                 to: userNotificationSettings.email.emailAddress,
-                subject: `Project ${projectstatus}`,
+                subject: `Project Traffic Spike Alert`,
                 html: emailHtml
             });
         }
@@ -52,6 +52,7 @@ const projectReqSpikeAlertWorker = new Worker("spike-alert", async (job) => {
         }
 
     } catch (error) {
+        console.log(error)
         throw error
     }
 }, {
