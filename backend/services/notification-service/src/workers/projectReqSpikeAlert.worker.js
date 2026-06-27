@@ -4,6 +4,9 @@ import { getNotificationSettings } from '../utils/getNotificationSettings.js';
 import { buildEmailSpikeAlertTemplate } from '../utils/email/buildEmailSpikeAlertTemplate.js';
 import { buildTelegramSpikeAlertMessage } from '../utils/telegram/buildTelegramSpikeAlertMessage.js';
 import { buildDiscordSpikeAlertMessage } from '../utils/discord/buildDiscordSpikeAlertMessage.js';
+import { sendDiscord } from '../senders/discord.sender.js';
+import { sendEmail } from '../senders/email.sender.js';
+import { sendTelegram } from '../senders/telegram.sender.js';
 
 
 const connection = {
