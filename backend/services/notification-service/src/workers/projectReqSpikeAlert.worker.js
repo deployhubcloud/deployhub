@@ -65,7 +65,7 @@ const projectReqSpikeAlertWorker = new Worker("spike-alert", async (job) => {
 
 
 projectReqSpikeAlertWorker.on('completed', (job) => {
-    console.log('Welcome email sent to user', job.data?.fullname)
+    console.log('Spike Alert sent')
 });
 
 projectReqSpikeAlertWorker.on('failed', (job, error) => {
