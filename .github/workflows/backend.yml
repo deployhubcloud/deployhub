@@ -164,7 +164,7 @@ jobs:
           script: |
             echo "$DOCKER_ACCESS_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-            SERVICES="api-gateway identity-service project-service build-service deploy-service notification-service stream-service secrets-manager"
+            SERVICES="api-gateway identity-service project-service build-service deploy-service notification-service stream-service secrets-manager analytics-service"
 
             for svc in $SERVICES; do
               case $svc in
