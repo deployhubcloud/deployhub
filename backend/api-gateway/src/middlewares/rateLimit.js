@@ -12,6 +12,10 @@ const limits = {
     build: {
         time: 10,
         limit: 250
+    },
+    analytics: {
+        time: 60,
+        limit: 200
     }
 }
 

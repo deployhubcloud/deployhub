@@ -13,13 +13,12 @@ export const services = {
         lastChecked: null,
         lastError: null
     },
-    Monitoring: {
-        url: ENV.SERVICES_URL.MONITORING,
+    Analytics: {
+        url: ENV.SERVICES_URL.ANALYTICS,
         isHealthy: false,
         lastChecked: null,
         lastError: null
     },
-
     Build: {
         url: ENV.SERVICES_URL.BUILD,
         isHealthy: false,
