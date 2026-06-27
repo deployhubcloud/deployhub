@@ -3,7 +3,6 @@ import { Link, useLocation, useParams, useNavigate } from 'react-router-dom'
 import { useSidebar } from './SidebarContext'
 import { api } from '../api/apiclient'
 
-
 const BackIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -59,7 +58,6 @@ const CrownIcon = () => (
   </svg>
 )
 
-
 function NavItem({ to, label, icon, active, onClick, state }) {
   return (
     <Link
@@ -67,8 +65,8 @@ function NavItem({ to, label, icon, active, onClick, state }) {
       state={state}
       onClick={onClick}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${active
-          ? 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20'
-          : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+        ? 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20'
+        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
         }`}
     >
       <span className={`flex-shrink-0 transition-colors ${active ? 'text-[#00e5ff]' : 'text-gray-500 group-hover:text-white'}`}>
@@ -79,7 +77,6 @@ function NavItem({ to, label, icon, active, onClick, state }) {
     </Link>
   )
 }
-
 
 function SidebarSkeleton({ isSidebarOpen }) {
   return (
@@ -124,7 +121,6 @@ function PlanBadge({ plan }) {
   )
 }
 
-
 export default function ProjectSidebar() {
   const { id: projectId } = useParams()
   const navigate = useNavigate()
@@ -132,6 +128,7 @@ export default function ProjectSidebar() {
   const location = useLocation()
   const [projectName, setProjectName] = useState(location.state?.projectName || '')
   const [plan, setPlan] = useState(location.state?.plan || null)
+  const [type, setType] = useState(location.state?.type || null)
   const [bootstrapLoading, setBootstrap] = useState(!location.state?.projectName)
 
   useEffect(() => {
@@ -140,6 +137,7 @@ export default function ProjectSidebar() {
       .then(res => {
         setProjectName(res.data.projectData?.name || 'Project')
         setPlan(res.data.projectData?.plan || 'free')
+        setType(res.data.projectData?.type || null)
       })
       .catch(() => navigate('/'))
       .finally(() => setBootstrap(false))
@@ -148,7 +146,6 @@ export default function ProjectSidebar() {
   const isActive = (path) => location.pathname === path
   const close = () => setIsSidebarOpen(false)
 
-
   const navGroups = [
     {
       label: 'Project',
@@ -156,7 +153,10 @@ export default function ProjectSidebar() {
         { to: `/project/${projectId}`, label: 'Overview', icon: <HomeIcon /> },
         { to: `/project/${projectId}/logs`, label: 'Logs', icon: <LogsIcon /> },
         { to: `/project/${projectId}/builds`, label: 'Builds', icon: <BuildsIcon /> },
-        { to: `/project/${projectId}/metrics`, label: 'Metrics', icon: <AnalyticsIcon /> },
+        // 👇 Only show Metrics if type is NOT "static"
+        ...(type && type !== 'static'
+          ? [{ to: `/project/${projectId}/metrics`, label: 'Metrics', icon: <AnalyticsIcon /> }]
+          : []),
       ],
     },
     {
@@ -178,7 +178,6 @@ export default function ProjectSidebar() {
 
   return (
     <>
-
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-10 md:hidden"
@@ -186,14 +185,12 @@ export default function ProjectSidebar() {
         />
       )}
 
-
       <div
         className={`fixed top-16 left-0 w-64 sm:w-72 md:w-64 min-h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] z-20 flex flex-col
           bg-[#0d1117] border-r border-white/5
           transform transition-transform duration-300
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
       >
-
         <div className="px-4 sm:px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00e5ff]/20 to-[#7c3aed]/20 border border-[#00e5ff]/20 flex items-center justify-center flex-shrink-0">
@@ -216,7 +213,6 @@ export default function ProjectSidebar() {
           </div>
         </div>
 
-
         <nav className="flex-1 px-2 sm:px-3 py-4 overflow-y-auto space-y-4">
           {navGroups.map(group => (
             <div key={group.label}>
@@ -232,11 +228,17 @@ export default function ProjectSidebar() {
                       icon={link.icon}
                       active={isActive(link.to)}
                       onClick={close}
-                      state={{ projectName, plan }}
+                      state={{ projectName, plan, type }}
                     />
                     {link.proBadge && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black px-1.5 py-0.5 rounded-md pointer-events-none"
-                        style={{ background: 'rgba(0,229,255,0.1)', color: '#00e5ff', border: '1px solid rgba(0,229,255,0.2)' }}>
+                      <span
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black px-1.5 py-0.5 rounded-md pointer-events-none"
+                        style={{
+                          background: 'rgba(0,229,255,0.1)',
+                          color: '#00e5ff',
+                          border: '1px solid rgba(0,229,255,0.2)',
+                        }}
+                      >
                         PRO
                       </span>
                     )}
