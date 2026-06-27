@@ -40,14 +40,31 @@ export const getProjects = async (userId) => {
 
 export const getProjectMetaService = async (projectId) => {
 
-    const projectData = await Project.findById(projectId).select('plan name').lean();
-    if (!projectData) {
-        throw new AppError("Invalid ProjectId", 404)
+
+    const redis = getRedis()
+
+    const raw = await redis.get(`deployhub:users:project:${projectId}:meta`)
+    if (!raw) {
+        const projectData = await Project.findById(projectId).select('plan name type').lean();
+        if (!projectData) {
+            throw new AppError("Invalid ProjectId", 404)
+        }
+
+        await redis.set(`deployhub:users:project:${projectId}:meta`, JSON.stringify(projectData));
+
+        return {
+            name: projectData.name,
+            plan: projectData.plan,
+            type: projectData.type
+        }
     }
 
+    const userProjectMetaData = JSON.parse(raw)
+
     return {
-        name: projectData.name,
-        plan: projectData.plan
+        name: userProjectMetaData.name,
+        plan: userProjectMetaData.plan,
+        type: userProjectMetaData.type
     }
 }
 
