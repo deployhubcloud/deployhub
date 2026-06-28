@@ -175,8 +175,27 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
 
         logger.write(`cloning repo ${project.repoUrl}`)
 
-        await GitCloner.clone({ repoUrl: project.repoUrl, branch: project.branch, targetPath: buildFilePath, githubToken: userGithubAcessToken, folderName: project.rootDirectory })
+        try {
+            await GitCloner.clone({ repoUrl: project.repoUrl, branch: project.branch, targetPath: buildFilePath, githubToken: userGithubAcessToken, folderName: project.rootDirectory })
 
+        } catch (error) {
+            switch (error.code) {
+                case "BRANCH_NOT_FOUND":
+                    logger.write(error.message);
+                    break;
+
+                case "REPO_NOT_FOUND":
+                    logger.write(error.message);
+                    break;
+
+                case "AUTH_FAILED":
+                    logger.write(error.message);
+                    break;
+
+                default:
+                    logger.write("Failed to clone repository.");
+            }
+        }
         logger.write(`repo cloned successfully`)
 
 
@@ -234,9 +253,14 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 Image: imageName
             });
 
-            const archiveStream = await container.getArchive({
-                path: `/app/${project.publishDir}`
-            })
+            try {
+                const archiveStream = await container.getArchive({
+                    path: `/app/${project.publishDir}`
+                })
+            } catch (error) {
+                logger.write("invalid PublishDir!", project.publishDir, "please check your Settings");
+                throw error;
+            }
 
             const tarFile = path.join(
                 buildFilePath,

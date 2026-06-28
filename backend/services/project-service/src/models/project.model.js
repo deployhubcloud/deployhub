@@ -18,7 +18,7 @@ const projectschema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['draft', 'queued', 'building', 'running', 'failed', 'stopped', 'crash'],
+        enum: ['draft', 'queued', 'building', 'deploying', 'running', 'failed', 'stopped', 'crash', 'deleted'],
         default: 'queued'
     },
     version: {
@@ -139,7 +139,7 @@ const projectschema = new mongoose.Schema({
     totalBuilds: {
         type: Number,
         default: 0
-    }, 
+    },
     buildId: {
         type: mongoose.Schema.Types.ObjectId,
     },
