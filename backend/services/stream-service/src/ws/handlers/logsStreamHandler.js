@@ -91,13 +91,7 @@ class ProjectLogsWatcher {
         let neededType = null;
         let neededParams = null;
 
-        // ---------- NEW: special handling for failed static projects ----------
-        if (status === 'failed' && type === 'static' && buildId) {
-            neededType = 'static_failed';
-            neededParams = { buildId };
-        }
-        // --------------------------------------------------------------------
-        else if (!status) {
+        if (!status) {
             neededType = 'none';
         } else if (status === 'building' || status === 'queued') {
             if (buildId) {
@@ -123,11 +117,22 @@ class ProjectLogsWatcher {
                     neededType = 'none';
                 }
             }
-        } else {
+        }
+
+        else if (status === 'failed' && type === 'static') {
+            if (logsUrl) {
+                neededType = 'static';
+                neededParams = { logsUrl };
+            } else {
+                neededType = 'none';
+                this.emitInfo('Static build failed, but logs URL is not available.');
+            }
+        }
+        else {
             neededType = 'none';
         }
 
-        // If the stream type hasn't changed, avoid restarting (except for static_failed which we always want to emit)
+
         if (this.currentStream && this.currentStream.type === neededType) {
             if (neededType === 'static' && this.currentStream.logsUrl !== logsUrl) {
                 this.currentStream.stop();
@@ -137,10 +142,12 @@ class ProjectLogsWatcher {
             }
         }
 
+
         if (this.currentStream) {
             this.currentStream.stop();
             this.currentStream = null;
         }
+
 
         this.emitReset();
 
@@ -154,10 +161,6 @@ class ProjectLogsWatcher {
                 break;
             case 'static':
                 this.currentStream = this.startStaticLogStream(logsUrl);
-                break;
-            case 'static_failed':   // <--- NEW case
-                this.emitStaticFailed(buildId);
-                this.currentStream = null;
                 break;
             case 'none':
                 this.emitInfo('No logs available at this moment.');
@@ -321,15 +324,6 @@ class ProjectLogsWatcher {
             logsUrl: logsUrl
         });
         return { type: 'static', stop: () => { }, logsUrl };
-    }
-    emitStaticFailed(buildId) {
-        const url = `https://dashboard.deployhub.cloud/project/${this.projectId}/logs/${buildId}`;
-        this.socket.emit('build_log', {
-            projectId: this.projectId,
-            type: 'static_failed',
-            message: 'Your static build has failed. Click the link to view logs.',
-            logsUrl: url
-        });
     }
 
     emitInfo(message) {

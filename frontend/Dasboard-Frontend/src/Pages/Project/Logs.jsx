@@ -33,16 +33,7 @@ function LogsSkeleton() {
 
 export default function Logs() {
   const { id: projectId } = useParams()
-  const {
-    logs,
-    loading,
-    connected,
-    isStaticProject,
-    staticFailed,
-    staticFailedMessage,
-    staticFailedLogsUrl
-  } = useProjectLogs(projectId)
-
+  const { logs, loading, connected, isStaticProject } = useProjectLogs(projectId)
   const bottomRef = useRef(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
@@ -79,22 +70,7 @@ export default function Logs() {
           </div>
 
           <div className="flex-1 bg-[#0d0d0d] border border-t-0 border-white/[0.06] rounded-b-xl overflow-y-auto font-mono text-sm">
-            {/* Special case: static build failed */}
-            {staticFailed ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-4">
-                <p className="text-red-400 text-sm">{staticFailedMessage}</p>
-                {staticFailedLogsUrl && (
-                  <a
-                    href={staticFailedLogsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-sm text-amber-400 hover:text-amber-300 underline underline-offset-2"
-                  >
-                    View build logs ↗
-                  </a>
-                )}
-              </div>
-            ) : isStaticProject && flatLogs.length === 0 ? (
+            {isStaticProject && flatLogs.length === 0 ? (
               <div className="flex items-center justify-center h-full text-neutral-500 text-sm px-6 text-center">
                 Runtime logs are not available for static projects.
               </div>
