@@ -1,8 +1,8 @@
 import { clearCacheProjectData } from "../../../../shared/utils/cacheProjectData.js";
 import { publishProjectStatus } from "../../../../shared/utils/publishProjectStatus.js";
-import { deleteCacheBuildData } from "../../../build-service/src/utils/cacheBuildData.js";
 import { getRedis } from "../core/redis/client.js";
 import { reDeployment } from "../services/redeploy.service.js";
+import { deleteCacheBuildData } from "../utils/cache/deleteCacheBuildData.js";
 
 export const reDeployController = async (req, res) => {
     try {

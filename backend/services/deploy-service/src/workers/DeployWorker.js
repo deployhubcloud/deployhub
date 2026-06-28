@@ -26,7 +26,7 @@ import { publishProjectStatus } from '../../../../shared/utils/publishProjectSta
 import { monitoringQueue } from '../utils/queues/queues.js';
 import { writeNginxConfig } from '../../../../shared/nginx/writeNginx.js';
 import { writeNginxFileToHost } from '../utils/nginx/writeNginxFileToHost.js';
-import { deleteCacheBuildData } from '../../../build-service/src/utils/cacheBuildData.js';
+import { deleteCacheBuildData } from '../utils/cache/deleteCacheBuildData.js';
 
 
 const redisPubSub = new RedisPubSub(
