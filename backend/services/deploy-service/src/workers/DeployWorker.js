@@ -261,7 +261,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             if (projectData?.customDomains?.length > 0) {
                 deploymentUrl = `${reqType}${projectData.customDomains}`
             } else {
-                deploymentUrl = DEPLOY_SERVICE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${projectData.assignedPort}`
+                deploymentUrl = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${projectData.assignedPort}`
             }
 
             deployment.status = 'live';
@@ -306,7 +306,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 if (projectData?.customDomains?.length > 0) {
                     deploymentUrl = `${reqType}${projectData.customDomains}`
                 } else {
-                    deploymentUrl = DEPLOY_SERVICE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${hostPort}`
+                    deploymentUrl = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? `${reqType}${projectData?.subdomain}.deployhub.online` : `${reqType}localhost:${hostPort}`
                 }
             }
 
@@ -480,7 +480,7 @@ deployWorker.on('completed', async (job, result) => {
 
     const { firstTime, projectId } = job.data;
 
-    if (firstTime && result.usergithubToken && DEPLOY_SERVICE_ENV === 'production' && result.userPlan.github_Ci_Cd) {
+    if (firstTime && result.usergithubToken && DEPLOY_SERVICE_ENV.NODE_ENV === 'production' && result.userPlan.github_Ci_Cd) {
         const repoLinkWithoutGit = result.repoLink.endsWith('.git') ? result.repoLink.slice(0, -4) : result.repoLink;
         const parts = repoLinkWithoutGit.split('/');
         const owner = parts[3];
