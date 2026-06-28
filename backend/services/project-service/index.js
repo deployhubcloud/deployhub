@@ -18,6 +18,9 @@ app.use(hpp());
 app.use(helmet());
 
 
+// github webhhok trigger
+import git_webHookRoutes from './src/routes/github-webhook.routes.js'
+app.use('/github-webhook', git_webHookRoutes)
 
 // parsing
 app.use(express.json());

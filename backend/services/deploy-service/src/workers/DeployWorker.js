@@ -499,48 +499,66 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
 }, { connection, concurrency: 1 });
 
-deployWorker.on('completed', async (job, result) => {
-
+deployWorker.on("completed", async (job, results) => {
     const { firstTime, projectId } = job.data;
 
-    if (firstTime && result.usergithubToken && DEPLOY_SERVICE_ENV.NODE_ENV === 'production' && result.userPlan.github_Ci_Cd) {
-        const repoLinkWithoutGit = result.repoLink.endsWith('.git') ? result.repoLink.slice(0, -4) : result.repoLink;
-        const parts = repoLinkWithoutGit.split('/');
+    if (firstTime && results.usergithubToken && results.userPlan.github_Ci_Cd) {
+        const repoLinkWithoutGit = results.repoLink.endsWith(".git")
+            ? results.repoLink.slice(0, -4)
+            : results.repoLink;
+
+        const parts = repoLinkWithoutGit.split("/");
         const owner = parts[3];
-        const repo = parts[4].replace(/\.git$/, '');
-        let result;
+        const repo = parts[4];
+
         try {
-            result = await fetch(
+            const response = await fetch(
                 `https://api.github.com/repos/${owner}/${repo}/hooks`,
                 {
                     method: "POST",
                     headers: {
-                        Authorization: `Bearer ${result.usergithubToken}`,
-                        Accept: "application/vnd.github+json"
+                        Authorization: `Bearer ${results.usergithubToken}`,
+                        Accept: "application/vnd.github+json",
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
                         name: "web",
                         active: true,
                         events: ["push"],
                         config: {
-                            url: DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? "https://api.deployhub.cloud/api/v1/project/github-webhook" : "https://b960-103-211-132-79.ngrok-free.app/github-webhook",
+                            url:
+                                DEPLOY_SERVICE_ENV.NODE_ENV === "production"
+                                    ? "https://api.deployhub.cloud/api/v1/project/github-webhook"
+                                    : "https://d712-2401-4900-8927-3fc1-8d23-dc2e-7df7-7e03.ngrok-free.app/github-webhook",
                             content_type: "json",
                             secret: DEPLOY_SERVICE_ENV.GITHUB_WEBHOOK_SECRET
                         }
                     })
                 }
             );
+
+            const body = await response.text();
+
+            if (!response.ok) {
+                console.error(
+                    `Failed to create webhook (${response.status}):`,
+                    body
+                );
+            } else {
+                console.log("Webhook created successfully.");
+                console.log(body);
+            }
         } catch (error) {
-            console.log("Error While Setup webhook secret")
+            console.error("Error while setting up GitHub webhook:", error);
         }
+    }
 
-        console.log("Webhook setup response:", result.status, await result.text())
-    };
+    await publishProjectStatus(redis, {
+        projectId,
+        status: "running"
+    });
 
-    await publishProjectStatus(redis, { projectId: projectId, status: 'running' })
-
-    console.log("Deploy Job Completed")
-
+    console.log("Deploy Job Completed");
 });
 
 deployWorker.on('failed', async (job, err) => {
