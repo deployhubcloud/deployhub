@@ -7,6 +7,13 @@ import { verifyJwt } from '../../middlewares/verifyJwt.middleware.js';
 
 const router = express.Router();
 
+router.use(
+    "/github-webhook",
+    checkHealthMiddleware('Project'),
+    rateLimitMiddleware('project', 'To Many Request! Plase try again Later'),
+    proxy(services.Project.url, "Project-Service")
+);
+
 router.use(verifyJwt);
 
 router.use(
@@ -15,6 +22,7 @@ router.use(
     rateLimitMiddleware('project', 'To Many Request! Plase try again Later'),
     proxy(services.Project.url, "Project-Service")
 );
+
 
 
 export default router;
