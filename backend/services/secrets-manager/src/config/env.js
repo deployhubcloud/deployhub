@@ -39,7 +39,7 @@ const schema = z.object({
 
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
-
+  GITHUB_WEBHOOK_SECRET: z.string().length(64, 'Must be 32 bytes = 64 hex chars'),
   GITHUB_TOKEN_ENCRYPTION_KEY: z.string().length(64, 'Must be 32 bytes = 64 hex chars'),
 
   INTERNAL_SECRET: z.string().min(32),

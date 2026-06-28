@@ -81,6 +81,7 @@ export function getSecretsForService(serviceName) {
       BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
       DOCKER_USERNAME: env.DOCKER_USERNAME,
       DOCKER_PASSWORD: env.DOCKER_PASSWORD,
+      GITHUB_WEBHOOK_SECRET: env.GITHUB_WEBHOOK_SECRET
     },
 
 
@@ -104,7 +105,8 @@ export function getSecretsForService(serviceName) {
       MINIO_BUCKET: env.MINIO_BUCKET,
       MINIO_SECRET_KEY: env.MINIO_SECRET_KEY,
       MINIO_ACCESS_KEY: env.MINIO_ACCESS_KEY,
-      MINIO_PUBLIC_HOST: env.MINIO_PUBLIC_HOST
+      MINIO_PUBLIC_HOST: env.MINIO_PUBLIC_HOST,
+      GITHUB_WEBHOOK_SECRET: env.GITHUB_WEBHOOK_SECRET
     },
 
     'api-gateway': {

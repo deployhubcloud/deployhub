@@ -485,27 +485,31 @@ deployWorker.on('completed', async (job, result) => {
         const parts = repoLinkWithoutGit.split('/');
         const owner = parts[3];
         const repo = parts[4].replace(/\.git$/, '');
-
-        const result = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}/hooks`,
-            {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${result.usergithubToken}`,
-                    Accept: "application/vnd.github+json"
-                },
-                body: JSON.stringify({
-                    name: "web",
-                    active: true,
-                    events: ["push"],
-                    config: {
-                        url: DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? "https://api.deployhub.cloud/github-webhook" : "https://b960-103-211-132-79.ngrok-free.app/github-webhook",
-                        content_type: "json",
-                        secret: DEPLOY_SERVICE_ENV.GITHUB_WEBHOOK_SECRET
-                    }
-                })
-            }
-        );
+        let result;
+        try {
+            result = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}/hooks`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${result.usergithubToken}`,
+                        Accept: "application/vnd.github+json"
+                    },
+                    body: JSON.stringify({
+                        name: "web",
+                        active: true,
+                        events: ["push"],
+                        config: {
+                            url: DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? "https://api.deployhub.cloud/api/v1/project/github-webhook" : "https://b960-103-211-132-79.ngrok-free.app/github-webhook",
+                            content_type: "json",
+                            secret: DEPLOY_SERVICE_ENV.GITHUB_WEBHOOK_SECRET
+                        }
+                    })
+                }
+            );
+        } catch (error) {
+            console.log("Error While Setup webhook secret")
+        }
 
         console.log("Webhook setup response:", result.status, await result.text())
     };
