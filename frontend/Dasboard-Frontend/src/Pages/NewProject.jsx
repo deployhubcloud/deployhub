@@ -1,29 +1,71 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Link, Navigate, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/apiclient";
 
+/* ============================================================
+ * Updated Plan Definitions (exactly as you described)
+ * ============================================================ */
 const PLAN_OPTIONS = {
   free: {
     name: "Free",
-    price: "0",
-    accent: "#2dd4bf",
+    price: 0,
     types: ["static"],
-    features: ["Static sites", "DeployHub subdomain", "SSL included"],
+    subdomain: true,
+    customDomain: false,
+    ssl: true,
+    alerts: { email: true, discord: true, telegram: true },
+    github_Ci_Cd: false,
+    ai_diagnostics: false,
+    uptime_monitoring: false,
+    features: [
+      "Static sites",
+      "DeployHub subdomain",
+      "SSL included",
+      "Email, Discord, Telegram alerts",
+    ],
   },
   starter: {
     name: "Starter",
-    price: "9.99",
-    accent: "#f59e0b",
+    price: 9.99,
     types: ["static", "node", "go", "python"],
-    features: ["Static and services", "Custom domains", "CI/CD ready"],
+    subdomain: true,
+    customDomain: true,
+    ssl: true,
+    alerts: { email: true, discord: true, telegram: true },
+    github_Ci_Cd: true,
+    ai_diagnostics: false,
+    uptime_monitoring: false,
+    resources: { ram: "256 MB", cpu: "0.5 vCPU", storage: "5 GB" },
+    features: [
+      "Static + Node.js, Go, Python",
+      "Custom domains",
+      "SSL included",
+      "GitHub CI/CD",
+      "All alert channels",
+    ],
   },
   pro: {
     name: "Pro",
-    price: "29.99",
-    accent: "#a855f7",
+    price: 29.99,
     types: ["static", "node", "go", "python", "java"],
-    features: ["All runtimes", "Uptime monitoring", "AI diagnostics"],
+    subdomain: true,
+    customDomain: true,
+    ssl: true,
+    alerts: { email: true, discord: true, telegram: true },
+    github_Ci_Cd: true,
+    ai_diagnostics: true,
+    uptime_monitoring: true,
+    resources: { ram: "512 MB", cpu: "1 vCPU", storage: "10 GB" },
+    features: [
+      "All runtimes (incl. Java)",
+      "Custom domains",
+      "SSL included",
+      "GitHub CI/CD",
+      "AI diagnostics",
+      "Uptime monitoring",
+      "All alert channels",
+    ],
   },
 };
 
@@ -35,37 +77,24 @@ const TYPE_LABELS = {
   java: "Java",
 };
 
-// Docker-available versions per runtime
 const RUNTIME_VERSIONS = {
-  static: {
-    label: "Node.js (build)",
-    versions: ["22", "24"],
-    default: "24",
-  },
-  node: {
-    label: "Node.js",
-    versions: ["22", "24"],
-    default: "24",
-  },
-  go: {
-    label: "Go",
-    versions: ["1.21", "1.22", "1.23"],
-    default: "1.22",
-  },
-  python: {
-    label: "Python",
-    versions: ["3.10", "3.11", "3.12"],
-    default: "3.11",
-  },
-  java: {
-    label: "Java",
-    versions: ["17", "21"],
-    default: "21",
-  },
+  static: { label: "Node.js (build)", versions: ["22", "24"], default: "24" },
+  node: { label: "Node.js", versions: ["22", "24"], default: "24" },
+  go: { label: "Go", versions: ["1.21", "1.22", "1.23"], default: "1.22" },
+  python: { label: "Python", versions: ["3.10", "3.11", "3.12"], default: "3.11" },
+  java: { label: "Java", versions: ["17", "21"], default: "21" },
 };
 
 const MONTHS = [1, 3, 6, 12];
 const REPO_PAGE_SIZE = 12;
+
+const STEPS = [
+  { id: 0, title: "Plan & Billing", desc: "Pick a tier and term" },
+  { id: 1, title: "Project & Runtime", desc: "Name and runtime version" },
+  { id: 2, title: "Repository", desc: "Connect your source" },
+  { id: 3, title: "Build & Deploy", desc: "Commands, port, env" },
+  { id: 4, title: "Notifications & Review", desc: "Alerts and confirm" },
+];
 
 function useRazorpay() {
   const [loaded, setLoaded] = useState(() => Boolean(window.Razorpay));
@@ -113,14 +142,33 @@ function buildPayload(form, plan, months, projectType, selectedRepo) {
     subdomain: isMicroservice ? undefined : form.subdomain.trim() || undefined,
     env: env && Object.keys(env).length ? env : undefined,
     notifications: {
-      email: { enabled: form.emailNotifications, emailAddress: form.notificationEmail.trim() || undefined },
-      discord: { enabled: form.discordNotifications, webhookUrl: form.discordWebhookUrl.trim() || undefined },
-      telegram: { enabled: form.telegramNotifications, botToken: form.telegramBotToken.trim() || undefined, chatId: form.telegramChatId.trim() || undefined },
+      email: {
+        enabled: form.emailNotifications,
+        emailAddress: form.notificationEmail.trim() || undefined,
+      },
+      discord: {
+        enabled: form.discordNotifications,
+        webhookUrl: form.discordWebhookUrl.trim() || undefined,
+      },
+      telegram: {
+        enabled: form.telegramNotifications,
+        botToken: form.telegramBotToken.trim() || undefined,
+        chatId: form.telegramChatId.trim() || undefined,
+      },
     },
-    monitor: { enabled: form.monitorEnabled, healthPath: form.healthPath.trim() || "/health" },
+    monitor: {
+      enabled: form.monitorEnabled,
+      healthPath: form.healthPath.trim() || "/health",
+    },
     ...(isStatic
-      ? { buildCommand: form.buildCommand.trim(), publishDir: form.publishDir.trim() }
-      : { startCommand: form.startCommand.trim(), port: Number(form.port) }),
+      ? {
+          buildCommand: form.buildCommand.trim(),
+          publishDir: form.publishDir.trim(),
+        }
+      : {
+          startCommand: form.startCommand.trim(),
+          port: Number(form.port),
+        }),
   };
 
   if (selectedRepo) {
@@ -136,6 +184,147 @@ function buildPayload(form, plan, months, projectType, selectedRepo) {
   return payload;
 }
 
+const cx = (...c) => c.filter(Boolean).join(" ");
+
+const inputClass =
+  "w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-neutral-500 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 focus:outline-none transition";
+
+const monoInputClass = inputClass + " font-mono";
+
+function Field({ label, htmlFor, hint, error, children, required }) {
+  return (
+    <label htmlFor={htmlFor} className="block">
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <span className="text-xs font-medium uppercase tracking-wider text-neutral-400">
+          {label}
+          {required && <span className="ml-1 text-amber-400">*</span>}
+        </span>
+        {hint && <span className="text-[11px] text-neutral-500">{hint}</span>}
+      </div>
+      {children}
+      {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
+    </label>
+  );
+}
+
+function Toggle({ checked, onChange, label, description }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-start justify-between gap-4 rounded-xl border border-white/[0.06] bg-[#111114] p-3.5 text-left transition hover:border-white/15"
+    >
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-white">{label}</div>
+        {description && (
+          <div className="mt-0.5 text-xs text-neutral-400">{description}</div>
+        )}
+      </div>
+      <span
+        className={cx(
+          "relative mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-full transition",
+          checked ? "bg-amber-500" : "bg-white/10"
+        )}
+      >
+        <span
+          className={cx(
+            "inline-block h-4 w-4 transform rounded-full bg-white transition",
+            checked ? "translate-x-4" : "translate-x-0.5"
+          )}
+        />
+      </span>
+    </button>
+  );
+}
+
+function StepIndicator({ step, setStep, validateStep, completed }) {
+  return (
+    <>
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between text-xs text-neutral-400">
+          <span className="font-medium text-white">
+            Step {step + 1} of {STEPS.length}
+          </span>
+          <span>{STEPS[step].title}</span>
+        </div>
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300"
+            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+          />
+        </div>
+      </div>
+      <ol className="hidden lg:block">
+        {STEPS.map((s, idx) => {
+          const isCurrent = idx === step;
+          const isDone = completed.includes(idx);
+          const reachable = isDone || idx <= step;
+          return (
+            <li key={s.id} className="relative pb-6 last:pb-0">
+              {idx < STEPS.length - 1 && (
+                <span
+                  className={cx(
+                    "absolute left-[15px] top-8 h-full w-px",
+                    isDone ? "bg-amber-500/60" : "bg-white/10"
+                  )}
+                />
+              )}
+              <button
+                type="button"
+                disabled={!reachable}
+                onClick={() => {
+                  if (idx <= step) setStep(idx);
+                  else if (idx === step + 1 && validateStep(step)) setStep(idx);
+                }}
+                className={cx(
+                  "group relative flex w-full items-start gap-3 text-left transition disabled:cursor-not-allowed",
+                  reachable ? "opacity-100" : "opacity-50"
+                )}
+              >
+                <span
+                  className={cx(
+                    "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition",
+                    isDone
+                      ? "border-amber-500 bg-amber-500 text-white"
+                      : isCurrent
+                      ? "border-amber-500 bg-[#111114] text-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]"
+                      : "border-white/15 bg-[#111114] text-neutral-400"
+                  )}
+                >
+                  {isDone ? (
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : (
+                    idx + 1
+                  )}
+                </span>
+                <span className="min-w-0 pt-0.5">
+                  <span
+                    className={cx(
+                      "block text-sm font-medium",
+                      isCurrent ? "text-white" : "text-neutral-300"
+                    )}
+                  >
+                    {s.title}
+                  </span>
+                  <span className="block text-xs text-neutral-500">{s.desc}</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </>
+  );
+}
+
 export default function NewProject() {
   const { type = "static" } = useParams();
   const { user } = useAuth();
@@ -143,7 +332,10 @@ export default function NewProject() {
   const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
   const normalizedType = type.toLowerCase();
   const selectedType = TYPE_LABELS[normalizedType] ? normalizedType : "static";
-  const defaultPlan = selectedType === "static" ? "free" : selectedType === "java" ? "pro" : "starter";
+  const defaultPlan =
+    selectedType === "static" ? "free" : selectedType === "java" ? "pro" : "starter";
+
+  const navigate = useNavigate();
 
   const [plan, setPlan] = useState(defaultPlan);
   const [months, setMonths] = useState(1);
@@ -157,9 +349,10 @@ export default function NewProject() {
   const [useManualRepo, setUseManualRepo] = useState(false);
   const [repoQuery, setRepoQuery] = useState("");
   const [visibleRepoCount, setVisibleRepoCount] = useState(REPO_PAGE_SIZE);
-
-  const navigate = useNavigate();
-
+  const [step, setStep] = useState(0);
+  const [completed, setCompleted] = useState([]);
+  const [stepErrors, setStepErrors] = useState({});
+  const topRef = useRef(null);
 
   const [form, setForm] = useState({
     projectName: "",
@@ -185,7 +378,8 @@ export default function NewProject() {
     telegramChatId: "",
   });
 
-  // Reset runtimeVersion when project type changes (via URL param)
+  /* ---------------- effects ---------------- */
+
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
@@ -193,7 +387,6 @@ export default function NewProject() {
     }));
   }, [selectedType]);
 
-  // Fetch GitHub repos if user is connected via GitHub
   useEffect(() => {
     const fetchRepos = async () => {
       if (!user || user.provider !== "github") return;
@@ -204,7 +397,9 @@ export default function NewProject() {
         setRepos(response.data.repositories || []);
       } catch (err) {
         console.error("Failed to fetch repos", err);
-        setRepoError("Could not load your GitHub repositories. You can still enter a repository URL manually.");
+        setRepoError(
+          "Could not load your GitHub repositories. You can still enter a repository URL manually."
+        );
         setUseManualRepo(true);
       } finally {
         setLoadingRepos(false);
@@ -216,11 +411,25 @@ export default function NewProject() {
   useEffect(() => {
     if (created) {
       const projectId = created.projectId || created?.project?._id;
-      if (projectId) {
-        navigate(`/project/${projectId}/logs`);
-      }
+      if (projectId) navigate(`/project/${projectId}/logs`);
     }
   }, [created, navigate]);
+
+  useEffect(() => {
+    if (topRef.current) topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [step]);
+
+  useEffect(() => {
+    if (selectedType === "static" && form.isMicroservice) {
+      setForm((prev) => ({ ...prev, isMicroservice: false }));
+    }
+  }, [form.isMicroservice, selectedType]);
+
+  useEffect(() => {
+    setVisibleRepoCount(REPO_PAGE_SIZE);
+  }, [repoQuery, repos]);
+
+  /* ---------------- derived ---------------- */
 
   const allowedTypes = PLAN_OPTIONS[plan].types;
   const isStatic = selectedType === "static";
@@ -232,10 +441,9 @@ export default function NewProject() {
   const filteredRepos = useMemo(() => {
     const query = repoQuery.trim().toLowerCase();
     if (!query) return repos;
-    return repos.filter((repo) => {
-      const searchable = `${repo.full_name || ""} ${repo.description || ""}`.toLowerCase();
-      return searchable.includes(query);
-    });
+    return repos.filter((r) =>
+      `${r.full_name || ""} ${r.description || ""}`.toLowerCase().includes(query)
+    );
   }, [repoQuery, repos]);
 
   const visibleRepos = useMemo(
@@ -249,46 +457,34 @@ export default function NewProject() {
     [form, months, plan, selectedType, selectedRepo]
   );
 
-  useEffect(() => {
-    if (isStatic && form.isMicroservice) {
-      setForm((prev) => ({ ...prev, isMicroservice: false }));
-    }
-  }, [form.isMicroservice, isStatic]);
+  /* ---------------- handlers ---------------- */
 
-  useEffect(() => {
-    setVisibleRepoCount(REPO_PAGE_SIZE);
-  }, [repoQuery, repos]);
-
-  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
-
-  const setMicroserviceMode = (enabled) => {
-    setForm((prev) => ({
-      ...prev,
-      isMicroservice: enabled,
-      subdomain: enabled ? "" : prev.subdomain,
-    }));
-  };
+  const setField = useCallback((key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setStepErrors((prev) => ({ ...prev, [key]: "" }));
+  }, []);
 
   const selectPlan = (nextPlan) => {
     if (!PLAN_OPTIONS[nextPlan].types.includes(selectedType)) {
-      setError(`${PLAN_OPTIONS[nextPlan].name} does not support ${TYPE_LABELS[selectedType]}.`);
+      setStepErrors((prev) => ({
+        ...prev,
+        plan: `${PLAN_OPTIONS[nextPlan].name} does not support ${TYPE_LABELS[selectedType]}.`,
+      }));
       return;
     }
     setPlan(nextPlan);
     setMonths(1);
-    setError("");
-    setCreated(null);
+    setStepErrors((prev) => ({ ...prev, plan: "" }));
   };
 
   const handleRepoSelect = (repo) => {
     setSelectedRepo(repo);
     setField("repoUrl", repo.html_url);
     setField("branch", repo.default_branch);
-    if (!form.projectName) {
-      setField("projectName", repo.name);
-    }
+    if (!form.projectName) setField("projectName", repo.name);
     setRepoError("");
     setUseManualRepo(false);
+    setStepErrors((prev) => ({ ...prev, repo: "" }));
   };
 
   const retryRepoFetch = async () => {
@@ -300,7 +496,9 @@ export default function NewProject() {
       setUseManualRepo(false);
     } catch (err) {
       console.error("Failed to fetch repos", err);
-      setRepoError("Could not load your GitHub repositories. You can still enter a repository URL manually.");
+      setRepoError(
+        "Could not load your GitHub repositories. You can still enter a repository URL manually."
+      );
       setUseManualRepo(true);
     } finally {
       setLoadingRepos(false);
@@ -310,77 +508,120 @@ export default function NewProject() {
   const handleRepoListScroll = (event) => {
     const { scrollTop, clientHeight, scrollHeight } = event.currentTarget;
     if (scrollHeight - scrollTop - clientHeight > 80 || !hasMoreRepos) return;
-    setVisibleRepoCount((count) => Math.min(count + REPO_PAGE_SIZE, filteredRepos.length));
+    setVisibleRepoCount((c) => Math.min(c + REPO_PAGE_SIZE, filteredRepos.length));
   };
 
-  const validate = () => {
-    if (!form.projectName.trim()) return "Project name is required.";
-    if (!form.repoUrl.trim()) return "Repository URL is required.";
-    if (!form.branch.trim()) return "Branch is required.";
-    if (!form.runtimeVersion) return "Runtime version is required.";
-    if (!allowedTypes.includes(selectedType)) return `${PLAN_OPTIONS[plan].name} does not support ${TYPE_LABELS[selectedType]}.`;
-    if (isStatic && !form.buildCommand.trim()) return "Build command is required for static projects.";
-    if (isStatic && !form.publishDir.trim()) return "Publish directory is required for static projects.";
-    if (!isStatic && !form.startCommand.trim()) return "Start command is required for services.";
-    if (!isStatic && (!Number.isInteger(Number(form.port)) || Number(form.port) < 1 || Number(form.port) > 65535))
-      return "Port must be between 1 and 65535.";
-    if (!microserviceEnabled && !form.subdomain.trim()) return "Subdomain is required when microservice mode is off.";
-    if (form.subdomain.trim() && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.subdomain.trim()))
-      return "Subdomain can only contain lowercase letters, numbers, and hyphens.";
-    if (form.emailNotifications && !form.notificationEmail.trim()) return "Notification email is required when email alerts are enabled.";
-    if (form.discordNotifications && !form.discordWebhookUrl.trim()) return "Discord webhook URL is required when Discord alerts are enabled.";
-    if (form.telegramNotifications && (!form.telegramBotToken.trim() || !form.telegramChatId.trim()))
-      return "Telegram bot token and chat ID are required when Telegram alerts are enabled.";
-    if (isPaid && !razorpayKey) return "Razorpay key is missing in frontend env.";
-    return "";
+  const validateStep = (idx) => {
+    const errors = {};
+    switch (idx) {
+      case 0:
+        if (!allowedTypes.includes(selectedType))
+          errors.plan = `Plan does not support ${TYPE_LABELS[selectedType]}.`;
+        if (isPaid && !MONTHS.includes(months)) errors.months = "Pick a valid term.";
+        break;
+      case 1:
+        if (!form.projectName.trim()) errors.projectName = "Project name is required.";
+        if (!form.runtimeVersion) errors.runtimeVersion = "Runtime version is required.";
+        break;
+      case 2:
+        if (!form.repoUrl.trim()) errors.repoUrl = "Repository URL is required.";
+        if (!form.branch.trim()) errors.branch = "Branch is required.";
+        break;
+      case 3:
+        if (isStatic && !form.buildCommand.trim())
+          errors.buildCommand = "Build command is required.";
+        if (isStatic && !form.publishDir.trim())
+          errors.publishDir = "Publish directory is required.";
+        if (!isStatic && !form.startCommand.trim())
+          errors.startCommand = "Start command is required.";
+        if (
+          !isStatic &&
+          (!Number.isInteger(Number(form.port)) ||
+            Number(form.port) < 1 ||
+            Number(form.port) > 65535)
+        )
+          errors.port = "Port must be between 1 and 65535.";
+        if (!microserviceEnabled && !form.subdomain.trim())
+          errors.subdomain = "Subdomain is required.";
+        if (
+          form.subdomain.trim() &&
+          !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(form.subdomain.trim())
+        )
+          errors.subdomain =
+            "Subdomain can only contain lowercase letters, numbers, and hyphens.";
+        break;
+      case 4:
+        if (form.emailNotifications && !form.notificationEmail.trim())
+          errors.notificationEmail = "Email is required.";
+        if (form.discordNotifications && !form.discordWebhookUrl.trim())
+          errors.discordWebhookUrl = "Discord webhook URL is required.";
+        if (
+          form.telegramNotifications &&
+          (!form.telegramBotToken.trim() || !form.telegramChatId.trim())
+        )
+          errors.telegram = "Telegram bot token and chat ID are required.";
+        if (isPaid && !razorpayKey) errors.payment = "Payment configuration missing.";
+        break;
+      default:
+        break;
+    }
+    setStepErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const createFreeProject = async () => {
-    const { data } = await api.post("/project/projects", { ...previewPayload, plan: "free" });
-    setCreated(data);
+  const handleNext = () => {
+    if (!validateStep(step)) return;
+    setCompleted((c) => Array.from(new Set([...c, step])));
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const createPaidProject = async () => {
-    if (!razorpayLoaded) throw new Error("Payment gateway is still loading.");
-    const { data: order } = await api.post("/project/payment/init", previewPayload);
-    await new Promise((resolve, reject) => {
-      const checkout = new window.Razorpay({
-        key: razorpayKey,
-        amount: order.amount,
-        currency: order.currency || "INR",
-        name: "DeployHub",
-        description: `${PLAN_OPTIONS[plan].name} project deployment`,
-        order_id: order.id || order.orderId,
-        prefill: { name: user?.fullName || user?.fullname || "", email: user?.email || "" },
-        handler: async (response) => {
-          try {
-            const { data } = await api.post("/project/payment/verify", {
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            setCreated(data);
-            resolve(data);
-          } catch (err) {
-            reject(err);
-          }
-        },
-        modal: { ondismiss: () => reject(new Error("Payment cancelled.")) },
-      });
-      checkout.open();
-    });
-  };
+  const handleBack = () => setStep((s) => Math.max(s - 1, 0));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!validateStep(4)) return;
+    setSubmitting(true);
     setError("");
     setCreated(null);
-    const validationError = validate();
-    if (validationError) return setError(validationError);
-    setSubmitting(true);
     try {
-      if (isPaid) await createPaidProject();
-      else await createFreeProject();
+      if (isPaid) {
+        if (!razorpayLoaded) throw new Error("Payment gateway is still loading.");
+        const { data: order } = await api.post("/project/payment/init", previewPayload);
+        await new Promise((resolve, reject) => {
+          const checkout = new window.Razorpay({
+            key: razorpayKey,
+            amount: order.amount,
+            currency: order.currency || "INR",
+            name: "DeployHub",
+            description: `${PLAN_OPTIONS[plan].name} project deployment`,
+            order_id: order.id || order.orderId,
+            prefill: {
+              name: user?.fullName || user?.fullname || "",
+              email: user?.email || "",
+            },
+            handler: async (response) => {
+              try {
+                const { data } = await api.post("/project/payment/verify", {
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                });
+                setCreated(data);
+                resolve(data);
+              } catch (err) {
+                reject(err);
+              }
+            },
+            modal: { ondismiss: () => reject(new Error("Payment cancelled.")) },
+          });
+          checkout.open();
+        });
+      } else {
+        const { data } = await api.post("/project/projects", {
+          ...previewPayload,
+          plan: "free",
+        });
+        setCreated(data);
+      }
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Project creation failed.");
     } finally {
@@ -390,611 +631,797 @@ export default function NewProject() {
 
   if (!TYPE_LABELS[normalizedType]) return <Navigate to="/projects/new/static" replace />;
 
-  const inputClass =
-    "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all";
-  const repoActionClass =
-    "text-xs font-medium text-violet-300 hover:text-violet-200 focus:outline-none focus:ring-2 focus:ring-violet-500/30";
+  /* ============================================================
+   * Step renderers
+   * ============================================================ */
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0f1c] to-[#05070f] text-white">
-      <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
-        {/* Header */}
-        <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition">
-              ← Back to projects
-            </Link>
-            <h1 className="mt-3 text-3xl font-bold bg-gradient-to-r from-white to-violet-300 bg-clip-text text-transparent">
-              Deploy new project
-            </h1>
-            <p className="mt-1 text-gray-400">Connect your repository and launch in seconds</p>
-          </div>
-          {created && (
-            <div className="rounded-2xl bg-emerald-500/20 backdrop-blur-sm px-5 py-3 border border-emerald-500/30">
-              <div className="flex items-center gap-2 text-emerald-300">
-                <span className="text-lg">✓</span> Project queued — ID: {created.projectId || created.project?._id}
+  const renderStep0 = () => (
+    <div className="space-y-6">
+      <div
+        role="radiogroup"
+        aria-label="Select plan"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+      >
+        {Object.entries(PLAN_OPTIONS).map(([key, item]) => {
+          const selected = plan === key;
+          const supports = item.types.includes(selectedType);
+          return (
+            <button
+              type="button"
+              key={key}
+              onClick={() => selectPlan(key)}
+              role="radio"
+              aria-checked={selected}
+              disabled={!supports}
+              className={cx(
+                "relative rounded-2xl border p-5 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40",
+                selected
+                  ? "border-amber-500 bg-amber-500/10 shadow-[0_10px_40px_-15px_rgba(245,158,11,0.6)]"
+                  : "border-white/[0.08] bg-[#111114] hover:border-white/20",
+                !supports && "cursor-not-allowed opacity-40"
+              )}
+            >
+              {selected && (
+                <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-white">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+              )}
+              <h3 className="text-base font-semibold text-white">{item.name}</h3>
+              <p className="mt-2 flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-white">${item.price}</span>
+                <span className="text-xs text-neutral-400">/mo</span>
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {item.types.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] text-neutral-300"
+                  >
+                    {TYPE_LABELS[t]}
+                  </span>
+                ))}
               </div>
-            </div>
-          )}
-        </div>
+              <ul className="mt-4 space-y-1.5 text-xs text-neutral-400">
+                {item.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-amber-400" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              {item.resources && (
+                <div className="mt-4 rounded-lg bg-white/[0.04] p-2 text-[11px] text-neutral-300">
+                  <span className="block text-xs font-medium text-neutral-400 mb-1">
+                    Resources
+                  </span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <div>RAM {item.resources.ram}</div>
+                    <div>CPU {item.resources.cpu}</div>
+                    <div>Disk {item.resources.storage}</div>
+                  </div>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {stepErrors.plan && (
+        <p className="text-sm text-red-400">{stepErrors.plan}</p>
+      )}
 
-        <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_340px]">
-          {/* Left column */}
-          <div className="space-y-8">
-            {/* Plan cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {Object.entries(PLAN_OPTIONS).map(([key, item]) => {
-                const selected = plan === key;
+      {isPaid && (
+        <div>
+          <div className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+            Billing term
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {MONTHS.map((m) => {
+              const active = months === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMonths(m)}
+                  className={cx(
+                    "rounded-lg border px-3 py-2.5 text-sm font-medium transition",
+                    active
+                      ? "border-amber-500 bg-amber-500/10 text-white"
+                      : "border-white/[0.08] bg-[#111114] text-neutral-300 hover:border-white/20"
+                  )}
+                >
+                  {m} {m === 1 ? "month" : "months"}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs text-neutral-400">
+            Total today:{" "}
+            <span className="font-semibold text-white">
+              ${(Number(PLAN_OPTIONS[plan].price) * months).toFixed(2)}
+            </span>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-white/[0.08] bg-[#111114] p-4">
+        <div className="text-xs uppercase tracking-wider text-neutral-400">
+          Project type
+        </div>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="inline-flex h-8 items-center rounded-full bg-amber-500/10 px-3 text-sm font-medium text-amber-400">
+            {TYPE_LABELS[selectedType]}
+          </span>
+          <span className="text-xs text-neutral-500">
+            (locked from URL — change via /projects/new/&lt;type&gt;)
+          </span>
+        </div>
+      </div>
+
+      <Field
+        label="Project name"
+        required
+        htmlFor="projectName"
+        error={stepErrors.projectName}
+      >
+        <input
+          id="projectName"
+          type="text"
+          value={form.projectName}
+          onChange={(e) => setField("projectName", e.target.value)}
+          placeholder="my-awesome-app"
+          className={inputClass}
+        />
+      </Field>
+
+      <Field
+        label={`${runtimeConfig.label} version`}
+        required
+        htmlFor="runtimeVersion"
+        error={stepErrors.runtimeVersion}
+      >
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {runtimeConfig.versions.map((v) => {
+            const active = form.runtimeVersion === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setField("runtimeVersion", v)}
+                className={cx(
+                  "rounded-lg border px-3 py-2.5 text-sm font-mono font-medium transition",
+                  active
+                    ? "border-amber-500 bg-amber-500/10 text-white"
+                    : "border-white/[0.08] bg-[#111114] text-neutral-300 hover:border-white/20"
+                )}
+              >
+                {v}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-5">
+      {/* Repo source */}
+      {!isGitHubUser || useManualRepo ? (
+        <Field
+          label="Repository URL"
+          required
+          htmlFor="repoUrl"
+          error={stepErrors.repoUrl}
+        >
+          <input
+            id="repoUrl"
+            type="url"
+            value={form.repoUrl}
+            onChange={(e) => {
+              setSelectedRepo(null);
+              setField("repoUrl", e.target.value);
+            }}
+            placeholder="https://github.com/user/repo"
+            className={inputClass}
+          />
+          {isGitHubUser && (
+            <button
+              type="button"
+              onClick={() => setUseManualRepo(false)}
+              className="mt-2 text-xs font-medium text-amber-400 hover:text-amber-300"
+            >
+              ← Back to repository list
+            </button>
+          )}
+        </Field>
+      ) : loadingRepos ? (
+        <div className="rounded-xl border border-white/[0.08] bg-[#111114] p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500/30 border-t-amber-500" />
+            <span className="text-sm text-neutral-300">Fetching your repositories…</span>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-14 animate-pulse rounded-lg bg-white/5" />
+            ))}
+          </div>
+        </div>
+      ) : repoError && repos.length === 0 ? (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+            {repoError}
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs font-medium">
+            <button
+              type="button"
+              onClick={retryRepoFetch}
+              className="text-amber-400 hover:text-amber-300"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseManualRepo(true)}
+              className="text-amber-400 hover:text-amber-300"
+            >
+              Enter URL manually
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-white/[0.08] bg-[#111114] p-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="search"
+              value={repoQuery}
+              onChange={(e) => setRepoQuery(e.target.value)}
+              placeholder="Search repositories"
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRepo(null);
+                setUseManualRepo(true);
+              }}
+              className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-neutral-300 hover:border-white/20 hover:text-white"
+            >
+              Enter URL
+            </button>
+          </div>
+          <div
+            onScroll={handleRepoListScroll}
+            className="mt-3 max-h-80 overflow-y-auto pr-1"
+          >
+            <div className="grid gap-2 sm:grid-cols-2">
+              {visibleRepos.map((repo) => {
+                const active = selectedRepo?.id === repo.id;
                 return (
                   <button
+                    key={repo.id}
                     type="button"
-                    key={key}
-                    onClick={() => selectPlan(key)}
-                    className={`relative rounded-2xl border p-4 text-left transition-all duration-200 ${selected
-                      ? "border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/20"
-                      : "border-white/10 bg-white/5 hover:bg-white/10"
-                      }`}
+                    onClick={() => handleRepoSelect(repo)}
+                    className={cx(
+                      "rounded-lg border p-3 text-left transition",
+                      active
+                        ? "border-amber-500 bg-amber-500/10"
+                        : "border-white/[0.06] bg-[#111114] hover:border-white/20"
+                    )}
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-xl font-bold">{item.name}</h3>
-                        <p className="mt-1 text-2xl font-black">
-                          ₹{item.price}
-                          <span className="text-sm font-normal text-gray-400">/mo</span>
-                        </p>
-                      </div>
-                      {selected && (
-                        <div className="rounded-full bg-violet-500 p-1">
-                          <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-white">
+                        {repo.full_name}
+                      </span>
+                      {repo.private && (
+                        <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-neutral-300">
+                          Private
+                        </span>
                       )}
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {item.types.map((t) => (
-                        <span key={t} className="rounded-full bg-white/10 px-2 py-0.5 text-xs">
-                          {TYPE_LABELS[t]}
-                        </span>
-                      ))}
-                    </div>
-                    <ul className="mt-3 space-y-1 text-sm text-gray-300">
-                      {item.features.map((f) => (
-                        <li key={f} className="flex items-center gap-1.5">
-                          • {f}
-                        </li>
-                      ))}
-                    </ul>
+                    {repo.description && (
+                      <p className="mt-1 line-clamp-2 text-xs text-neutral-400">
+                        {repo.description}
+                      </p>
+                    )}
                   </button>
                 );
               })}
             </div>
-
-            {/* Main form card */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 space-y-6">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Project name</label>
-                  <input
-                    type="text"
-                    value={form.projectName}
-                    onChange={(e) => setField("projectName", e.target.value)}
-                    className={inputClass}
-                    placeholder="my-app"
-                  />
-                </div>
-
-                {/* ── Runtime Version Selector ── */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">
-                    {runtimeConfig.label} version
-                  </label>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {runtimeConfig.versions.map((v) => {
-                      const active = form.runtimeVersion === v;
-                      return (
-                        <button
-                          key={v}
-                          type="button"
-                          onClick={() => setField("runtimeVersion", v)}
-                          className={`rounded-lg border px-3 py-1.5 text-sm font-mono font-semibold transition-all duration-150 ${active
-                            ? "border-violet-500 bg-violet-500/20 text-violet-200 shadow shadow-violet-500/20"
-                            : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:bg-white/10 hover:text-white"
-                            }`}
-                        >
-                          {v}
-                          {v === runtimeConfig.default && (
-                            <span className="ml-1.5 rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-sans text-emerald-300">
-                              recommended
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-1.5 text-xs text-gray-500">
-                    Docker image: <span className="font-mono text-gray-400">{selectedType === "static" || selectedType === "node" ? `node:${form.runtimeVersion}-alpine` : selectedType === "go" ? `golang:${form.runtimeVersion}-alpine` : selectedType === "python" ? `python:${form.runtimeVersion}-slim` : `eclipse-temurin:${form.runtimeVersion}-jdk-alpine`}</span>
-                  </p>
-                </div>
-
-                {/* Repository selection */}
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300">Repository</label>
-                  {isGitHubUser && !useManualRepo ? (
-                    <div className="space-y-2">
-                      {loadingRepos ? (
-                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-400/30 border-t-violet-300" />
-                            <span className="text-sm text-gray-300">Fetching your repositories...</span>
-                          </div>
-                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                            {[0, 1, 2, 3].map((item) => (
-                              <div key={item} className="h-14 animate-pulse rounded-lg bg-white/10" />
-                            ))}
-                          </div>
-                        </div>
-                      ) : repoError ? (
-                        <div className="space-y-3">
-                          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-                            {repoError}
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            <button type="button" onClick={retryRepoFetch} className={repoActionClass}>
-                              Retry
-                            </button>
-                            <button type="button" onClick={() => setUseManualRepo(true)} className={repoActionClass}>
-                              Enter URL manually
-                            </button>
-                          </div>
-                        </div>
-                      ) : repos.length === 0 ? (
-                        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                          <p className="text-sm text-gray-300">No repositories found.</p>
-                          <button type="button" onClick={() => setUseManualRepo(true)} className={`${repoActionClass} mt-2`}>
-                            Enter URL manually
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <input
-                              type="search"
-                              value={repoQuery}
-                              onChange={(e) => setRepoQuery(e.target.value)}
-                              className={inputClass}
-                              placeholder="Search repositories"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedRepo(null);
-                                setUseManualRepo(true);
-                              }}
-                              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-violet-200 transition hover:bg-white/10"
-                            >
-                              Manual URL
-                            </button>
-                          </div>
-
-                          {selectedRepo && (
-                            <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-100">
-                              Selected: <span className="font-medium">{selectedRepo.full_name}</span>
-                            </div>
-                          )}
-
-                          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-400">
-                            <span>
-                              Showing {visibleRepos.length} of {filteredRepos.length} repositories
-                            </span>
-                            {hasMoreRepos && <span>Scroll to load more</span>}
-                          </div>
-
-                          <div
-                            onScroll={handleRepoListScroll}
-                            className="mt-2 grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2"
-                          >
-                            {visibleRepos.map((repo) => {
-                              const selected = selectedRepo?.id === repo.id;
-                              return (
-                                <button
-                                  key={repo.id}
-                                  type="button"
-                                  onClick={() => handleRepoSelect(repo)}
-                                  className={`min-w-0 rounded-lg border p-3 text-left transition ${selected
-                                    ? "border-violet-400 bg-violet-500/15"
-                                    : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
-                                    }`}
-                                >
-                                  <div className="flex min-w-0 items-center justify-between gap-2">
-                                    <span className="truncate text-sm font-semibold text-white">{repo.full_name}</span>
-                                    <span
-                                      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${repo.private
-                                        ? "bg-amber-400/15 text-amber-200"
-                                        : "bg-cyan-400/15 text-cyan-200"
-                                        }`}
-                                    >
-                                      {repo.private ? "Private" : "Public"}
-                                    </span>
-                                  </div>
-                                  <p className="mt-1 truncate text-xs text-gray-400">
-                                    {repo.description || `Default branch: ${repo.default_branch}`}
-                                  </p>
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {filteredRepos.length === 0 && (
-                            <p className="mt-3 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">
-                              No repository matches your search.
-                            </p>
-                          )}
-                          {hasMoreRepos && filteredRepos.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setVisibleRepoCount((count) =>
-                                  Math.min(count + REPO_PAGE_SIZE, filteredRepos.length)
-                                )
-                              }
-                              className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-violet-200 transition hover:bg-white/10"
-                            >
-                              Load more repositories
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {repoError && (
-                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-                          {repoError}
-                        </div>
-                      )}
-                      <input
-                        type="url"
-                        value={form.repoUrl}
-                        onChange={(e) => {
-                          setSelectedRepo(null);
-                          setField("repoUrl", e.target.value);
-                        }}
-                        className={inputClass}
-                        placeholder="https://github.com/user/repo"
-                      />
-                      {isGitHubUser && useManualRepo && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRepoError("");
-                            setUseManualRepo(false);
-                          }}
-                          className={repoActionClass}
-                        >
-                          Back to repository list
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Branch</label>
-                  <input
-                    type="text"
-                    value={form.branch}
-                    onChange={(e) => setField("branch", e.target.value)}
-                    className={inputClass}
-                    placeholder="main"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Root directory</label>
-                  <input
-                    type="text"
-                    value={form.rootDirectory}
-                    onChange={(e) => setField("rootDirectory", e.target.value)}
-                    className={inputClass}
-                    placeholder="."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300">Subdomain</label>
-                  <input
-                    type="text"
-                    value={form.subdomain}
-                    onChange={(e) => setField("subdomain", e.target.value.toLowerCase())}
-                    disabled={microserviceEnabled}
-                    required={!microserviceEnabled}
-                    className={inputClass}
-                    placeholder="my-app"
-                  />
-                </div>
-                {!isStatic && (
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => setMicroserviceMode(!microserviceEnabled)}
-                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 transition ${microserviceEnabled ? "border-purple-500 bg-purple-500/20" : "border-white/10 bg-white/5"
-                        }`}
-                    >
-                      <span>Microservice mode</span>
-                      <div
-                        className={`h-5 w-9 rounded-full transition ${microserviceEnabled ? "bg-purple-500" : "bg-white/30"
-                          }`}
-                      >
-                        <div
-                          className={`h-5 w-5 rounded-full bg-white transition-transform ${microserviceEnabled ? "translate-x-4" : "translate-x-0"
-                            }`}
-                        />
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Build / start commands */}
-              <div className="grid gap-5 sm:grid-cols-2">
-                {isStatic ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300">Build command</label>
-                      <input
-                        type="text"
-                        value={form.buildCommand}
-                        onChange={(e) => setField("buildCommand", e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300">Publish directory</label>
-                      <input
-                        type="text"
-                        value={form.publishDir}
-                        onChange={(e) => setField("publishDir", e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300">Start command</label>
-                      <input
-                        type="text"
-                        value={form.startCommand}
-                        onChange={(e) => setField("startCommand", e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300">Port</label>
-                      <input
-                        type="number"
-                        value={form.port}
-                        onChange={(e) => setField("port", e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Environment variables */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300">
-                  Environment variables (KEY=value per line)
-                </label>
-                <textarea
-                  rows={3}
-                  value={form.envText}
-                  onChange={(e) => setField("envText", e.target.value)}
-                  className={`${inputClass} font-mono`}
-                  placeholder={"NODE_ENV=production\nAPI_KEY=xxx"}
-                />
-              </div>
-
-              {/* Monitoring (Pro only) */}
-              {plan === "pro" && (
-                <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-                  <button
-                    type="button"
-                    onClick={() => setField("monitorEnabled", !form.monitorEnabled)}
-                    className="flex w-full items-center justify-between"
-                  >
-                    <div>
-                      <h3 className="font-semibold">Uptime monitoring</h3>
-                      <p className="text-sm text-gray-400">Get alerts on downtime</p>
-                    </div>
-                    <div
-                      className={`h-5 w-9 rounded-full transition ${form.monitorEnabled ? "bg-violet-500" : "bg-white/30"
-                        }`}
-                    >
-                      <div
-                        className={`h-5 w-5 rounded-full bg-white transition-transform ${form.monitorEnabled ? "translate-x-4" : "translate-x-0"
-                          }`}
-                      />
-                    </div>
-                  </button>
-                  {form.monitorEnabled && (
-                    <div className="mt-3">
-                      <label className="text-sm text-gray-300">Health path</label>
-                      <input
-                        type="text"
-                        value={form.healthPath}
-                        onChange={(e) => setField("healthPath", e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Notifications */}
-              <div className="rounded-xl border border-white/10 bg-black/30 p-4 space-y-3">
-                <h3 className="font-semibold">Alert channels</h3>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setField("emailNotifications", !form.emailNotifications)}
-                      className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2"
-                    >
-                      Email
-                      <div
-                        className={`h-5 w-9 rounded-full transition ${form.emailNotifications ? "bg-violet-500" : "bg-white/30"
-                          }`}
-                      >
-                        <div
-                          className={`h-5 w-5 rounded-full bg-white transition-transform ${form.emailNotifications ? "translate-x-4" : "translate-x-0"
-                            }`}
-                        />
-                      </div>
-                    </button>
-                    {form.emailNotifications && (
-                      <input
-                        type="email"
-                        value={form.notificationEmail}
-                        onChange={(e) => setField("notificationEmail", e.target.value)}
-                        className={`${inputClass} mt-2`}
-                        placeholder="you@example.com"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setField("discordNotifications", !form.discordNotifications)}
-                      className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2"
-                    >
-                      Discord
-                      <div
-                        className={`h-5 w-9 rounded-full transition ${form.discordNotifications ? "bg-violet-500" : "bg-white/30"
-                          }`}
-                      >
-                        <div
-                          className={`h-5 w-5 rounded-full bg-white transition-transform ${form.discordNotifications ? "translate-x-4" : "translate-x-0"
-                            }`}
-                        />
-                      </div>
-                    </button>
-                    {form.discordNotifications && (
-                      <input
-                        type="url"
-                        value={form.discordWebhookUrl}
-                        onChange={(e) => setField("discordWebhookUrl", e.target.value)}
-                        className={`${inputClass} mt-2`}
-                        placeholder="https://discord.com/api/webhooks/..."
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setField("telegramNotifications", !form.telegramNotifications)}
-                      className="flex w-full justify-between rounded-lg bg-white/5 px-3 py-2"
-                    >
-                      Telegram
-                      <div
-                        className={`h-5 w-9 rounded-full transition ${form.telegramNotifications ? "bg-violet-500" : "bg-white/30"
-                          }`}
-                      >
-                        <div
-                          className={`h-5 w-5 rounded-full bg-white transition-transform ${form.telegramNotifications ? "translate-x-4" : "translate-x-0"
-                            }`}
-                        />
-                      </div>
-                    </button>
-                    {form.telegramNotifications && (
-                      <div className="space-y-2 mt-2">
-                        <input
-                          type="text"
-                          value={form.telegramBotToken}
-                          onChange={(e) => setField("telegramBotToken", e.target.value)}
-                          className={inputClass}
-                          placeholder="Bot token"
-                        />
-                        <input
-                          type="text"
-                          value={form.telegramChatId}
-                          onChange={(e) => setField("telegramChatId", e.target.value)}
-                          className={inputClass}
-                          placeholder="Chat ID"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {filteredRepos.length === 0 && (
+              <p className="py-6 text-center text-sm text-neutral-500">
+                No repositories match your search.
+              </p>
+            )}
+            {hasMoreRepos && (
+              <p className="mt-3 text-center text-xs text-neutral-500">
+                Scroll for more…
+              </p>
+            )}
           </div>
+        </div>
+      )}
 
-          {/* Right column: Summary + Action */}
-          <div className="space-y-6">
-            <div className="sticky top-8 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-6 backdrop-blur-sm">
-              <h2 className="text-xl font-bold">Order summary</h2>
-              <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Plan</span>
-                  <span className="font-medium">{PLAN_OPTIONS[plan].name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Type</span>
-                  <span>{TYPE_LABELS[selectedType]}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">{runtimeConfig.label} ver.</span>
-                  <span className="font-mono text-violet-300">{form.runtimeVersion}</span>
-                </div>
-                {isPaid && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Duration</span>
-                    <div className="flex gap-2">
-                      {MONTHS.map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setMonths(m)}
-                          className={`rounded-md px-2 py-1 text-xs font-medium transition ${months === m ? "bg-violet-500 text-white" : "bg-white/10 hover:bg-white/20"
-                            }`}
-                        >
-                          {m}m
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-white/10 pt-3 text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-violet-400">
-                    ₹{isPaid ? parseInt(PLAN_OPTIONS[plan].price) * months : 0}
-                    {isPaid && <span className="text-sm font-normal text-gray-400"> / {months} mo</span>}
-                  </span>
-                </div>
-              </div>
-              {error && (
-                <div className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm text-red-300">{error}</div>
-              )}
-              <button
-                type="submit"
-                disabled={submitting || (isPaid && !razorpayLoaded)}
-                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 font-bold text-white shadow-lg shadow-violet-500/25 transition hover:scale-[1.02] disabled:opacity-50"
-              >
-                {submitting
-                  ? isPaid
-                    ? "Processing payment..."
-                    : "Creating project..."
-                  : isPaid
-                    ? "Pay & Deploy"
-                    : "Deploy for Free"}
-              </button>
-              {isPaid && !razorpayLoaded && (
-                <p className="mt-2 text-center text-xs text-gray-500">Loading payment gateway...</p>
-              )}
-            </div>
-          </div>
-        </form>
+      {/* Branch + root dir */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Branch" required htmlFor="branch" error={stepErrors.branch}>
+          <input
+            id="branch"
+            type="text"
+            value={form.branch}
+            onChange={(e) => setField("branch", e.target.value)}
+            placeholder="main"
+            className={monoInputClass}
+          />
+        </Field>
+        <Field label="Root directory" htmlFor="rootDirectory" hint="default: .">
+          <input
+            id="rootDirectory"
+            type="text"
+            value={form.rootDirectory}
+            onChange={(e) => setField("rootDirectory", e.target.value)}
+            placeholder="."
+            className={monoInputClass}
+          />
+        </Field>
       </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-5">
+      {!isStatic && (
+        <Toggle
+          checked={form.isMicroservice}
+          onChange={(v) =>
+            setForm((p) => ({ ...p, isMicroservice: v, subdomain: v ? "" : p.subdomain }))
+          }
+          label="Microservice"
+          description="Internal service — no public subdomain."
+        />
+      )}
+
+      {isStatic ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Build command"
+            required
+            htmlFor="buildCommand"
+            error={stepErrors.buildCommand}
+          >
+            <input
+              id="buildCommand"
+              type="text"
+              value={form.buildCommand}
+              onChange={(e) => setField("buildCommand", e.target.value)}
+              className={monoInputClass}
+            />
+          </Field>
+          <Field
+            label="Publish directory"
+            required
+            htmlFor="publishDir"
+            error={stepErrors.publishDir}
+          >
+            <input
+              id="publishDir"
+              type="text"
+              value={form.publishDir}
+              onChange={(e) => setField("publishDir", e.target.value)}
+              className={monoInputClass}
+            />
+          </Field>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-[1fr_140px]">
+          <Field
+            label="Start command"
+            required
+            htmlFor="startCommand"
+            error={stepErrors.startCommand}
+          >
+            <input
+              id="startCommand"
+              type="text"
+              value={form.startCommand}
+              onChange={(e) => setField("startCommand", e.target.value)}
+              className={monoInputClass}
+            />
+          </Field>
+          <Field label="Port" required htmlFor="port" error={stepErrors.port}>
+            <input
+              id="port"
+              type="number"
+              min={1}
+              max={65535}
+              value={form.port}
+              onChange={(e) => setField("port", e.target.value)}
+              className={monoInputClass}
+            />
+          </Field>
+        </div>
+      )}
+
+      {!microserviceEnabled && (
+        <Field
+          label="Subdomain"
+          required
+          htmlFor="subdomain"
+          hint="lowercase, hyphens"
+          error={stepErrors.subdomain}
+        >
+          <div className="flex">
+            <input
+              id="subdomain"
+              type="text"
+              value={form.subdomain}
+              onChange={(e) => setField("subdomain", e.target.value.toLowerCase())}
+              placeholder="my-app"
+              className={cx(monoInputClass, "rounded-r-none")}
+            />
+            <span className="inline-flex items-center rounded-r-lg border border-l-0 border-white/10 bg-[#111114] px-3 text-sm text-neutral-400">
+              .deployhub.app
+            </span>
+          </div>
+        </Field>
+      )}
+
+      <Field
+        label="Environment variables"
+        htmlFor="envText"
+        hint="KEY=value, one per line"
+      >
+        <textarea
+          id="envText"
+          rows={5}
+          value={form.envText}
+          onChange={(e) => setField("envText", e.target.value)}
+          placeholder={"DATABASE_URL=postgres://...\nNODE_ENV=production"}
+          className={cx(monoInputClass, "resize-y")}
+        />
+      </Field>
+
+      {/* Uptime monitoring – only for Pro */}
+      {plan === "pro" && PLAN_OPTIONS.pro.uptime_monitoring && (
+        <div className="space-y-3">
+          <Toggle
+            checked={form.monitorEnabled}
+            onChange={(v) => setField("monitorEnabled", v)}
+            label="Enable uptime monitoring"
+            description="Periodic health checks with alerting."
+          />
+          {form.monitorEnabled && (
+            <Field label="Health check path" htmlFor="healthPath">
+              <input
+                id="healthPath"
+                type="text"
+                value={form.healthPath}
+                onChange={(e) => setField("healthPath", e.target.value)}
+                className={monoInputClass}
+              />
+            </Field>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-white">Notifications</h3>
+
+        <Toggle
+          checked={form.emailNotifications}
+          onChange={(v) => setField("emailNotifications", v)}
+          label="Email alerts"
+          description="Build status + monitor alerts to your inbox."
+        />
+        {form.emailNotifications && (
+          <Field
+            label="Email address"
+            required
+            htmlFor="notificationEmail"
+            error={stepErrors.notificationEmail}
+          >
+            <input
+              id="notificationEmail"
+              type="email"
+              value={form.notificationEmail}
+              onChange={(e) => setField("notificationEmail", e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        )}
+
+        <Toggle
+          checked={form.discordNotifications}
+          onChange={(v) => setField("discordNotifications", v)}
+          label="Discord webhook"
+          description="POST events to a channel webhook."
+        />
+        {form.discordNotifications && (
+          <Field
+            label="Webhook URL"
+            required
+            htmlFor="discordWebhookUrl"
+            error={stepErrors.discordWebhookUrl}
+          >
+            <input
+              id="discordWebhookUrl"
+              type="url"
+              value={form.discordWebhookUrl}
+              onChange={(e) => setField("discordWebhookUrl", e.target.value)}
+              placeholder="https://discord.com/api/webhooks/..."
+              className={inputClass}
+            />
+          </Field>
+        )}
+
+        <Toggle
+          checked={form.telegramNotifications}
+          onChange={(v) => setField("telegramNotifications", v)}
+          label="Telegram bot"
+          description="Send messages via a Telegram bot."
+        />
+        {form.telegramNotifications && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Bot token" required htmlFor="telegramBotToken">
+              <input
+                id="telegramBotToken"
+                type="text"
+                value={form.telegramBotToken}
+                onChange={(e) => setField("telegramBotToken", e.target.value)}
+                className={monoInputClass}
+              />
+            </Field>
+            <Field label="Chat ID" required htmlFor="telegramChatId">
+              <input
+                id="telegramChatId"
+                type="text"
+                value={form.telegramChatId}
+                onChange={(e) => setField("telegramChatId", e.target.value)}
+                className={monoInputClass}
+              />
+            </Field>
+            {stepErrors.telegram && (
+              <p className="sm:col-span-2 text-xs text-red-400">{stepErrors.telegram}</p>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-[#111114] p-4">
+        <h3 className="text-sm font-semibold text-white">Review</h3>
+        <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <Row k="Plan" v={`${PLAN_OPTIONS[plan].name}${isPaid ? ` · ${months}mo` : ""}`} />
+          <Row k="Type" v={TYPE_LABELS[selectedType]} />
+          <Row k="Name" v={form.projectName || "—"} />
+          <Row k="Runtime" v={`${runtimeConfig.label} ${form.runtimeVersion}`} />
+          <Row k="Repo" v={form.repoUrl || "—"} mono truncate />
+          <Row k="Branch" v={form.branch} mono />
+          <Row k="Root" v={form.rootDirectory} mono />
+          {isStatic ? (
+            <>
+              <Row k="Build" v={form.buildCommand} mono />
+              <Row k="Publish" v={form.publishDir} mono />
+            </>
+          ) : (
+            <>
+              <Row k="Start" v={form.startCommand} mono />
+              <Row k="Port" v={form.port} mono />
+            </>
+          )}
+          {!microserviceEnabled && (
+            <Row k="Subdomain" v={form.subdomain ? `${form.subdomain}.deployhub.app` : "—"} mono />
+          )}
+          {microserviceEnabled && <Row k="Mode" v="Microservice" />}
+          {plan === "pro" && PLAN_OPTIONS.pro.uptime_monitoring && (
+            <Row
+              k="Monitor"
+              v={form.monitorEnabled ? `On · ${form.healthPath}` : "Off"}
+            />
+          )}
+          <Row
+            k="Alerts"
+            v={
+              [
+                form.emailNotifications && "Email",
+                form.discordNotifications && "Discord",
+                form.telegramNotifications && "Telegram",
+              ]
+                .filter(Boolean)
+                .join(", ") || "None"
+            }
+          />
+        </dl>
+        {previewPayload.env && (
+          <div className="mt-3">
+            <div className="text-xs uppercase tracking-wider text-neutral-400">
+              Env vars
+            </div>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {Object.keys(previewPayload.env).map((k) => (
+                <span
+                  key={k}
+                  className="rounded bg-white/[0.06] px-2 py-0.5 font-mono text-[11px] text-neutral-300"
+                >
+                  {k}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {stepErrors.payment && (
+        <p className="text-sm text-red-400">{stepErrors.payment}</p>
+      )}
+    </div>
+  );
+
+  const stepRenderers = [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4];
+
+  /* ============================================================
+   * Shell
+   * ============================================================ */
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] text-white">
+      <div className="mx-auto max-w-6xl px-4 pb-32 pt-8 sm:px-6 lg:px-8 lg:pb-12">
+        <div ref={topRef} />
+
+        {/* Header */}
+        <header className="mb-6 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs uppercase tracking-wider text-neutral-500">
+              DeployHub
+            </div>
+            <h1 className="mt-0.5 truncate text-xl font-semibold text-white sm:text-2xl">
+              New {TYPE_LABELS[selectedType]} Project
+            </h1>
+          </div>
+          <Link
+            to="/"
+            className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-white/20 hover:text-white"
+          >
+            Cancel
+          </Link>
+        </header>
+
+        <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
+          {/* Sidebar / progress */}
+          <aside className="lg:sticky lg:top-8 lg:self-start">
+            <StepIndicator
+              step={step}
+              setStep={setStep}
+              validateStep={validateStep}
+              completed={completed}
+            />
+          </aside>
+
+          {/* Active step */}
+          <main className="min-w-0">
+            <div className="rounded-2xl border border-white/[0.06] bg-[#111114] p-5 sm:p-6">
+              <div className="mb-5 border-b border-white/[0.06] pb-4">
+                <h2 className="text-lg font-semibold text-white">
+                  {STEPS[step].title}
+                </h2>
+                <p className="mt-0.5 text-sm text-neutral-400">{STEPS[step].desc}</p>
+              </div>
+
+              {error && (
+                <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+
+              {stepRenderers[step]()}
+            </div>
+
+            {/* Desktop action bar */}
+            <div className="mt-4 hidden items-center justify-between gap-3 lg:flex">
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={step === 0 || submitting}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-neutral-300 transition hover:border-white/20 hover:text-white disabled:opacity-40"
+              >
+                Back
+              </button>
+              {step < STEPS.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_-10px_rgba(245,158,11,0.6)] transition hover:bg-amber-400"
+                >
+                  Continue
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_-10px_rgba(245,158,11,0.6)] transition hover:bg-amber-400 disabled:opacity-60"
+                >
+                  {submitting && (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  )}
+                  {isPaid ? "Pay & Deploy" : "Create Project"}
+                </button>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Mobile sticky action bar */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-[#0a0a0b]/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={step === 0 || submitting}
+            className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-neutral-300 disabled:opacity-40"
+          >
+            Back
+          </button>
+          {step < STEPS.length - 1 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="flex-1 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black"
+            >
+              Continue
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black disabled:opacity-60"
+            >
+              {submitting && (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {isPaid ? "Pay & Deploy" : "Create"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+ * Review row
+ * ============================================================ */
+
+function Row({ k, v, mono, truncate }) {
+  return (
+    <div className="flex items-baseline gap-3 border-b border-white/[0.04] py-1.5 last:border-0">
+      <dt className="w-24 shrink-0 text-xs uppercase tracking-wider text-neutral-500">
+        {k}
+      </dt>
+      <dd
+        className={cx(
+          "min-w-0 flex-1 text-sm text-neutral-200",
+          mono && "font-mono text-[13px]",
+          truncate && "truncate"
+        )}
+        title={typeof v === "string" ? v : undefined}
+      >
+        {v}
+      </dd>
     </div>
   );
 }
