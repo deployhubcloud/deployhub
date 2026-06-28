@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/apiclient'
 import PageHeader from '../components/PageHeader'
@@ -20,37 +20,289 @@ function getErrorMessage(error, fallback) {
   return error.response?.data?.message || error.response?.data?.error || fallback
 }
 
-function ProfileSkeleton() {
+// ── Profile Tab ──────────────────────────────────────────────────────────
+function ProfileTab({ user, onUpdate }) {
+  const [form, setForm] = useState({
+    fullName: user?.fullName || user?.fullname || '',
+    phone: user?.phone || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+
+  const isGithubUser = user?.provider === 'github'
+
+  const handleSave = async () => {
+    if (!form.fullName.trim()) {
+      setError('Full name is required')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      await api.put('/auth/user/fullname', { fullname: form.fullName.trim() })
+      // phone update API is not available yet – coming soon
+      await onUpdate()
+      setSuccess('Profile updated')
+    } catch (err) {
+      setError(getErrorMessage(err, 'Update failed'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (isGithubUser) {
+      setError('GitHub users cannot change avatar.')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file.')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image must be under 2MB.')
+      return
+    }
+    const body = new FormData()
+    body.append('profilePic', file)
+    setUploading(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      await api.put('/auth/user/profile-pic', body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      await onUpdate()
+      setSuccess('Avatar updated')
+    } catch (err) {
+      setError(getErrorMessage(err, 'Avatar upload failed'))
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6 flex gap-6">
-        <Skeleton className="w-24 h-24 rounded-full flex-shrink-0" />
-        <div className="flex-1 space-y-3">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-32" />
+    <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6 space-y-6">
+      <h2 className="font-bold text-white text-lg">Personal Information</h2>
+
+      {/* Avatar Section */}
+      <div className="flex items-center gap-5">
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full border border-white/[0.06] bg-[#0a0a0b] flex items-center justify-center overflow-hidden">
+            {user?.profilePic ? (
+              <img src={user.profilePic} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-2xl font-semibold text-amber-400">{getInitials(form.fullName)}</span>
+            )}
+          </div>
+          {uploading && (
+            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+              <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+        <div>
+          {!isGithubUser && (
+            <>
+              <label className="cursor-pointer inline-flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] transition px-4 py-2 rounded-lg text-xs font-medium text-neutral-300 border border-white/[0.06]">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Change Photo
+                <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+              </label>
+              <p className="text-[10px] text-neutral-500 mt-1.5">JPG, PNG or WebP · Max 2MB</p>
+            </>
+          )}
         </div>
       </div>
-      <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6 space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+
+      {/* Form Fields */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Full Name</label>
+          <input
+            type="text"
+            value={form.fullName}
+            onChange={e => setForm({ ...form, fullName: e.target.value })}
+            className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 outline-none"
+            placeholder="Your full name"
+          />
+        </div>
+
+        {/* Phone – coming soon */}
+        <div>
+          <label className="flex items-center gap-2 text-xs text-neutral-500 uppercase tracking-widest mb-1.5">
+            Phone
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              Coming soon
+            </span>
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.phone}
+              disabled
+              className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-500 cursor-not-allowed"
+              placeholder="+91 9876543210"
+            />
+            <div className="absolute inset-0 flex items-center justify-end pr-3 pointer-events-none">
+              <svg className="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-8a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-[10px] text-neutral-600 mt-1">Phone update support will be added soon.</p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Email</label>
+          <input
+            type="text"
+            value={user?.email || ''}
+            disabled
+            className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-500 cursor-not-allowed"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Account Type</label>
+          <div className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-300 capitalize">
+            {user?.provider === 'github' ? 'GitHub OAuth' : 'Local Account'}
+          </div>
+        </div>
       </div>
+
+      {error && <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{error}</div>}
+      {success && <div className="text-green-400 text-xs bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg">{success}</div>}
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm disabled:opacity-50 transition-colors"
+      >
+        {saving ? 'Saving…' : 'Save Changes'}
+      </button>
     </div>
   )
 }
 
-export function Profile() {
-  const { user, fetchUser } = useAuth()
+// ── Security Tab ─────────────────────────────────────────────────────────
+function SecurityTab({ user }) {
+  const [form, setForm] = useState({ oldPassword: '', newPassword: '', confirm: '' })
   const [loading, setLoading] = useState(false)
-  const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [formData, setFormData] = useState({
-    fullName: '', email: '', profilePic: '', provider: 'local',
-  })
 
-  const isGithubUser = formData.provider === 'github'
+  const isGithubUser = user?.provider === 'github'
+
+  if (isGithubUser) {
+    return (
+      <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-white text-sm">Password management</h3>
+            <p className="text-xs text-neutral-400 mt-1 max-w-xs">
+              Password changes are not available for GitHub OAuth accounts. Your authentication is managed entirely through GitHub.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    if (form.newPassword !== form.confirm) {
+      setError('Passwords do not match')
+      return
+    }
+    if (form.newPassword.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    setLoading(true)
+    try {
+      await api.put('/auth/user/change-password', {
+        oldPassword: form.oldPassword,
+        newPassword: form.newPassword,
+      })
+      setSuccess('Password changed successfully!')
+      setForm({ oldPassword: '', newPassword: '', confirm: '' })
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to change password'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6 space-y-5">
+      <h2 className="font-bold text-white text-lg">Change Password</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Current Password</label>
+          <input
+            type="password"
+            value={form.oldPassword}
+            onChange={e => setForm({ ...form, oldPassword: e.target.value })}
+            className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 outline-none"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">New Password</label>
+          <input
+            type="password"
+            value={form.newPassword}
+            onChange={e => setForm({ ...form, newPassword: e.target.value })}
+            placeholder="Min 8 characters"
+            className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 outline-none"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Confirm New Password</label>
+          <input
+            type="password"
+            value={form.confirm}
+            onChange={e => setForm({ ...form, confirm: e.target.value })}
+            className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 outline-none"
+            required
+          />
+        </div>
+        {error && <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{error}</div>}
+        {success && <div className="text-green-400 text-xs bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-lg">{success}</div>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Updating…' : 'Update Password'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+// ── Main Profile Page ─────────────────────────────────────────────────────
+export function Profile() {
+  const { user, fetchUser } = useAuth()
+  const [pageLoading, setPageLoading] = useState(true)
+  const [tab, setTab] = useState('profile')
 
   const accountAge = useMemo(() => {
     if (!user?.createdAt) return 0
@@ -58,197 +310,85 @@ export function Profile() {
   }, [user])
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        fullName: user?.fullName || user?.fullname || '',
-        email: user?.email || '',
-        profilePic: user?.profilePic || '',
-        provider: user?.provider || 'local',
-      })
-      setPageLoading(false)
-    }
+    if (user) setPageLoading(false)
   }, [user])
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
+  const TABS = [
+    { id: 'profile', label: 'Profile', icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    )},
+    { id: 'security', label: 'Security', icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    )},
+  ]
 
-  const handleCancelEdit = () => {
-    setIsEditing(false)
-    setError(null)
-    setFormData({
-      fullName: user?.fullName || user?.fullname || '',
-      email: user?.email || '',
-      profilePic: user?.profilePic || '',
-      provider: user?.provider || 'local',
-    })
-  }
-
-  const handleUpdateProfile = async () => {
-    const fullName = formData.fullName.trim()
-    if (!fullName) { setError('Full name is required'); return }
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-    try {
-      const res = await api.put('/auth/user/fullname', { fullname: fullName })
-      const updatedUser = res.data?.userData
-      if (updatedUser) {
-        setFormData(prev => ({
-          ...prev,
-          fullName: updatedUser.fullName || fullName,
-          email: updatedUser.email || prev.email,
-          profilePic: updatedUser.profilePic || prev.profilePic,
-          provider: updatedUser.provider || prev.provider,
-        }))
-      }
-      await fetchUser()
-      setSuccess('Profile updated successfully')
-      setIsEditing(false)
-    } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update profile'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    if (isGithubUser) { setError('GitHub OAuth users cannot change profile picture.'); return }
-    if (!file.type.startsWith('image/')) { setError('Please select a valid image file.'); return }
-    if (file.size > 2 * 1024 * 1024) { setError('Image must be under 2MB.'); return }
-    const body = new FormData()
-    body.append('profilePic', file)
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-    try {
-      const res = await api.put('/auth/user/profile-pic', body, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      const updatedUser = res.data?.userData
-      if (updatedUser?.profilePic) {
-        setFormData(prev => ({ ...prev, profilePic: updatedUser.profilePic }))
-      }
-      await fetchUser()
-      setSuccess('Profile picture updated')
-    } catch (err) {
-      setError(getErrorMessage(err, 'Failed to upload image'))
-    } finally {
-      setLoading(false)
-    }
+  if (pageLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <PageHeader section="Account" title="Profile" />
+        <div className="grid md:grid-cols-4 gap-6 mt-6">
+          <div className="bg-[#111114] rounded-xl p-5 border border-white/[0.06] h-fit">
+            <Skeleton className="w-20 h-20 rounded-full mx-auto mb-3" />
+            <Skeleton className="h-4 w-24 mx-auto mb-1" />
+            <Skeleton className="h-3 w-32 mx-auto" />
+          </div>
+          <div className="md:col-span-3">
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 py-10">
       <PageHeader section="Account" title="Profile" />
 
-      {pageLoading ? (
-        <ProfileSkeleton />
-      ) : (
-        <>
-          {error && (
-            <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>
-          )}
-          {success && (
-            <div className="mb-6 bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-xl text-sm">{success}</div>
-          )}
-
-          <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
-            <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
-              <div className="relative shrink-0">
-                <div className="w-24 h-24 rounded-full border border-white/[0.06] bg-[#0a0a0b] flex items-center justify-center overflow-hidden">
-                  {formData.profilePic ? (
-                    <img src={formData.profilePic} alt={formData.fullName} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl font-semibold text-amber-400">{getInitials(formData.fullName)}</span>
-                  )}
-                </div>
-                {!isGithubUser && (
-                  <>
-                    <label htmlFor="profile-pic-upload"
-                      className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center cursor-pointer hover:bg-amber-400 transition">
-                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </label>
-                    <input type="file" id="profile-pic-upload" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={loading} />
-                  </>
-                )}
-              </div>
-              <div className="text-center sm:text-left">
-                <h2 className="text-xl font-semibold text-white">{formData.fullName || 'Unnamed User'}</h2>
-                <span className={`inline-block mt-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
-                  isGithubUser ? 'bg-white/[0.04] text-neutral-500' : 'bg-amber-500/10 text-amber-400'
-                }`}>
-                  {isGithubUser ? 'GitHub OAuth' : 'Local Account'}
-                </span>
-                <p className="text-xs text-neutral-500 mt-2">Joined {formatDate(user?.createdAt)}</p>
-              </div>
-            </div>
-
-            <div className="px-6 pb-6 space-y-4 border-t border-white/[0.06] pt-6">
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Full Name</label>
-                {isEditing && !isGithubUser ? (
-                  <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
-                    className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 outline-none"
-                    placeholder="Enter your name" disabled={loading} />
-                ) : (
-                  <div className="bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-300">
-                    {formData.fullName || '—'}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Email</label>
-                <div className="bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-neutral-300">
-                  {formData.email || '—'}
-                </div>
-              </div>
-              {!isGithubUser && (
-                <div className="flex gap-3 pt-2">
-                  {isEditing ? (
-                    <>
-                      <button onClick={handleUpdateProfile} disabled={loading}
-                        className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold disabled:opacity-50">
-                        {loading ? 'Saving…' : 'Save'}
-                      </button>
-                      <button onClick={handleCancelEdit} disabled={loading}
-                        className="px-4 py-2 rounded-lg border border-white/10 text-neutral-400 text-xs font-medium hover:bg-white/5">
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => { setError(null); setSuccess(null); setIsEditing(true) }}
-                      className="px-4 py-2 rounded-lg border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5">
-                      Edit Name
-                    </button>
-                  )}
+      <div className="grid md:grid-cols-4 gap-6 mt-6">
+        {/* ── Sidebar ── */}
+        <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5 h-fit">
+          <div className="text-center mb-5">
+            <div className="relative inline-block">
+              {user?.profilePic ? (
+                <img src={user.profilePic} alt="avatar" className="w-20 h-20 rounded-full object-cover border-2 border-amber-500/20" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-amber-500/10 text-amber-400 text-2xl font-bold flex items-center justify-center border-2 border-amber-500/20">
+                  {getInitials(user?.fullName || user?.fullname)}
                 </div>
               )}
             </div>
+            <p className="font-bold text-white mt-3 text-sm">{user?.fullName || user?.fullname || 'Unnamed User'}</p>
+            <p className="text-xs text-neutral-500">{user?.email}</p>
           </div>
 
-          <div className="mt-6 bg-[#111114] border border-white/[0.06] rounded-xl p-6">
-            <p className="text-xs text-neutral-500 uppercase tracking-widest mb-4">Account Metadata</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-neutral-500 mb-1">Account Age</p>
-                <p className="text-sm text-white">{accountAge} days</p>
-              </div>
-              <div>
-                <p className="text-xs text-neutral-500 mb-1">Last Updated</p>
-                <p className="text-sm text-white">{formatDate(user?.updatedAt)}</p>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+          <nav className="space-y-1">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                  tab === t.id
+                    ? 'bg-amber-500/10 text-amber-400'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.03]'
+                }`}
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* ── Content ── */}
+        <div className="md:col-span-3">
+          {tab === 'profile' && <ProfileTab user={user} onUpdate={fetchUser} />}
+          {tab === 'security' && <SecurityTab user={user} />}
+        </div>
+      </div>
     </div>
   )
 }

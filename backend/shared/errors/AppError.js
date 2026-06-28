@@ -3,5 +3,6 @@ export class AppError extends Error {
         super(msg);
         this.name = 'AppError';
         this.status = status;
+        this.msg = msg;
     }
 }
