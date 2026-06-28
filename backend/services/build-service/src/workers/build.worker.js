@@ -253,12 +253,13 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 Image: imageName
             });
 
+            let archiveStream;
             try {
-                const archiveStream = await container.getArchive({
+                archiveStream = await container.getArchive({
                     path: `/app/${project.publishDir}`
                 })
             } catch (error) {
-                logger.write("invalid PublishDir!", project.publishDir, "please check your Settings");
+                logger.write(`invalid PublishDir! ${project.publishDir}, "please check your Settings`);
                 throw error;
             }
 
