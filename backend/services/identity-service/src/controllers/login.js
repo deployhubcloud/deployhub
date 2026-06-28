@@ -31,7 +31,7 @@ export const loginController = async (req, res) => {
 
     } catch (error) {
         res.status(error.status || 500).json({
-            message: error.message || "Internal server Error"
+            message: error.msg || "Internal server Error"
         })
     }
 }

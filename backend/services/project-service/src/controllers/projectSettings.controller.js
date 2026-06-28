@@ -22,7 +22,7 @@ export const projectSettingsController = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal Server Error"
+            message: error.msg || "Internal Server Error"
         })
     }
 }
@@ -45,7 +45,7 @@ export const updateEnvSettingsController = async (req, res) => {
         })
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal Server Error"
+            message: error.msg || "Internal Server Error"
         })
     }
 }
@@ -68,7 +68,7 @@ export const updateBuildandStartSettingsController = async (req, res) => {
         })
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal Server Error"
+            message: error.msg || "Internal Server Error"
         })
     }
 }
@@ -92,7 +92,7 @@ export const updateHealthMonitoringAndNotificationController = async (req, res) 
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal Server Error"
+            message: error.msg || "Internal Server Error"
         })
     }
 }

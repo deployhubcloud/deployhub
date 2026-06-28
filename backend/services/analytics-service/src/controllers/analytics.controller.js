@@ -29,7 +29,7 @@ export const summaryController = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal server Error"
+            message: error.msg || "Internal server Error"
         })
     }
 }

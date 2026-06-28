@@ -23,7 +23,7 @@ export const changeSubdomainController = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal server Error"
+            message: error.msg || "Internal server Error"
         })
     }
 }
@@ -48,7 +48,7 @@ export const getDomainSettingsController = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal server Error"
+            message: error.msg || "Internal server Error"
         })
     }
 }
@@ -77,7 +77,7 @@ export const addCustomDomainCOntroller = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal server Error"
+            message: error.msg || "Internal server Error"
         })
     }
 };
@@ -106,7 +106,7 @@ export const deleteCustomDomainController = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || "Internal server Error"
+            message: error.msg || "Internal server Error"
         })
     }
 }

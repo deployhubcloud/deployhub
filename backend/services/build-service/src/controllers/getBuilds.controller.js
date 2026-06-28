@@ -32,7 +32,7 @@ export const getBuildByProjectIdController = async (req, res) => {
 
     } catch (error) {
         res.status(error.status || 500).json({
-            message: error.message || "Internal Server Error"
+            message: error.msg || "Internal Server Error"
         })
     }
 }
@@ -51,7 +51,7 @@ export const getLatestBuildIdController = async (req, res) => {
 
     } catch (error) {
         res.status(error.status || 500).json({
-            message: error.message || "Internal Server Error"
+            message: error.msg || "Internal Server Error"
         })
     }
 }

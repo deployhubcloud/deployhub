@@ -6,15 +6,20 @@ export const summaryService = async (projectId) => {
     const redis = getRedis()
     const base = `deployhub:user:analytics:${projectId}`;
 
+    const now = Date.now();
+    const bucket5m = Math.floor(now / (5 * 60 * 1000));
+    const bucket1h = Math.floor(now / (60 * 60 * 1000));
+    const bucket24h = Math.floor(now / (24 * 60 * 60 * 1000));
+
     const [req5m, req1h, req24h, err4xx, err5xx, uv, geo, endpoints] = await Promise.all([
-        redis.get(`${base}:5m:req`),
-        redis.get(`${base}:1h:req`),
-        redis.get(`${base}:24h:req`),
-        redis.get(`${base}:5m:err4xx`),
-        redis.get(`${base}:5m:err5xx`),
+        redis.get(`${base}:5m:${bucket5m}:req`),
+        redis.get(`${base}:1h:${bucket1h}:req`),
+        redis.get(`${base}:24h:${bucket24h}:req`),
+        redis.get(`${base}:5m:${bucket5m}:err4xx`),
+        redis.get(`${base}:5m:${bucket5m}:err5xx`),
         redis.pfcount(`${base}:24h:uv`),
-        redis.hgetall(`${base}:24h:geo`),
-        redis.hgetall(`${base}:24h:endpoints`),
+        redis.hgetall(`${base}:24h:${bucket24h}:geo`),
+        redis.hgetall(`${base}:24h:${bucket24h}:endpoints`),
     ]);
 
     const topEndpoints = Object.entries(endpoints || {})

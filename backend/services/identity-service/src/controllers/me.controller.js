@@ -12,7 +12,7 @@ export const meController = async (req, res) => {
 
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || 'Internal Server Error'
+            message: error.msg || 'Internal Server Error'
         });
     }
 }

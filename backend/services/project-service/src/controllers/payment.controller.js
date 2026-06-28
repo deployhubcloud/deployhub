@@ -8,7 +8,7 @@ const sendError = (res, error) => {
     const status = error?.status || 500;
     return res.status(status).json({
         success: false,
-        message: error?.message || 'Internal server error',
+        message: error?.msg || 'Internal server error',
     });
 };
 

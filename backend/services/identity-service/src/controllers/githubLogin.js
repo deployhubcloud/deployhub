@@ -56,7 +56,7 @@ export const githubCallbackController = async (req, res) => {
             .clearCookie('GithubOAuthState', getClearGithubOAuthStateCookieOptions())
             .status(error.status || 500)
             .json({
-                message: error.message || 'OAuth Login Failed'
+                message: error.msg || 'OAuth Login Failed'
             })
     }
 };

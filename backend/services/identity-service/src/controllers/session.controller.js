@@ -10,7 +10,7 @@ export const listSessionsController = async (req, res) => {
         return res.status(200).json({ sessions });
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || 'Internal Server Error',
+            message: error.msg || 'Internal Server Error',
         });
     }
 };
@@ -25,7 +25,7 @@ export const revokeSessionController = async (req, res) => {
         return res.status(200).json({ message: 'Session revoked' });
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || 'Internal Server Error',
+            message: error.msg || 'Internal Server Error',
         });
     }
 };
@@ -37,7 +37,7 @@ export const revokeAllSessionsController = async (req, res) => {
         return res.status(200).json({ message: 'All sessions revoked' });
     } catch (error) {
         return res.status(error.status || 500).json({
-            message: error.message || 'Internal Server Error',
+            message: error.msg || 'Internal Server Error',
         });
     }
 };

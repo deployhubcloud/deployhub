@@ -24,7 +24,7 @@ export const refreshTokenController = async (req, res) => {
         }
 
         return res.status(err.status || 500).json({
-            message: err.message || 'Internal Server Error'
+            message: err.msg || 'Internal Server Error'
         });
     }
 };

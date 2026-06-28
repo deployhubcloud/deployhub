@@ -1,6 +1,6 @@
 export class AppError extends Error {
-    constructor(message, status = 500) {
-        super(message);
+    constructor(msg, status = 500) {
+        super(msg);
         this.name = 'AppError';
         this.status = status;
     }
