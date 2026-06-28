@@ -193,8 +193,9 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                     break;
 
                 default:
-                    logger.write("Failed to clone repository.");
+                    logger.write(`Failed to clone repository`);
             }
+            throw error
         }
         logger.write(`repo cloned successfully`)
 
@@ -395,6 +396,12 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
                 await newBuild.save({
                     validateBeforeSave: false
                 });
+
+                const cacheData = {
+                    logsUrl: buildlogUrl
+                }
+
+                await cacheLatestBuildIdOfProject(projectId, redis, cacheData);
             }
 
             if (project) {
@@ -414,11 +421,6 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         }
 
         await publishProjectStatus(redis, { projectId: projectId, status: 'failed' })
-        const cacheData = {
-            logsUrl: logsUrl
-        }
-
-        await cacheLatestBuildIdOfProject(projectId, redis, cacheData);
 
         await deleteCacheBuildData(projectId);
 
