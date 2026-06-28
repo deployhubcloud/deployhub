@@ -5,8 +5,8 @@ export default function AuthGate({ children }) {
 
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-[#050810] flex items-center justify-center text-white">
-        <div className="h-6 w-6 rounded-full border-2 border-white/15 border-t-[#00e5ff] animate-spin" />
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+        <div className="h-6 w-6 rounded-full border-2 border-white/10 border-t-amber-500 animate-spin" />
       </div>
     );
   }

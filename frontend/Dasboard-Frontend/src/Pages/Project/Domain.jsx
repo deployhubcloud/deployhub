@@ -1,330 +1,309 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/apiclient";
+import PageHeader from "../../components/PageHeader";
+import Skeleton from "../../components/ui/Skeleton";
+
+function DomainSkeleton() {
+  return (
+    <div className="space-y-5">
+      {[1, 2].map(i => (
+        <div key={i} className="bg-[#111114] border border-white/[0.06] rounded-xl p-5 space-y-4">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Domain() {
-    const { id: projectId } = useParams();
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState("");
+  const { id: projectId } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [domainSettings, setDomainSettings] = useState(null);
+  const [originalSubdomain, setOriginalSubdomain] = useState("");
+  const [newSubdomain, setNewSubdomain] = useState("");
+  const [customDomains, setCustomDomains] = useState([]);
+  const [newCustomDomain, setNewCustomDomain] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [customDomainSaving, setCustomDomainSaving] = useState(false);
+  const [customDomainRemoving, setCustomDomainRemoving] = useState(null);
+  const [customDomainError, setCustomDomainError] = useState(null);
+  const [cooldown, setCooldown] = useState(false);
 
-    // Domain state
-    const [domainSettings, setDomainSettings] = useState(null);
-    const [originalSubdomain, setOriginalSubdomain] = useState("");
-    const [newSubdomain, setNewSubdomain] = useState("");
-
-    // Custom domains state
-    const [customDomains, setCustomDomains] = useState([]);
-    const [newCustomDomain, setNewCustomDomain] = useState("");
-
-    // Operation states for custom domains
-    const [customDomainSaving, setCustomDomainSaving] = useState(false);
-    const [customDomainRemoving, setCustomDomainRemoving] = useState(null); // domain currently being removed
-    const [customDomainError, setCustomDomainError] = useState(null);
-
-    // Cooldown after subdomain update
-    const [cooldown, setCooldown] = useState(false);
-
-    useEffect(() => {
-        const fetchDomain = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get(`/project/settings/domain/${projectId}`);
-                const ds = response.data.domainSettings;
-                setDomainSettings(ds);
-                setOriginalSubdomain(ds.subdomain || "");
-                setNewSubdomain(ds.subdomain || "");
-                setCustomDomains(ds.customDomains || []);
-            } catch (err) {
-                setError("Failed to load domain settings.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchDomain();
-    }, [projectId]);
-
-    const handleSubdomainSave = async () => {
-        if (!newSubdomain.trim() || newSubdomain === originalSubdomain) return;
-        setError(null);
-        setSuccessMessage("");
-        setSaving(true);
-        try {
-            await api.put(`/project/subdomain/${projectId}`, {
-                oldSubdomain: originalSubdomain,
-                newSubdomain: newSubdomain.trim(),
-            });
-            setOriginalSubdomain(newSubdomain.trim());
-            setSuccessMessage("Subdomain updated successfully!");
-            setCooldown(true);
-            setTimeout(() => {
-                setCooldown(false);
-            }, 8000);
-        } catch (err) {
-            setError(`${err.response?.data?.message}`);
-        } finally {
-            setSaving(false);
-        }
+  useEffect(() => {
+    const fetchDomain = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/project/settings/domain/${projectId}`);
+        const ds = response.data.domainSettings;
+        setDomainSettings(ds);
+        setOriginalSubdomain(ds.subdomain || "");
+        setNewSubdomain(ds.subdomain || "");
+        setCustomDomains(ds.customDomains || []);
+      } catch {
+        setError("Failed to load domain settings.");
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchDomain();
+  }, [projectId]);
 
-    // --- Custom domain API integration ---
-    const addCustomDomain = async () => {
-        const domain = newCustomDomain.trim().toLowerCase();
-        if (!domain || customDomains.includes(domain)) return;
-
-        setCustomDomainError(null);
-        setCustomDomainSaving(true);
-        try {
-            await api.post(`/project/custom-domain/${projectId}`, { domain });
-            setCustomDomains(prev => [...prev, domain]);
-            setNewCustomDomain("");
-            setSuccessMessage(`Domain ${domain} added successfully.`);
-            setTimeout(() => setSuccessMessage(""), 3000);
-        } catch (err) {
-            setCustomDomainError(err.response?.data?.message || "Failed to add custom domain.");
-        } finally {
-            setCustomDomainSaving(false);
-        }
-    };
-
-    const removeCustomDomain = async (domain) => {
-        setCustomDomainError(null);
-        setCustomDomainRemoving(domain);
-        try {
-            await api.delete(`/project/custom-domain/${projectId}`, { data: { domain } });
-            setCustomDomains(prev => prev.filter(d => d !== domain));
-            setSuccessMessage(`Domain ${domain} removed successfully.`);
-            setTimeout(() => setSuccessMessage(""), 3000);
-        } catch (err) {
-            setCustomDomainError(err.response?.data?.message || "Failed to remove custom domain.");
-        } finally {
-            setCustomDomainRemoving(null);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <span className="material-symbols-outlined animate-spin text-[32px] text-[#adc6ff]">
-                    progress_activity
-                </span>
-            </div>
-        );
+  const handleSubdomainSave = async () => {
+    if (!newSubdomain.trim() || newSubdomain === originalSubdomain) return;
+    setError(null);
+    setSuccessMessage("");
+    setSaving(true);
+    try {
+      await api.put(`/project/subdomain/${projectId}`, {
+        oldSubdomain: originalSubdomain,
+        newSubdomain: newSubdomain.trim(),
+      });
+      setOriginalSubdomain(newSubdomain.trim());
+      setSuccessMessage("Subdomain updated successfully!");
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 8000);
+    } catch (err) {
+      setError(`${err.response?.data?.message}`);
+    } finally {
+      setSaving(false);
     }
+  };
 
-    if (!domainSettings) {
-        return (
-            <div className="p-6 text-center text-[#c2c6d6]">
-                <span className="material-symbols-outlined text-[48px] text-[#ffb4ab]">error</span>
-                <p className="mt-4">Could not load domain settings.</p>
-            </div>
-        );
+  const addCustomDomain = async () => {
+    const domain = newCustomDomain.trim().toLowerCase();
+    if (!domain || customDomains.includes(domain)) return;
+    setCustomDomainError(null);
+    setCustomDomainSaving(true);
+    try {
+      await api.post(`/project/custom-domain/${projectId}`, { domain });
+      setCustomDomains(prev => [...prev, domain]);
+      setNewCustomDomain("");
+      setShowAddForm(false);
+      setSuccessMessage(`Domain ${domain} added successfully.`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setCustomDomainError(err.response?.data?.message || "Failed to add custom domain.");
+    } finally {
+      setCustomDomainSaving(false);
     }
+  };
 
-    const isMicro = domainSettings.isMicroservice;
-    const isFree = domainSettings.plan === "free";
-    const canEditSubdomain = !isMicro;
-    const canManageCustom = !isFree && !isMicro;
+  const removeCustomDomain = async (domain) => {
+    setCustomDomainError(null);
+    setCustomDomainRemoving(domain);
+    try {
+      await api.delete(`/project/custom-domain/${projectId}`, { data: { domain } });
+      setCustomDomains(prev => prev.filter(d => d !== domain));
+      setSuccessMessage(`Domain ${domain} removed successfully.`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setCustomDomainError(err.response?.data?.message || "Failed to remove custom domain.");
+    } finally {
+      setCustomDomainRemoving(null);
+    }
+  };
 
+  if (loading) {
     return (
-        <main className="min-h-screen">
-            <div className="p-6 max-w-[800px] mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <div className="flex items-center gap-2 text-[#c2c6d6] mb-1">
-                        <span className="text-xs uppercase tracking-wider font-semibold">Domain Settings</span>
-                        <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                        <span className="text-xs font-semibold">Manage</span>
-                    </div>
-                    <h3 className="text-2xl font-semibold text-[#dae2fd]">Domains & URLs</h3>
-                    <p className="text-sm text-[#c2c6d6] mt-1">
-                        {isMicro ? "Microservice – read-only configuration" : "Configure how your project is accessed"}
-                    </p>
-                </div>
-
-                {error && (
-                    <div className="mb-6 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2 rounded flex items-center gap-2">
-                        <span className="material-symbols-outlined">error</span>
-                        {error}
-                    </div>
-                )}
-                {successMessage && (
-                    <div className="mb-6 bg-green-900/10 border border-green-500/30 text-green-400 px-4 py-2 rounded flex items-center gap-2">
-                        <span className="material-symbols-outlined">check_circle</span>
-                        {successMessage}
-                    </div>
-                )}
-                {customDomainError && (
-                    <div className="mb-6 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2 rounded flex items-center gap-2">
-                        <span className="material-symbols-outlined">error</span>
-                        {customDomainError}
-                    </div>
-                )}
-
-                <div className="space-y-6">
-                    {/* Subdomain Section */}
-                    <section className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                        <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#adc6ff]">language</span>
-                            <span className="text-xs font-semibold uppercase tracking-wider">DeployHub Subdomain</span>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">Subdomain</label>
-                                <div className="flex items-center gap-4">
-                                    <input
-                                        type="text"
-                                        value={newSubdomain}
-                                        onChange={(e) => setNewSubdomain(e.target.value)}
-                                        disabled={!canEditSubdomain || cooldown}
-                                        className={`flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all ${!canEditSubdomain || cooldown ? "opacity-50 cursor-not-allowed" : ""}`}
-                                    />
-                                    <span className="text-[#c2c6d6] text-sm">.deployhub.online</span>
-                                </div>
-                                {isMicro && (
-                                    <p className="mt-2 text-xs text-[#c2c6d6] opacity-70 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-[14px]">info</span>
-                                        Subdomain cannot be changed for microservices
-                                    </p>
-                                )}
-                                {cooldown && (
-                                    <p className="mt-2 text-xs text-[#c2c6d6] opacity-70 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
-                                        Changes are being processed. This may take up to 2 minutes.
-                                    </p>
-                                )}
-                                {!isMicro && newSubdomain !== originalSubdomain && !cooldown && (
-                                    <button
-                                        onClick={handleSubdomainSave}
-                                        disabled={saving || !newSubdomain.trim()}
-                                        className="mt-3 px-6 py-1.5 bg-[#adc6ff] text-[#00285d] rounded text-xs font-bold uppercase tracking-wider transition-all hover:shadow-[0_0_15px_rgba(173,198,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        {saving ? (
-                                            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                                        ) : (
-                                            <span className="material-symbols-outlined text-[16px]">save</span>
-                                        )}
-                                        {saving ? "Saving..." : "Save Subdomain"}
-                                    </button>
-                                )}
-                                {cooldown && (
-                                    <div className="mt-3 px-6 py-1.5 bg-[#adc6ff]/20 text-[#adc6ff] rounded text-xs font-semibold uppercase tracking-wider flex items-center gap-2 opacity-70">
-                                        <span className="material-symbols-outlined text-[16px]">schedule</span>
-                                        Processing – wait a moment
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Internal URL (only for microservices) */}
-                    {isMicro && (
-                        <section className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                            <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[#adc6ff]">dns</span>
-                                <span className="text-xs font-semibold uppercase tracking-wider">Internal URL</span>
-                            </div>
-                            <div className="p-6">
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">Service Endpoint</label>
-                                <div className="flex items-center gap-2 bg-[#0b1326] border border-[#424754] rounded p-2">
-                                    <span className="font-mono text-sm text-[#dae2fd] flex-1 truncate">
-                                        {domainSettings.internalUrl || "Not configured"}
-                                    </span>
-                                    {domainSettings.internalUrl && (
-                                        <button
-                                            onClick={() => navigator.clipboard.writeText(domainSettings.internalUrl)}
-                                            className="material-symbols-outlined text-[#c2c6d6] hover:text-[#adc6ff]"
-                                            title="Copy URL"
-                                        >
-                                            content_copy
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="mt-2 text-xs text-[#c2c6d6] opacity-70 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">info</span>
-                                    Internal communication URL, not publicly accessible
-                                </p>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Custom Domains */}
-                    <section className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-                        <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[#adc6ff]">public</span>
-                                <span className="text-xs font-semibold uppercase tracking-wider">Custom Domains</span>
-                            </div>
-                            {isFree && !isMicro && (
-                                <span className="px-2 py-0.5 bg-[#adc6ff]/10 text-[#adc6ff] rounded text-xs font-semibold uppercase flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">lock</span>
-                                    Pro Feature
-                                </span>
-                            )}
-                        </div>
-                        <div className="p-6 space-y-4">
-                            {customDomains.length === 0 && (
-                                <p className="text-sm text-[#c2c6d6] opacity-70">No custom domains configured.</p>
-                            )}
-                            {customDomains.map((domain) => (
-                                <div key={domain} className="flex items-center justify-between p-3 bg-[#0b1326] border border-[#424754] rounded-lg">
-                                    <span className="font-mono text-sm text-[#dae2fd]">{domain}</span>
-                                    {canManageCustom && (
-                                        <button
-                                            onClick={() => removeCustomDomain(domain)}
-                                            disabled={customDomainRemoving === domain}
-                                            className="material-symbols-outlined text-[#c2c6d6] hover:text-[#ffb4ab] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {customDomainRemoving === domain ? (
-                                                <span className="animate-spin text-[16px]">progress_activity</span>
-                                            ) : (
-                                                "delete"
-                                            )}
-                                        </button>
-                                    )}
-                                    {!canManageCustom && (
-                                        <span className="text-xs text-[#c2c6d6] opacity-50">read-only</span>
-                                    )}
-                                </div>
-                            ))}
-
-                            {canManageCustom && (
-                                <div className="flex gap-3 mt-4">
-                                    <input
-                                        type="text"
-                                        value={newCustomDomain}
-                                        onChange={(e) => setNewCustomDomain(e.target.value)}
-                                        placeholder="api.example.com"
-                                        disabled={customDomainSaving}
-                                        className="flex-1 bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none disabled:opacity-50"
-                                    />
-                                    <button
-                                        onClick={addCustomDomain}
-                                        disabled={!newCustomDomain.trim() || customDomainSaving}
-                                        className="px-6 py-2 bg-[#adc6ff]/10 text-[#adc6ff] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#adc6ff]/20 transition disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {customDomainSaving ? (
-                                            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                                        ) : null}
-                                        {customDomainSaving ? "Adding..." : "Add"}
-                                    </button>
-                                </div>
-                            )}
-
-                            {isFree && !isMicro && (
-                                <div className="mt-3 p-3 bg-[#adc6ff]/5 border border-[#adc6ff]/20 rounded-lg flex items-start gap-2">
-                                    <span className="material-symbols-outlined text-[#adc6ff] text-[18px]">info</span>
-                                    <p className="text-xs text-[#c2c6d6]">
-                                        Custom domains are available on the <strong>Pro</strong> plan.{" "}
-                                        <a href="/upgrade" className="text-[#adc6ff] underline hover:no-underline">Upgrade now</a>.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </main>
+      <div className="max-w-3xl mx-auto">
+        <PageHeader section="Project" title="Domains" />
+        <DomainSkeleton />
+      </div>
     );
+  }
+
+  if (!domainSettings) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <PageHeader section="Project" title="Domains" />
+        <p className="text-neutral-500 text-sm">Could not load domain settings.</p>
+      </div>
+    );
+  }
+
+  const isMicro = domainSettings.isMicroservice;
+  const isFree = domainSettings.plan === "free";
+  const canEditSubdomain = !isMicro;
+  const canManageCustom = !isFree && !isMicro;
+
+  const DNS_RECORDS = [
+    { type: 'CNAME', name: '@', value: 'cname.deployhub.online', status: 'pending' },
+    { type: 'CNAME', name: 'www', value: 'cname.deployhub.online', status: 'pending' },
+  ];
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <PageHeader section="Project" title="Domains" />
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>
+      )}
+      {successMessage && (
+        <div className="bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-xl text-sm">{successMessage}</div>
+      )}
+      {customDomainError && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">{customDomainError}</div>
+      )}
+
+      <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/[0.06]">
+          <h2 className="text-sm font-medium text-white">DeployHub Subdomain</h2>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+            <div className="flex-1 flex items-center gap-2">
+              <input
+                type="text"
+                value={newSubdomain}
+                onChange={(e) => setNewSubdomain(e.target.value)}
+                disabled={!canEditSubdomain || cooldown}
+                className="flex-1 bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 font-mono text-sm text-white focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 outline-none disabled:opacity-50"
+              />
+              <span className="text-neutral-500 text-sm">.deployhub.online</span>
+            </div>
+          </div>
+          {isMicro && (
+            <p className="text-xs text-neutral-500">Subdomain cannot be changed for microservices.</p>
+          )}
+          {cooldown && (
+            <p className="text-xs text-amber-400">Changes are being processed. This may take up to 2 minutes.</p>
+          )}
+          {!isMicro && newSubdomain !== originalSubdomain && !cooldown && (
+            <button onClick={handleSubdomainSave} disabled={saving || !newSubdomain.trim()}
+              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold transition-colors disabled:opacity-50">
+              {saving ? "Saving…" : "Save Subdomain"}
+            </button>
+          )}
+        </div>
+      </section>
+
+      {isMicro && (
+        <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/[0.06]">
+            <h2 className="text-sm font-medium text-white">Internal URL</h2>
+          </div>
+          <div className="p-5">
+            <div className="flex items-center gap-2 bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2">
+              <span className="font-mono text-sm text-neutral-300 flex-1 truncate">
+                {domainSettings.internalUrl || "Not configured"}
+              </span>
+              {domainSettings.internalUrl && (
+                <button onClick={() => navigator.clipboard.writeText(domainSettings.internalUrl)}
+                  className="text-xs text-neutral-500 hover:text-amber-400 transition-colors">
+                  Copy
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <h2 className="text-sm font-medium text-white">Custom Domains</h2>
+          {isFree && !isMicro && (
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pro</span>
+          )}
+        </div>
+        <div className="p-5 space-y-3">
+          {customDomains.length === 0 && !showAddForm && (
+            <p className="text-sm text-neutral-500">No custom domains configured.</p>
+          )}
+          {customDomains.map((domain) => (
+            <div key={domain} className="flex items-center justify-between py-3 border-b border-white/[0.06] last:border-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                <span className="font-mono text-sm text-white truncate">{domain}</span>
+                <span className="text-xs text-green-400">Active</span>
+              </div>
+              {canManageCustom && (
+                <button onClick={() => removeCustomDomain(domain)} disabled={customDomainRemoving === domain}
+                  className="text-xs text-neutral-500 hover:text-red-400 transition disabled:opacity-50">
+                  {customDomainRemoving === domain ? "Removing…" : "Remove"}
+                </button>
+              )}
+            </div>
+          ))}
+
+          {canManageCustom && (
+            <>
+              {showAddForm ? (
+                <div className="pt-3 space-y-3 border-t border-white/[0.06]">
+                  <input
+                    type="text"
+                    value={newCustomDomain}
+                    onChange={(e) => setNewCustomDomain(e.target.value)}
+                    placeholder="api.example.com"
+                    disabled={customDomainSaving}
+                    className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 font-mono text-sm text-white focus:border-amber-500/50 outline-none disabled:opacity-50"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={addCustomDomain} disabled={!newCustomDomain.trim() || customDomainSaving}
+                      className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold disabled:opacity-50">
+                      {customDomainSaving ? "Adding…" : "Add Domain"}
+                    </button>
+                    <button onClick={() => { setShowAddForm(false); setNewCustomDomain(""); }}
+                      className="px-4 py-2 rounded-lg border border-white/10 text-neutral-400 text-xs font-medium hover:bg-white/5">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setShowAddForm(true)}
+                  className="text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors">
+                  + Add domain
+                </button>
+              )}
+            </>
+          )}
+
+          {isFree && !isMicro && (
+            <p className="text-xs text-neutral-500 pt-2">Custom domains are available on the Pro plan.</p>
+          )}
+        </div>
+      </section>
+
+      {customDomains.length > 0 && canManageCustom && (
+        <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/[0.06]">
+            <h2 className="text-sm font-medium text-white">DNS Records</h2>
+            <p className="text-xs text-neutral-500 mt-1">Configure these records at your domain provider</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-mono">
+              <thead>
+                <tr className="text-left text-xs text-neutral-500 uppercase tracking-wider border-b border-white/[0.06]">
+                  <th className="py-3 px-5 font-medium">Type</th>
+                  <th className="py-3 px-5 font-medium">Name</th>
+                  <th className="py-3 px-5 font-medium">Value</th>
+                  <th className="py-3 px-5 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DNS_RECORDS.map((rec, i) => (
+                  <tr key={i} className="border-b border-white/[0.06] last:border-0">
+                    <td className="py-3 px-5 text-neutral-300">{rec.type}</td>
+                    <td className="py-3 px-5 text-neutral-400">{rec.name}</td>
+                    <td className="py-3 px-5 text-neutral-300">{rec.value}</td>
+                    <td className="py-3 px-5">
+                      <span className="inline-flex items-center gap-1.5 text-xs">
+                        <span className={`w-1.5 h-1.5 rounded-full ${rec.status === 'active' ? 'bg-green-500' : rec.status === 'failed' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                        <span className="text-neutral-400 capitalize">{rec.status}</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
 }

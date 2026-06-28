@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api/apiclient'
 import { useProjectStatus } from '../hooks/useProjectStatus'
+import PageHeader from '../components/PageHeader'
+import StatusBadge from '../components/ui/StatusBadge'
+import Skeleton from '../components/ui/Skeleton'
 
-// ── Helpers ───────────────────────────────────────────────
 function timeAgo(dateStr) {
+  if (!dateStr) return '—'
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
@@ -14,96 +17,30 @@ function timeAgo(dateStr) {
   return `${days}d ago`
 }
 
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
-}
-
-// ── Animated counter ──────────────────────────────────────
-function Counter({ to }) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    let cur = 0
-    const step = Math.max(to / 60, 1)
-    const t = setInterval(() => {
-      cur = Math.min(cur + step, to)
-      setVal(Math.floor(cur))
-      if (cur >= to) clearInterval(t)
-    }, 16)
-    return () => clearInterval(t)
-  }, [to])
-  return <>{val.toLocaleString()}</>
-}
-
-const STATUS = {
-  queued: { label: 'Queued', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', pulse: false },
-  building: { label: 'Building', color: '#00e5ff', bg: 'rgba(0,229,255,0.08)', border: 'rgba(0,229,255,0.2)', pulse: true },
-  running: { label: 'Running', color: '#34d399', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)', pulse: true },
-  failed: { label: 'Failed', color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)', pulse: false },
-  stopped: { label: 'Stopped', color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.2)', pulse: false },
-}
-
-const BUILD_STATUS = {
-  success: { label: 'Success', color: '#34d399', icon: '✓' },
-  failed: { label: 'Failed', color: '#f87171', icon: '✕' },
-  pending: { label: 'Pending', color: '#f59e0b', icon: '◌' },
-}
-
-// ── Skeleton ──────────────────────────────────────────────
-function Skeleton({ w = 'w-24', h = 'h-3' }) {
-  return <div className={`${w} ${h} rounded-lg animate-pulse`} style={{ background: 'rgba(255,255,255,0.06)' }} />
-}
-
-// ── Confirm Modal ─────────────────────────────────────────
 function ConfirmRedeployModal({ projectName, onConfirm, onCancel, loading }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
-      <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: '#0c1118', border: '1px solid rgba(255,255,255,0.09)' }}>
-        <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, #00e5ff, transparent)' }} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+      <div className="w-full max-w-sm rounded-xl overflow-hidden bg-[#111114] border border-white/[0.06]">
         <div className="p-6">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.15)' }}>
-            <svg className="w-6 h-6" style={{ color: '#00e5ff' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </div>
-          <h3 className="font-syne font-black text-lg text-white mb-1">Redeploy Project?</h3>
-          <p className="text-sm mb-6" style={{ color: '#6b7280' }}>
-            This will trigger a fresh build and redeploy for{' '}
-            <span className="font-bold" style={{ color: '#9ca3af' }}>{projectName}</span>.
-            The current deployment will be replaced.
+          <h3 className="text-lg font-semibold text-white mb-1">Redeploy Project?</h3>
+          <p className="text-sm text-neutral-500 mb-6">
+            This will trigger a fresh build for{' '}
+            <span className="font-medium text-neutral-300">{projectName}</span>.
           </p>
           <div className="flex items-center gap-3">
             <button
               onClick={onCancel}
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-40"
-              style={{ background: 'rgba(255,255,255,0.05)', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.08)' }}>
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium border border-white/10 text-neutral-300 hover:bg-white/5 transition-colors disabled:opacity-40"
+            >
               Cancel
             </button>
             <button
               onClick={onConfirm}
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-black transition-all hover:scale-105 disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg, #00e5ff, #00b8cc)', boxShadow: '0 4px 16px rgba(0,229,255,0.25)' }}>
-              {loading ? (
-                <>
-                  <div className="w-3.5 h-3.5 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                  Deploying…
-                </>
-              ) : (
-                <>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Yes, Redeploy
-                </>
-              )}
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-black transition-colors disabled:opacity-60"
+            >
+              {loading ? 'Deploying…' : 'Yes, Redeploy'}
             </button>
           </div>
         </div>
@@ -112,13 +49,36 @@ function ConfirmRedeployModal({ projectName, onConfirm, onCancel, loading }) {
   )
 }
 
+function OverviewSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-[#111114] border border-white/[0.06] rounded-xl p-5">
+            <Skeleton className="h-3 w-20 mb-3" />
+            <Skeleton className="h-8 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5 space-y-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="flex items-center gap-4 py-3 border-b border-white/[0.06] last:border-0">
+            <Skeleton className="w-2 h-2 rounded-full" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-4 w-12" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Overview() {
   const { id: projectId } = useParams()
-
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
   const [showConfirm, setShowConfirm] = useState(false)
   const [redeployLoading, setRedeployLoading] = useState(false)
   const [redeployError, setRedeployError] = useState(null)
@@ -126,14 +86,11 @@ export default function Overview() {
   useEffect(() => {
     setLoading(true)
     api.get(`/project/overview/${projectId}`)
-      .then(res => {
-        setProject(res.data.data)
-      })
+      .then(res => setProject(res.data.data))
       .catch(() => setError('Failed to load project.'))
       .finally(() => setLoading(false))
   }, [projectId])
 
-  // WS se live status update
   const handleStatusUpdate = useCallback((status) => {
     setProject(prev => prev ? { ...prev, stats: status } : prev)
   }, [])
@@ -156,24 +113,35 @@ export default function Overview() {
     }
   }
 
-  if (error) return (
-    <div className="flex items-center justify-center h-48">
-      <div className="text-sm px-4 py-3 rounded-xl" style={{ color: '#f87171', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.15)' }}>
-        {error}
-      </div>
-    </div>
-  )
-
   const p = project
-  const s = STATUS[p?.stats] || STATUS.stopped
   const lastBuild = p?.latestBuildData
-  const bs = BUILD_STATUS[lastBuild?.status] || BUILD_STATUS.pending
-
-  // notifications object e.g. { discord: true, telegram: false, email: true }
-  const notif = p?.notifications || {}
+  const statusKey = p?.stats || 'stopped'
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }} className="space-y-5 pb-8">
+    <div className="max-w-4xl mx-auto">
+      <PageHeader section="Project" title={loading ? 'Loading…' : p?.name || 'Overview'}>
+        {!loading && (
+          <div className="flex items-center gap-2">
+            {!p?.isMicroservice && p?.domain && (
+              <a
+                href={`https://${p.domain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 text-neutral-300 hover:bg-white/5 transition-colors"
+              >
+                Visit Site
+              </a>
+            )}
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={redeployLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-black transition-colors disabled:opacity-50"
+            >
+              Redeploy
+            </button>
+          </div>
+        )}
+      </PageHeader>
 
       {showConfirm && (
         <ConfirmRedeployModal
@@ -184,281 +152,122 @@ export default function Overview() {
         />
       )}
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-xs font-bold tracking-[0.15em] uppercase mb-1.5" style={{ color: '#00e5ff' }}>Overview</p>
-          {loading
-            ? <Skeleton w="w-40" h="h-7" />
-            : <h1 className="font-syne font-black text-[26px] text-white leading-none">{p.name}</h1>
-          }
-          <div className="flex items-center gap-2.5 mt-2 flex-wrap">
-            {loading ? (
-              <><Skeleton w="w-16" h="h-5" /><Skeleton w="w-10" h="h-5" /><Skeleton w="w-14" h="h-5" /></>
-            ) : (
-              <>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                  style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color }}>
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.pulse ? 'animate-pulse' : ''}`}
-                    style={{ background: s.color }} />
-                  {s.label}
-                </span>
-                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-md"
-                  style={{ background: 'rgba(255,255,255,0.04)', color: '#4b5563' }}>
-                  {p.type} {p.version ? `· v${p.version}` : ''}
-                </span>
-                {p.isMicroservice && (
-                  <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md"
-                    style={{ background: 'rgba(167,139,250,0.08)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.15)' }}>
-                    Microservice
-                  </span>
-                )}
-              </>
-            )}
-          </div>
+      {error && (
+        <div className="mb-6 px-4 py-3 rounded-xl text-sm bg-red-500/10 text-red-400 border border-red-500/20">
+          {error}
         </div>
+      )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {loading ? <Skeleton w="w-24" h="h-9" /> : (
-            <>
-              {/* Visit site only when NOT microservice and domain exists */}
-              {!p.isMicroservice && p.domain && (
-                <a href={`https://${p.domain}`} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105"
-                  style={{ background: 'rgba(0,229,255,0.08)', color: '#00e5ff', border: '1px solid rgba(0,229,255,0.15)' }}>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Visit Site
-                </a>
-              )}
-              <button
-                onClick={() => setShowConfirm(true)}
-                disabled={redeployLoading}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all hover:scale-105 disabled:opacity-50"
-                style={{ background: 'rgba(255,255,255,0.04)', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Redeploy
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Redeploy error */}
       {redeployError && (
-        <div className="px-4 py-3 rounded-xl text-sm flex items-center justify-between"
-          style={{ color: '#f87171', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.15)' }}>
+        <div className="mb-6 px-4 py-3 rounded-xl text-sm bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-between">
           {redeployError}
           <button onClick={() => setRedeployError(null)} className="ml-3 opacity-60 hover:opacity-100">✕</button>
         </div>
       )}
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="relative rounded-2xl p-4 overflow-hidden transition-all hover:-translate-y-0.5"
-          style={{ background: 'linear-gradient(135deg,rgba(0,229,255,0.07),rgba(0,229,255,0.02))', border: '1px solid rgba(0,229,255,0.15)' }}>
-          <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full blur-2xl" style={{ background: 'rgba(0,229,255,0.1)' }} />
-          <div className="text-[10px] font-bold tracking-[0.15em] uppercase relative z-10" style={{ color: 'rgba(0,229,255,0.6)' }}>
-            Total Builds
-          </div>
-          <div className="mt-1 relative z-10">
-            {loading
-              ? <Skeleton w="w-16" h="h-8" />
-              : <div className="font-syne font-black text-3xl" style={{ color: '#00e5ff' }}>
-                <Counter to={p?.totalBuilds || 0} />
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-
-      {/* ── Last Build + Deployment Info ── */}
-      <div className="grid lg:grid-cols-2 gap-4">
-
-        {/* Last build */}
-        <div className="rounded-2xl p-5 flex flex-col gap-4"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold tracking-[0.15em] uppercase" style={{ color: '#4b5563' }}>Latest Build</p>
-            <Link to={`/project/${projectId}/builds`}
-              className="text-[10px] font-bold hover:opacity-70 transition-opacity" style={{ color: '#00e5ff' }}>
-              All builds →
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Skeleton w="w-9 h-9" h="h-9" />
-                <div className="space-y-1.5"><Skeleton w="w-20" /><Skeleton w="w-28" /></div>
-              </div>
-              <Skeleton w="w-full" h="h-16" />
+      {loading ? (
+        <OverviewSkeleton />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5">
+              <p className="text-xs text-neutral-500 uppercase tracking-widest mb-2">Total Builds</p>
+              <p className="text-3xl font-semibold text-white tabular-nums">{p?.totalBuilds ?? 0}</p>
             </div>
-          ) : !lastBuild ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <svg className="w-5 h-5" style={{ color: '#374151' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <p className="text-sm" style={{ color: '#374151' }}>No builds yet</p>
+            <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5">
+              <p className="text-xs text-neutral-500 uppercase tracking-widest mb-2">Last Deploy</p>
+              <p className="text-3xl font-semibold text-white">
+                {lastBuild?.createdAt ? timeAgo(lastBuild.createdAt) : '—'}
+              </p>
             </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-base flex-shrink-0"
-                  style={{ background: `${bs.color}15`, border: `1px solid ${bs.color}30`, color: bs.color }}>
-                  {bs.icon}
-                </div>
-                <div>
-                  <div className="text-sm font-bold" style={{ color: bs.color }}>{bs.label}</div>
-                  <div className="text-[10px]" style={{ color: '#374151' }}>
-                    {lastBuild.createdAt && timeAgo(lastBuild.createdAt)}
-                    {lastBuild.timeTaken != null && ` · ${lastBuild.timeTaken}s`}
-                  </div>
-                </div>
+            <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5">
+              <p className="text-xs text-neutral-500 uppercase tracking-widest mb-2">Status</p>
+              <div className="mt-1">
+                <StatusBadge status={statusKey} />
               </div>
+            </div>
+          </div>
 
-              <div className="rounded-xl p-3 space-y-2"
-                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                {lastBuild.commitSha && (
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3 h-3 flex-shrink-0" style={{ color: '#4b5563' }} fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12c0-5.523-4.477-10-10-10z" />
-                    </svg>
-                    <span className="text-[11px] font-mono" style={{ color: '#6b7280' }}>
-                      {lastBuild.commitSha.slice(0, 7)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Deployment info */}
-        <div className="rounded-2xl p-5"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <p className="text-[10px] font-bold tracking-[0.15em] uppercase mb-4" style={{ color: '#4b5563' }}>
-            Deployment Info
-          </p>
-          {loading ? (
-            <div className="space-y-3">{[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="flex justify-between"><Skeleton w="w-16" /><Skeleton w="w-32" /></div>
-            ))}</div>
-          ) : (
-            <div className="space-y-3">
-              {[
-                // Domain → only when NOT microservice
-                !p.isMicroservice && p.domain
-                  ? { k: 'Domain', v: p.domain, link: `https://${p.domain}` }
-                  : null,
-                // Internal URL → only when IS microservice
-                p.isMicroservice && p.internalUrl
-                  ? { k: 'Internal URL', v: p.internalUrl }
-                  : null,
-                { k: 'Repo', v: p.repoUrl?.replace('https://github.com/', ''), link: p.repoUrl },
-                { k: 'Branch', v: p.branch || 'main' },
-                { k: 'Build Cmd', v: p.buildCommand || '—' },
-                { k: 'Start Cmd', v: p.startCommand || '—' },
-              ].filter(Boolean).map(row => (
-                <div key={row.k} className="flex items-center justify-between gap-4">
-                  <span className="text-xs flex-shrink-0" style={{ color: '#4b5563' }}>{row.k}</span>
-                  {row.link ? (
-                    <a href={row.link} target="_blank" rel="noreferrer"
-                      className="text-xs font-mono truncate max-w-[60%] text-right transition-colors"
-                      style={{ color: '#6b7280' }}
-                      onMouseEnter={e => e.currentTarget.style.color = '#00e5ff'}
-                      onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}>
-                      {row.v}
-                    </a>
-                  ) : (
-                    <span className="text-xs font-mono truncate max-w-[60%] text-right" style={{ color: '#9ca3af' }}>
-                      {row.v}
-                    </span>
+          <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+              <h2 className="text-sm font-medium text-white">Recent Builds</h2>
+              <Link to={`/project/${projectId}/builds`} className="text-xs text-neutral-500 hover:text-amber-400 transition-colors">
+                View all →
+              </Link>
+            </div>
+            {!lastBuild ? (
+              <div className="py-12 text-center text-sm text-neutral-500">No builds yet</div>
+            ) : (
+              <div className="divide-y divide-white/[0.06]">
+                <div className="flex items-center gap-4 px-5 py-3.5 text-sm">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    lastBuild.status === 'success' ? 'bg-green-500' :
+                    lastBuild.status === 'failed' ? 'bg-red-500' : 'bg-amber-500 animate-status-pulse'
+                  }`} />
+                  <span className="font-mono text-xs text-neutral-400 w-16 flex-shrink-0">
+                    {lastBuild.commitSha?.slice(0, 7) || '—'}
+                  </span>
+                  <span className="flex-1 text-neutral-300 truncate">
+                    {lastBuild.message || `Build ${lastBuild.status}`}
+                  </span>
+                  <span className="text-xs text-neutral-500 flex-shrink-0">{timeAgo(lastBuild.createdAt)}</span>
+                  {lastBuild.timeTaken != null && (
+                    <span className="text-xs font-mono text-neutral-500 flex-shrink-0">{lastBuild.timeTaken}s</span>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Monitor + Notifications ── */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl p-5"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <p className="text-[10px] font-bold tracking-[0.15em] uppercase mb-3" style={{ color: '#4b5563' }}>Monitor</p>
-          {loading ? <Skeleton w="w-32" /> : (
-            <div className="flex items-center gap-4 text-xs" style={{ color: '#9ca3af' }}>
-              <span className="inline-flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${p.monitorEnabled ? 'animate-pulse' : ''}`}
-                  style={{ background: p.monitorEnabled ? '#34d399' : '#6b7280' }} />
-                {p.monitorEnabled ? 'Enabled' : 'Disabled'}
-              </span>
-              {p.monitorEnabled && (
-                <>
-                  <span>· every {p.monitorIntervalSeconds}s</span>
-                  <span className="font-mono">· {p.monitorHealthPath}</span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl p-5"
-          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <p className="text-[10px] font-bold tracking-[0.15em] uppercase mb-3" style={{ color: '#4b5563' }}>Notifications</p>
-          {loading ? <Skeleton w="w-32" /> : (
-            <div className="flex items-center gap-3">
-              {['discord', 'telegram', 'email'].map(ch => (
-                <span key={ch} className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-md"
-                  style={{
-                    background: notif[ch] ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.03)',
-                    color: notif[ch] ? '#34d399' : '#4b5563',
-                    border: `1px solid ${notif[ch] ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.06)'}`,
-                  }}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: notif[ch] ? '#34d399' : '#4b5563' }} />
-                  {ch.charAt(0).toUpperCase() + ch.slice(1)}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Quick links ── */}
-      <div className="rounded-2xl p-5"
-        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <p className="text-[10px] font-bold tracking-[0.15em] uppercase mb-4" style={{ color: '#4b5563' }}>Quick Links</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {[
-            { to: `/project/${projectId}/logs`, label: 'View Logs', color: '#00e5ff', icon: 'M9 12h6m-6 4h6M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8' },
-            { to: `/project/${projectId}/builds`, label: 'Build History', color: '#a78bfa', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-            { to: `/project/${projectId}/settings`, label: 'Settings', color: '#f59e0b', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-          ].map(item => (
-            <Link key={item.to} to={item.to}
-              className="flex items-center gap-2.5 p-3 rounded-xl transition-all"
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)' }}>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: `${item.color}12`, color: item.color }}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={item.icon} />
-                </svg>
               </div>
-              <span className="text-xs font-medium text-white">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+            )}
+          </div>
 
+          <div className="mt-6 grid lg:grid-cols-2 gap-4">
+            <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5">
+              <p className="text-xs text-neutral-500 uppercase tracking-widest mb-4">Deployment Info</p>
+              <div className="space-y-3">
+                {[
+                  !p.isMicroservice && p.domain ? { k: 'Domain', v: p.domain, link: `https://${p.domain}` } : null,
+                  p.isMicroservice && p.internalUrl ? { k: 'Internal URL', v: p.internalUrl } : null,
+                  { k: 'Repo', v: p.repoUrl?.replace('https://github.com/', ''), link: p.repoUrl },
+                  { k: 'Branch', v: p.branch || 'main' },
+                  { k: 'Type', v: `${p.type}${p.version ? ` · v${p.version}` : ''}` },
+                ].filter(Boolean).map(row => (
+                  <div key={row.k} className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-neutral-500">{row.k}</span>
+                    {row.link ? (
+                      <a href={row.link} target="_blank" rel="noreferrer" className="text-xs font-mono text-neutral-400 hover:text-amber-400 truncate max-w-[60%] text-right transition-colors">
+                        {row.v}
+                      </a>
+                    ) : (
+                      <span className="text-xs font-mono text-neutral-300 truncate max-w-[60%] text-right">{row.v}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-5">
+              <p className="text-xs text-neutral-500 uppercase tracking-widest mb-4">Monitor & Alerts</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={`w-1.5 h-1.5 rounded-full ${p.monitorEnabled ? 'bg-green-500 animate-status-pulse' : 'bg-neutral-600'}`} />
+                  <span className="text-neutral-300">{p.monitorEnabled ? 'Monitor enabled' : 'Monitor disabled'}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['discord', 'telegram', 'email'].map(ch => {
+                    const enabled = p.notifications?.[ch]
+                    return (
+                      <span key={ch} className={`text-[11px] font-medium px-2 py-1 rounded-md border ${
+                        enabled ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-white/[0.02] text-neutral-600 border-white/[0.06]'
+                      }`}>
+                        {ch.charAt(0).toUpperCase() + ch.slice(1)}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

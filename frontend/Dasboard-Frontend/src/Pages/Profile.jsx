@@ -1,66 +1,77 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../api/apiclient'
+import PageHeader from '../components/PageHeader'
+import Skeleton from '../components/ui/Skeleton'
 
-// Helpers
 function formatDate(dateString) {
   if (!dateString) return '—'
   return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: 'numeric', month: 'long', day: 'numeric',
   })
 }
 
 function getInitials(name) {
   if (!name) return 'U'
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function getErrorMessage(error, fallback) {
   return error.response?.data?.message || error.response?.data?.error || fallback
 }
 
+function ProfileSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6 flex gap-6">
+        <Skeleton className="w-24 h-24 rounded-full flex-shrink-0" />
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+      <div className="bg-[#111114] border border-white/[0.06] rounded-xl p-6 space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
+  )
+}
+
 export function Profile() {
   const { user, fetchUser } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
-
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    profilePic: '',
-    provider: 'local',
+    fullName: '', email: '', profilePic: '', provider: 'local',
   })
 
   const isGithubUser = formData.provider === 'github'
 
-  // Calculate account age (safe, memoized)
   const accountAge = useMemo(() => {
     if (!user?.createdAt) return 0
     return Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
   }, [user])
 
   useEffect(() => {
-    setFormData({
-      fullName: user?.fullName || user?.fullname || '',
-      email: user?.email || '',
-      profilePic: user?.profilePic || '',
-      provider: user?.provider || 'local',
-    })
+    if (user) {
+      setFormData({
+        fullName: user?.fullName || user?.fullname || '',
+        email: user?.email || '',
+        profilePic: user?.profilePic || '',
+        provider: user?.provider || 'local',
+      })
+      setPageLoading(false)
+    }
   }, [user])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleCancelEdit = () => {
@@ -76,20 +87,15 @@ export function Profile() {
 
   const handleUpdateProfile = async () => {
     const fullName = formData.fullName.trim()
-    if (!fullName) {
-      setError('Full name is required')
-      return
-    }
-
+    if (!fullName) { setError('Full name is required'); return }
     setLoading(true)
     setError(null)
     setSuccess(null)
-
     try {
       const res = await api.put('/auth/user/fullname', { fullname: fullName })
       const updatedUser = res.data?.userData
       if (updatedUser) {
-        setFormData((prev) => ({
+        setFormData(prev => ({
           ...prev,
           fullName: updatedUser.fullName || fullName,
           email: updatedUser.email || prev.email,
@@ -110,36 +116,22 @@ export function Profile() {
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
-
     if (!file) return
-
-    if (isGithubUser) {
-      setError('GitHub OAuth users cannot change profile picture.')
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file.')
-      return
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Image must be under 2MB.')
-      return
-    }
-
+    if (isGithubUser) { setError('GitHub OAuth users cannot change profile picture.'); return }
+    if (!file.type.startsWith('image/')) { setError('Please select a valid image file.'); return }
+    if (file.size > 2 * 1024 * 1024) { setError('Image must be under 2MB.'); return }
     const body = new FormData()
     body.append('profilePic', file)
-
     setLoading(true)
     setError(null)
     setSuccess(null)
-
     try {
       const res = await api.put('/auth/user/profile-pic', body, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       const updatedUser = res.data?.userData
       if (updatedUser?.profilePic) {
-        setFormData((prev) => ({ ...prev, profilePic: updatedUser.profilePic }))
+        setFormData(prev => ({ ...prev, profilePic: updatedUser.profilePic }))
       }
       await fetchUser()
       setSuccess('Profile picture updated')
@@ -151,192 +143,113 @@ export function Profile() {
   }
 
   return (
-    <main className="min-h-screen">
-      <div className="p-6 max-w-[800px] mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-[#c2c6d6] mb-1">
-            <span className="text-xs uppercase tracking-wider font-semibold">Identity</span>
-            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-            <span className="text-xs font-semibold">Profile</span>
-          </div>
-          <h3 className="text-2xl font-semibold text-[#dae2fd]">Profile Settings</h3>
-        </div>
+    <div className="max-w-2xl mx-auto">
+      <PageHeader section="Account" title="Profile" />
 
-        {error && (
-          <div className="mb-6 bg-[#93000a]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] px-4 py-2 rounded flex items-center gap-2">
-            <span className="material-symbols-outlined">error</span>
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 bg-green-900/10 border border-green-500/30 text-green-400 px-4 py-2 rounded flex items-center gap-2">
-            <span className="material-symbols-outlined">check_circle</span>
-            {success}
-          </div>
-        )}
+      {pageLoading ? (
+        <ProfileSkeleton />
+      ) : (
+        <>
+          {error && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>
+          )}
+          {success && (
+            <div className="mb-6 bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-xl text-sm">{success}</div>
+          )}
 
-        {/* Profile Card */}
-        <div className="bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-          <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
-            {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="w-24 h-24 rounded-full border-2 border-[#adc6ff]/30 bg-[#0b1326] flex items-center justify-center overflow-hidden">
-                {formData.profilePic ? (
-                  <img src={formData.profilePic} alt={formData.fullName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl font-bold text-[#adc6ff]">
-                    {getInitials(formData.fullName)}
-                  </span>
+          <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+            <div className="p-6 flex flex-col sm:flex-row items-center gap-6">
+              <div className="relative shrink-0">
+                <div className="w-24 h-24 rounded-full border border-white/[0.06] bg-[#0a0a0b] flex items-center justify-center overflow-hidden">
+                  {formData.profilePic ? (
+                    <img src={formData.profilePic} alt={formData.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl font-semibold text-amber-400">{getInitials(formData.fullName)}</span>
+                  )}
+                </div>
+                {!isGithubUser && (
+                  <>
+                    <label htmlFor="profile-pic-upload"
+                      className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center cursor-pointer hover:bg-amber-400 transition">
+                      <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </label>
+                    <input type="file" id="profile-pic-upload" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={loading} />
+                  </>
                 )}
               </div>
-              {!isGithubUser && (
-                <>
-                  <label
-                    htmlFor="profile-pic-upload"
-                    className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-[#adc6ff] flex items-center justify-center cursor-pointer hover:bg-[#8cb5f0] transition shadow-lg"
-                  >
-                    <span className="material-symbols-outlined text-[#00285d] text-[20px]">photo_camera</span>
-                  </label>
-                  <input
-                    type="file"
-                    id="profile-pic-upload"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={loading}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="text-center sm:text-left space-y-1">
-              <h2 className="text-xl font-semibold text-[#dae2fd]">
-                {formData.fullName || 'Unnamed User'}
-              </h2>
-              <div className="flex justify-center sm:justify-start">
-                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${isGithubUser
-                    ? 'bg-[#2d3449] text-[#8c909f]'
-                    : 'bg-[#adc6ff]/10 text-[#adc6ff]'
-                  }`}>
+              <div className="text-center sm:text-left">
+                <h2 className="text-xl font-semibold text-white">{formData.fullName || 'Unnamed User'}</h2>
+                <span className={`inline-block mt-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                  isGithubUser ? 'bg-white/[0.04] text-neutral-500' : 'bg-amber-500/10 text-amber-400'
+                }`}>
                   {isGithubUser ? 'GitHub OAuth' : 'Local Account'}
                 </span>
+                <p className="text-xs text-neutral-500 mt-2">Joined {formatDate(user?.createdAt)}</p>
               </div>
-              <p className="text-xs text-[#c2c6d6] opacity-60">
-                Joined {formatDate(user?.createdAt)}
-              </p>
-              {isGithubUser && (
-                <p className="text-[11px] text-[#c2c6d6]/50 max-w-xs mt-2 bg-[#0b1326] p-2 rounded border border-[#424754]/50">
-                  Name and photo are managed by GitHub. You cannot change them here.
-                </p>
-              )}
             </div>
-          </div>
 
-          <div className="px-6 pb-6 space-y-4">
-            {/* Full Name */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
-                Full Name
-              </label>
-              {isEditing && !isGithubUser ? (
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  className="w-full bg-[#0b1326] border border-[#424754] rounded p-2 font-mono text-sm text-[#dae2fd] focus:border-[#adc6ff] focus:ring-1 focus:ring-[#adc6ff] outline-none transition-all"
-                  placeholder="Enter your name"
-                  disabled={loading}
-                />
-              ) : (
-                <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 text-sm text-[#dae2fd]">
-                  {formData.fullName || '—'}
+            <div className="px-6 pb-6 space-y-4 border-t border-white/[0.06] pt-6">
+              <div>
+                <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Full Name</label>
+                {isEditing && !isGithubUser ? (
+                  <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
+                    className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 outline-none"
+                    placeholder="Enter your name" disabled={loading} />
+                ) : (
+                  <div className="bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-neutral-300">
+                    {formData.fullName || '—'}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">Email</label>
+                <div className="bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-neutral-300">
+                  {formData.email || '—'}
+                </div>
+              </div>
+              {!isGithubUser && (
+                <div className="flex gap-3 pt-2">
+                  {isEditing ? (
+                    <>
+                      <button onClick={handleUpdateProfile} disabled={loading}
+                        className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold disabled:opacity-50">
+                        {loading ? 'Saving…' : 'Save'}
+                      </button>
+                      <button onClick={handleCancelEdit} disabled={loading}
+                        className="px-4 py-2 rounded-lg border border-white/10 text-neutral-400 text-xs font-medium hover:bg-white/5">
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setError(null); setSuccess(null); setIsEditing(true) }}
+                      className="px-4 py-2 rounded-lg border border-white/10 text-neutral-300 text-xs font-medium hover:bg-white/5">
+                      Edit Name
+                    </button>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Email (read-only) */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
-                Email
-              </label>
-              <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 font-mono text-sm text-[#dae2fd] select-all">
-                {formData.email || '—'}
-              </div>
-            </div>
-
-            {/* Actions */}
-            {!isGithubUser && (
-              <div className="flex gap-3 pt-2">
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleUpdateProfile}
-                      disabled={loading}
-                      className="px-6 py-2 bg-[#adc6ff] text-[#00285d] rounded text-xs font-bold uppercase tracking-wider hover:shadow-[0_0_15px_rgba(173,198,255,0.3)] disabled:opacity-50 transition flex items-center gap-2"
-                    >
-                      {loading ? (
-                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                      ) : (
-                        <span className="material-symbols-outlined text-[16px]">save</span>
-                      )}
-                      {loading ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={loading}
-                      className="px-6 py-2 border border-[#424754] text-[#c2c6d6] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#222a3d] transition"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setError(null)
-                      setSuccess(null)
-                      setIsEditing(true)
-                    }}
-                    className="px-6 py-2 border border-[#424754] text-[#c2c6d6] rounded text-xs font-semibold uppercase tracking-wider hover:bg-[#222a3d] transition flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">edit</span>
-                    Edit Name
-                  </button>
-                )}
-              </div>
-            )}
           </div>
-        </div>
 
-        {/* Metadata Card */}
-        <div className="mt-6 bg-[#171f33] rounded-xl border border-[#424754] overflow-hidden">
-          <div className="p-4 border-b border-[#424754] bg-[#222a3d] flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#adc6ff]">analytics</span>
-            <span className="text-xs font-semibold uppercase tracking-wider">Account Metadata</span>
-          </div>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
-                Account Age
-              </label>
-              <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 text-sm text-[#dae2fd]">
-                {accountAge} days
+          <div className="mt-6 bg-[#111114] border border-white/[0.06] rounded-xl p-6">
+            <p className="text-xs text-neutral-500 uppercase tracking-widest mb-4">Account Metadata</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-neutral-500 mb-1">Account Age</p>
+                <p className="text-sm text-white">{accountAge} days</p>
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#c2c6d6] mb-1">
-                Last Updated
-              </label>
-              <div className="bg-[#0b1326] border border-[#424754]/50 rounded p-2 text-sm text-[#dae2fd]">
-                {formatDate(user?.updatedAt)}
+              <div>
+                <p className="text-xs text-neutral-500 mb-1">Last Updated</p>
+                <p className="text-sm text-white">{formatDate(user?.updatedAt)}</p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </main>
+        </>
+      )}
+    </div>
   )
 }
 
