@@ -26,6 +26,7 @@ import { publishProjectStatus } from '../../../../shared/utils/publishProjectSta
 import { monitoringQueue } from '../utils/queues/queues.js';
 import { writeNginxConfig } from '../../../../shared/nginx/writeNginx.js';
 import { writeNginxFileToHost } from '../utils/nginx/writeNginxFileToHost.js';
+import { deleteCacheBuildData } from '../../../build-service/src/utils/cacheBuildData.js';
 
 
 const redisPubSub = new RedisPubSub(
@@ -461,6 +462,8 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             }
         }
 
+        await deleteCacheBuildData(projectId);
+
         return {
             repoLink: projectData.repoUrl,
             usergithubToken: userGithubToken,
@@ -469,8 +472,13 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
 
     } catch (error) {
+
+        
+
         deployment.status = 'failed'
         await deployment.save({ validateBeforeSave: false })
+
+        await deleteCacheBuildData(projectId);
         throw error;
     }
 

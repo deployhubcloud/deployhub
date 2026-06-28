@@ -340,6 +340,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
 
         await newBuild.save({ validateBeforeSave: false })
 
+
+        await deleteCacheBuildData(projectId);
         return {
             projectId: project._id,
             projectName: project.name,
@@ -392,6 +394,8 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
         }
 
         await cacheLatestBuildIdOfProject(projectId, redis, cacheData);
+
+        await deleteCacheBuildData(projectId);
 
         throw error;
     } finally {
