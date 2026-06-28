@@ -6,14 +6,13 @@
   --font-serif: "DM Serif Display", Georgia, serif;
   --font-sans: "DM Sans", system-ui, sans-serif;
 
-  --color-cyan: #00e5ff;
-  --color-cyan-dark: #00c4d6;
-  --color-violet: #7c3aed;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  /* Amber accent instead of cyan/violet */
+  --color-amber-custom: #f59e0b;     /* amber-500 */
+  --color-amber-dark: #d97706;       /* amber-600 */
+  --color-amber-light: #fbbf24;      /* amber-400 */
 }
 
-/* Light mode (default) */
+/* Light mode (default) — not used much now, but keep for future */
 :root {
   --bg-page: #ffffff;
   --bg-card: #ffffff;
@@ -26,22 +25,22 @@
   --text-secondary: #334155;
   --text-muted: #64748b;
   --ring-subtle: #e2e8f0;
-  --hero-glow-color: rgba(0, 229, 255, 0.05);
+  --hero-glow-color: rgba(245, 158, 11, 0.06);
 }
 
 .dark {
-  --bg-page: #080c10;
-  --bg-card: #111827;
-  --bg-card-hover: #1f2937;
-  --bg-card-alt: #0d1117;
-  --bg-sidebar: #0d1117;
-  --border-light: #1f2937;
-  --border-light-subtle: rgba(255,255,255,0.05);
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #6b7280;
+  --bg-page: #0a0a0b;                /* profile inputs background */
+  --bg-card: #111114;                /* profile card bg */
+  --bg-card-hover: #1a1a1f;
+  --bg-card-alt: #0a0a0b;
+  --bg-sidebar: #111114;
+  --border-light: #1f1f23;           /* white/[0.06] approx */
+  --border-light-subtle: rgba(255,255,255,0.06);
+  --text-primary: #f5f5f5;
+  --text-secondary: #d4d4d4;        /* neutral-300 */
+  --text-muted: #737373;            /* neutral-500 */
   --ring-subtle: rgba(255,255,255,0.1);
-  --hero-glow-color: rgba(0, 229, 255, 0.07);
+  --hero-glow-color: rgba(245, 158, 11, 0.07);
 }
 
 body {
@@ -62,7 +61,7 @@ body {
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
 
-/* Hero glow as utility class (used by LaunchingSoonModal + sections) */
+/* Hero glow — now amber */
 .bg-hero-glow {
   background: radial-gradient(ellipse 80% 50% at 50% 0%, var(--hero-glow-color), transparent 70%);
 }
@@ -79,7 +78,9 @@ body {
   transform: translateY(0);
 }
 
+/* Pulse dot (now amber) */
 .pulse-dot {
+  background-color: #f59e0b;
   animation: pulse 1.8s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -87,6 +88,7 @@ body {
   50% { opacity: 0.4; transform: scale(0.75); }
 }
 
+/* Shine effect for cards (amber tint) */
 @keyframes shine {
   0% { left: -100%; }
   60%, 100% { left: 150%; }
@@ -102,11 +104,12 @@ body {
   left: -100%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0,229,255,0.03), transparent);
+  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.04), transparent);
   animation: shine 4s ease-in-out infinite;
   pointer-events: none;
 }
 
+/* Mouse‑follow glow (now amber) */
 .hero-glow {
   position: relative;
   overflow: hidden;
@@ -116,7 +119,7 @@ body {
   position: absolute;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, var(--hero-glow-color) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
   top: calc(var(--my, 40%) - 300px);
   left: calc(var(--mx, 50%) - 300px);
   pointer-events: none;
@@ -124,6 +127,7 @@ body {
   z-index: 0;
 }
 
+/* Noise texture (unchanged) */
 .noise::after {
   content: "";
   position: absolute;
@@ -133,18 +137,21 @@ body {
   z-index: 1;
 }
 
+/* Dot grid (amber) */
 .dot-grid {
-  background-image: radial-gradient(rgba(0,229,255,0.12) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(245,158,11,0.12) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
+/* Gradient text (amber instead of cyan/violet) */
 .grad-text {
-  background: linear-gradient(135deg, #00e5ff 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
 }
@@ -152,10 +159,11 @@ body {
   background: var(--bg-page);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f2937;
+  background: #333;
   border-radius: 2px;
 }
 
+/* Feature card hover accent line (amber) */
 .feat-card {
   transition: box-shadow 0.25s, transform 0.25s, border-color 0.25s;
 }
@@ -166,7 +174,7 @@ body {
   left: 0;
   right: 0;
   height: 2px;
-  background: #00e5ff;
+  background: #f59e0b;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
@@ -175,7 +183,7 @@ body {
   transform: scaleX(1);
 }
 
-/* Modal animations (LaunchingSoonModal) */
+/* Modal animations */
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(16px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }

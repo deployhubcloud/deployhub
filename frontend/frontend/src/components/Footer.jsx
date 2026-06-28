@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useLaunchModal } from "../lib/launch-modal";
 
 const SOCIALS = [
   { name: "Discord", href: "https://discord.gg/deployhub", icon: (
@@ -14,14 +13,12 @@ const SOCIALS = [
 ];
 
 export default function Footer() {
-  const { openLaunch } = useLaunchModal();
-
   return (
-    <footer className="border-t border-gray-200 dark:border-white/5 bg-white dark:bg-[#080c10]">
+    <footer className="border-t border-white/[0.06] bg-[#0a0a0b]">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-4 lg:px-8">
         <div className="lg:col-span-1">
           <Link to="/" className="flex items-center gap-2 font-semibold">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-cyan/15 text-cyan ring-1 ring-cyan/30">
+            <span className="grid h-8 w-8 place-items-center rounded-md bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                 <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
                 <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09" />
@@ -29,47 +26,54 @@ export default function Footer() {
                 <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05" />
               </svg>
             </span>
-            <span className="text-gray-900 dark:text-white">DeployHub</span>
+            <span className="text-white">DeployHub</span>
           </Link>
-          <p className="mt-3 max-w-xs text-sm text-gray-600 dark:text-gray-500">Serious infrastructure, made simple. Ship sites and services from GitHub in seconds.</p>
-          <div className="mt-4 flex gap-2 text-gray-500">
+          <p className="mt-3 max-w-xs text-sm text-neutral-500">Serious infrastructure, made simple. Ship sites and services from GitHub in seconds.</p>
+          <div className="mt-4 flex gap-2 text-neutral-400">
             {SOCIALS.map((s) => (
-              <a key={s.name} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.name} className="rounded-md border border-gray-200 dark:border-white/10 p-2 hover:text-gray-900 dark:hover:text-white hover:border-cyan/40 transition-colors">
+              <a key={s.name} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.name} className="rounded-md border border-white/10 p-2 hover:text-amber-400 hover:border-amber-500/30 transition-colors">
                 {s.icon}
               </a>
             ))}
           </div>
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Product</h4>
+          <h4 className="text-sm font-semibold text-white">Product</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link to="/pricing" className="text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white">Pricing</Link></li>
-            <li><Link to="/about" className="text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white">About</Link></li>
-            <li><Link to="/developers" className="text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white">Developers</Link></li>
+            <li><Link to="/pricing" className="text-neutral-500 hover:text-white transition">Pricing</Link></li>
+            <li><Link to="/about" className="text-neutral-500 hover:text-white transition">About</Link></li>
+            <li><Link to="/developers" className="text-neutral-500 hover:text-white transition">Developers</Link></li>
           </ul>
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Platform</h4>
+          <h4 className="text-sm font-semibold text-white">Platform</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><span className="text-gray-600 dark:text-gray-500">Static hosting</span></li>
-            <li><span className="text-gray-600 dark:text-gray-500">Backend runtimes</span></li>
-            <li><span className="text-gray-600 dark:text-gray-500">Custom domains</span></li>
-            <li><span className="text-gray-600 dark:text-gray-500">AI diagnostics</span></li>
+            <li><span className="text-neutral-500">Static hosting</span></li>
+            <li><span className="text-neutral-500">Backend runtimes</span></li>
+            <li><span className="text-neutral-500">Custom domains</span></li>
+            <li><span className="text-neutral-500">AI diagnostics</span></li>
           </ul>
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Get started</h4>
-          <p className="mt-3 text-sm text-gray-600 dark:text-gray-500">DeployHub is launching soon. Follow our socials to be first in line.</p>
-          <button onClick={openLaunch} className="mt-4 inline-flex rounded-md bg-cyan px-4 py-2 text-sm font-medium text-black hover:bg-cyan-dark transition-colors">Notify me</button>
+          <h4 className="text-sm font-semibold text-white">Get started</h4>
+          <p className="mt-3 text-sm text-neutral-500">DeployHub is live now. Start shipping your projects.</p>
+          <a
+            href="https://dashboard.deployhub.cloud/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex rounded-md bg-amber-500 hover:bg-amber-400 px-4 py-2 text-sm font-medium text-black transition-colors"
+          >
+            Open Dashboard
+          </a>
         </div>
       </div>
-      <div className="border-t border-gray-200 dark:border-white/5">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-gray-500 dark:text-gray-600 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+      <div className="border-t border-white/[0.06]">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-neutral-600 sm:flex-row sm:items-center sm:px-6 lg:px-8">
           <p>© 2026 DeployHub. All rights reserved.</p>
           <div className="flex gap-4">
-            <span className="hover:text-gray-900 dark:hover:text-white cursor-pointer">Privacy</span>
-            <span className="hover:text-gray-900 dark:hover:text-white cursor-pointer">Terms</span>
-            <span className="hover:text-gray-900 dark:hover:text-white cursor-pointer">Status</span>
+            <span className="hover:text-white cursor-pointer transition">Privacy</span>
+            <span className="hover:text-white cursor-pointer transition">Terms</span>
+            <span className="hover:text-white cursor-pointer transition">Status</span>
           </div>
         </div>
       </div>
