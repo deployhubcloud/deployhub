@@ -33,7 +33,7 @@ const schema = z.object({
 
 
   ACCESS_TOKEN_SECRET: z.string().min(32),
-  ACCESS_TOKEN_EXPIRY: z.string().default('15m'),
+  ACCESS_TOKEN_EXPIRY: z.string().default('2h'),
   REFRESH_TOKEN_SECRET: z.string().min(32),
   REFRESH_TOKEN_EXPIRY: z.string().default('7d'),
 
