@@ -473,12 +473,27 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 
     } catch (error) {
 
-        
+
 
         deployment.status = 'failed'
         await deployment.save({ validateBeforeSave: false })
 
         await deleteCacheBuildData(projectId);
+
+        await redisPubSub.produce(
+            'deployhub:users:build:status',
+            JSON.stringify({
+                projectId: projectId,
+                projectstatus: "failed",
+                userId,
+                projectName: projectData.name,
+                buildId: buildData?._id,
+                logsUrl: buildData.logUrl,
+                serviceType: projectData.type
+            })
+        );
+
+        await publishProjectStatus(redis, { projectId: projectId, status: 'failed' })
         throw error;
     }
 

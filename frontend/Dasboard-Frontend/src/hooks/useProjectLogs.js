@@ -7,6 +7,9 @@ export function useProjectLogs(projectId) {
     const [loading, setLoading] = useState(true);
     const [isStaticProject, setIsStaticProject] = useState(false);
     const [staticContent, setStaticContent] = useState(null);
+    const [staticFailed, setStaticFailed] = useState(false);
+    const [staticFailedMessage, setStaticFailedMessage] = useState('');
+    const [staticFailedLogsUrl, setStaticFailedLogsUrl] = useState(null);
 
     const projectIdRef = useRef(projectId);
     const socketRef = useRef(null);
@@ -38,6 +41,9 @@ export function useProjectLogs(projectId) {
                     setLogs([]);
                     setIsStaticProject(false);
                     setStaticContent(null);
+                    setStaticFailed(false);
+                    setStaticFailedMessage('');
+                    setStaticFailedLogsUrl(null);
                     setLoading(false);
                     break;
 
@@ -54,6 +60,15 @@ export function useProjectLogs(projectId) {
                             setLogs(['Unable to load deployment logs.']);
                         }
                     }
+                    break;
+
+                case 'static_failed':
+                    setIsStaticProject(false);
+                    setStaticContent(null);
+                    setLogs([]);
+                    setStaticFailed(true);
+                    setStaticFailedMessage(data.message || 'Your static build has failed.');
+                    setStaticFailedLogsUrl(data.logsUrl || null);
                     break;
 
                 case 'log':
@@ -105,6 +120,9 @@ export function useProjectLogs(projectId) {
         loading,
         connected,
         isStaticProject,
-        staticContent
+        staticContent,
+        staticFailed,
+        staticFailedMessage,
+        staticFailedLogsUrl
     };
 }
