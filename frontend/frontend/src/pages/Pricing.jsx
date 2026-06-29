@@ -7,10 +7,10 @@ const PLANS = [
   { name: "Free", desc: "Static sites with subdomain and SSL.", monthly: 0, annual: 0, features: [
     { label: "Static site hosting", ok: true }, { label: "DeployHub subdomain", ok: true }, { label: "Automatic SSL (Let's Encrypt)", ok: true }, { label: "Email, Discord, Telegram alerts", ok: true }, { label: "Custom domain", ok: false }, { label: "GitHub CI/CD", ok: false }, { label: "Uptime monitoring", ok: false }, { label: "AI diagnostics", ok: false }
   ], cta: "Start free", ctaStyle: "outline", highlight: false, badge: null },
-  { name: "Starter", desc: "Backend runtimes and custom domains.", monthly: 1499, annual: 95.9, features: [
+  { name: "Starter", desc: "Backend runtimes and custom domains.", monthly: 1499, annual: 17988, features: [
     { label: "Static, Node.js, Go, Python", ok: true }, { label: "Subdomain + custom domain", ok: true }, { label: "Automatic SSL", ok: true }, { label: "GitHub CI/CD auto-deploy", ok: true }, { label: "256 MB RAM, 0.5 CPU, 5 GB storage", ok: true }, { label: "Email, Discord, Telegram alerts", ok: true }, { label: "Uptime monitoring", ok: false }, { label: "AI diagnostics", ok: false }
   ], cta: "Choose Starter", ctaStyle: "solid", highlight: false, badge: null },
-  { name: "Pro", desc: "Production stack with monitoring and AI.", monthly: 2499, annual: 287.9, features: [
+  { name: "Pro", desc: "Production stack with monitoring and AI.", monthly: 2499, annual: 29988, features: [
     { label: "Static, Node.js, Go, Python, Java", ok: true }, { label: "Subdomain + custom domain", ok: true }, { label: "Automatic SSL", ok: true }, { label: "GitHub CI/CD auto-deploy", ok: true }, { label: "512 MB RAM, 1 CPU, 10 GB storage", ok: true }, { label: "Uptime monitoring + auto-restart", ok: true }, { label: "AI diagnostics for builds & logs", ok: true }, { label: "Email, Discord, Telegram alerts", ok: true }
   ], cta: "Choose Pro", ctaStyle: "solid", highlight: true, badge: "Most popular" }
 ];
