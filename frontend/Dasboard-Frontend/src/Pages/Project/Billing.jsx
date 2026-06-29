@@ -195,6 +195,7 @@ export function Billing() {
     const isFree = price === 0 || planName.toLowerCase() === 'free'
     const paymentStatus = billing?.paymentStatus || 'unknown'
 
+
     const daysLeft = useMemo(() => {
         if (!billing?.endDate) return Infinity
         return daysUntil(billing.endDate)
@@ -211,6 +212,12 @@ export function Billing() {
 
     const isExpiringSoon = !isFree && daysLeft <= 15 && daysLeft > 0
 
+
+    const badgeStatus = isFree
+        ? 'not_required'
+        : isExpiringSoon
+            ? 'expiring'
+            : paymentStatus
     // Billing history (object → array, newest first)
     const history = useMemo(() => {
         const list = normalizeHistory(billing?.billingHistory)
@@ -279,20 +286,10 @@ export function Billing() {
                                     <p className="text-[10px] text-neutral-500 uppercase tracking-[0.15em]">
                                         Current Plan
                                     </p>
-                                    {isFree ? (
-                                        <StatusBadge status="active" className="!rounded-full" />
-                                    ) : (
-                                        <StatusBadge
-                                            status={
-                                                isExpiringSoon
-                                                    ? 'expiring'
-                                                    : paymentStatus === 'paid'
-                                                        ? 'active'
-                                                        : paymentStatus
-                                            }
-                                            className="!rounded-full"
-                                        />
-                                    )}
+                                    <StatusBadge
+                                        status={badgeStatus}
+                                        className="!rounded-full"
+                                    />
                                 </div>
 
                                 <h3 className="text-2xl font-semibold text-white capitalize mb-3">
@@ -392,8 +389,8 @@ export function Billing() {
                                 <div className="h-2 w-full bg-white/[0.04] rounded-full overflow-hidden mb-4">
                                     <div
                                         className={`h-full rounded-full transition-all duration-500 ${isExpiringSoon
-                                                ? 'bg-amber-400'
-                                                : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                                            ? 'bg-amber-400'
+                                            : 'bg-gradient-to-r from-emerald-500 to-emerald-400'
                                             }`}
                                         style={{ width: `${usedPct}%` }}
                                     />
@@ -443,8 +440,8 @@ export function Billing() {
                                         key={t.id}
                                         onClick={() => setActiveTab(t.id)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${activeTab === t.id
-                                                ? 'bg-white/10 text-white'
-                                                : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+                                            ? 'bg-white/10 text-white'
+                                            : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
                                             }`}
                                     >
                                         {t.label}
