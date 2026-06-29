@@ -70,9 +70,7 @@ export default function Pricing() {
               }`}
             >
               Yearly
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
-                Save 20%
-              </span>
+              
             </button>
           </div>
 
