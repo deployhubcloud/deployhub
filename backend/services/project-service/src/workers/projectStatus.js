@@ -10,7 +10,6 @@ const redisPubSub = new RedisPubSub(
     {
         host: project_env.REDIS_HOST,
         port: project_env.REDIS_PORT,
-        password: project_env.REDIS_PASSWORD,
         maxRetriesPerRequest: 3,
         enableReadyCheck: true,
         lazyConnect: true

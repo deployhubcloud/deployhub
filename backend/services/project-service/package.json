@@ -26,6 +26,7 @@
     "ioredis": "^5.10.1",
     "mongo-sanitize": "^1.1.0",
     "mongoose": "^9.6.1",
+    "node-cron": "^4.5.0",
     "uuid": "^14.0.0"
   }
 }

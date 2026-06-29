@@ -5,10 +5,10 @@ import { project_env } from '../lib/env.js';
 const connection = {
     host: project_env.REDIS_HOST,
     port: Number(project_env.REDIS_PORT),
-    password: project_env.REDIS_PASSWORD,
     maxRetriesPerRequest: null,
 };
 
 export const buildQueue = new Queue(QUEUE_NAMES.BUILD, { connection });
 export const subdomainChangeQueue = new Queue(QUEUE_NAMES.SUBDOMAIN_CHANGE, { connection });
-export const startStopHealthCheck = new Queue(QUEUE_NAMES.START_STOP_HEALTH_CHECK, { connection })
+export const startStopHealthCheck = new Queue(QUEUE_NAMES.START_STOP_HEALTH_CHECK, { connection });
+export const deleteProjectQueue  = new Queue(QUEUE_NAMES.DELETE_PROJECT, { connection });

@@ -7,5 +7,6 @@ export const QUEUE_NAMES = {
     SUBDOMAIN_CHANGE: 'subdomain-change',
     MONITORING: 'deplyhub-monitoring',
     HEALTH_CHECK_QUEUE: 'healthCheckQueue',
-    START_STOP_HEALTH_CHECK: 'start-stop-health-check'
+    START_STOP_HEALTH_CHECK: 'start-stop-health-check',
+    DELETE_PROJECT: 'deployhub-project-delete'
 }
