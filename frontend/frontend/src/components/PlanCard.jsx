@@ -53,7 +53,7 @@ export default function PlanCard({ plan, annual, delay = 0 }) {
       <div className="font-sans font-bold text-xl mb-1 text-white">{plan.name}</div>
       <p className="text-neutral-500 text-sm mb-5 leading-relaxed">{plan.desc}</p>
       <div className="flex items-end gap-1 mb-6">
-        {plan.monthly !== 0 && <span className="text-neutral-400 text-lg mb-1">$</span>}
+        {plan.monthly !== 0 && <span className="text-neutral-400 text-lg mb-1">₹</span>}
         <span className="font-sans font-bold text-5xl leading-none text-white">{plan.monthly === 0 ? "Free" : annual ? plan.annual : plan.monthly}</span>
         {plan.monthly !== 0 && <span className="text-neutral-500 text-sm mb-1">/{annual ? "year" : "mo"}</span>}
       </div>
