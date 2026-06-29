@@ -201,7 +201,7 @@ const verifyRazorpaySignature = ({ orderId, paymentId, signature }) => {
         Buffer.from(signature)
     );
 };
-
+ 
 const planAmountInPaise = (planName, months) => {
     const amount = Number(plans[planName]?.price || 0) * months * 100;
     return Math.round(amount);

@@ -8,12 +8,6 @@ const NAV_LINKS = [
   { to: '/settings/sessions', label: 'Sessions', icon: 'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18' },
 ]
 
-const DOCS_LINK = {
-  href: 'https://docs.deployhub.cloud',
-  label: 'Docs',
-  icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-}
-
 function NavIcon({ d, active }) {
   return (
     <svg
@@ -47,7 +41,6 @@ function SidebarLink({ to, label, icon, active, onClick, expanded }) {
       >
         {label}
       </span>
-      {/* Tooltip for collapsed sidebar on desktop (unchanged) */}
       <span className="absolute left-full ml-2 px-2 py-1 rounded-md text-xs font-medium text-white bg-[#18181c] border border-white/[0.06] opacity-0 pointer-events-none group-hover:opacity-0 group-hover/item:opacity-0 md:group-hover:opacity-0 md:group-hover/item:opacity-0 md:group-[&:not(:hover)]:group-hover/item:opacity-100 md:group-[&:not(:hover)]:group-hover/item:pointer-events-auto z-50 whitespace-nowrap">
         {label}
       </span>
@@ -103,20 +96,6 @@ export default function Sidebar() {
               expanded={isSidebarOpen}
             />
           ))}
-
-          <a
-            href={DOCS_LINK.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group/item relative flex items-center h-10 mx-2 rounded-lg hover:bg-white/[0.03] transition-colors"
-          >
-            <span className="w-14 flex items-center justify-center flex-shrink-0">
-              <NavIcon d={DOCS_LINK.icon} active={false} />
-            </span>
-            <span className={`whitespace-nowrap text-sm font-medium text-neutral-400 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto ${isSidebarOpen ? 'max-md:opacity-100 max-md:translate-x-0' : ''}`}>
-              {DOCS_LINK.label}
-            </span>
-          </a>
         </nav>
       </aside>
     </>

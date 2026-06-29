@@ -17,7 +17,7 @@ const free = {
 
 const starter = {
     name: 'starter',
-    price: 9.99,
+    price: 1499,
     deployment_Type: ['static', 'node', 'go', 'python'],
     subdomain: true,
     customDomain: true,
@@ -39,7 +39,7 @@ const starter = {
 
 const pro = {
     name: 'pro',
-    price: 29.99,
+    price: 2499,
     deployment_Type: ['static', 'node', 'go', 'python', 'java'],
     subdomain: true,
     customDomain: true,

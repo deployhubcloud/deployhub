@@ -27,7 +27,7 @@ const PLAN_OPTIONS = {
   },
   starter: {
     name: "Starter",
-    price: 9.99,
+    price: 1499,
     types: ["static", "node", "go", "python"],
     subdomain: true,
     customDomain: true,
@@ -47,7 +47,7 @@ const PLAN_OPTIONS = {
   },
   pro: {
     name: "Pro",
-    price: 29.99,
+    price: 2499,
     types: ["static", "node", "go", "python", "java"],
     subdomain: true,
     customDomain: true,
@@ -162,13 +162,13 @@ function buildPayload(form, plan, months, projectType, selectedRepo) {
     },
     ...(isStatic
       ? {
-          buildCommand: form.buildCommand.trim(),
-          publishDir: form.publishDir.trim(),
-        }
+        buildCommand: form.buildCommand.trim(),
+        publishDir: form.publishDir.trim(),
+      }
       : {
-          startCommand: form.startCommand.trim(),
-          port: Number(form.port),
-        }),
+        startCommand: form.startCommand.trim(),
+        port: Number(form.port),
+      }),
   };
 
   if (selectedRepo) {
@@ -289,8 +289,8 @@ function StepIndicator({ step, setStep, validateStep, completed }) {
                     isDone
                       ? "border-amber-500 bg-amber-500 text-white"
                       : isCurrent
-                      ? "border-amber-500 bg-[#111114] text-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]"
-                      : "border-white/15 bg-[#111114] text-neutral-400"
+                        ? "border-amber-500 bg-[#111114] text-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]"
+                        : "border-white/15 bg-[#111114] text-neutral-400"
                   )}
                 >
                   {isDone ? (

@@ -11,6 +11,9 @@ import { addCustomDomainValidator, getDomainSettingsValidators, validateChangeSu
 import { changeSubdomainController, getDomainSettingsController, addCustomDomainCOntroller, deleteCustomDomainController } from '../controllers/domain.controller.js';
 import { projectSettingValidators, updateBuildandStartSettingsValidators, updateHealthMonitoringAndNotificationValidator, updateEnvSettingsValidators } from '../validators/projectSettings.js';
 import { projectSettingsController, updateBuildandStartSettingsController, updateEnvSettingsController, updateHealthMonitoringAndNotificationController } from '../controllers/projectSettings.controller.js';
+import { getProjectBillingValidators } from '../validators/billing.validators.js';
+import { getProjectBillingController } from '../controllers/billing.controller.js';
+import { getLatestPlans } from '../controllers/getPlans.controller.js';
 
 const projectRouter = express.Router();
 
@@ -38,4 +41,10 @@ projectRouter.post('/custom-domain/:projectId', addCustomDomainValidator, addCus
 projectRouter.delete('/custom-domain/:projectId', deleteCustomDomainValidator, deleteCustomDomainController)
 
 
+// project billing
+projectRouter.get("/billing/:projectId" , getProjectBillingValidators , getProjectBillingController)
+
+
+// plans
+projectRouter.get('/plans' , getLatestPlans)
 export default projectRouter;
