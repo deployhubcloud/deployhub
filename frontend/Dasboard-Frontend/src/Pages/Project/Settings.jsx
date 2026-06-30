@@ -38,6 +38,62 @@ function TextInput({ ...props }) {
   );
 }
 
+// ──────────────────────────────────────────────────────────────
+// FIX: dedicated numeric-input component.
+//
+// The old bug: <TextInput type="number" value={port}
+//   onChange={e => setPort(parseInt(e.target.value) || 3000)} />
+//
+// While typing, e.target.value briefly becomes "" (e.g. user
+// backspaces, or edits mid-string). parseInt("") is NaN, and
+// `NaN || 3000` instantly snapped the value back to 3000 on every
+// such keystroke — fighting the user's input and making it look
+// like the field was "incrementing" or resetting randomly.
+//
+// Fix: keep what's typed as a plain string while editing (so React
+// never fights the cursor), only coerce to a number as it's typed
+// (when valid) and only apply a fallback default on blur, when the
+// field is genuinely left empty.
+// ──────────────────────────────────────────────────────────────
+function NumberInput({ value, onChange, fallback = 0, ...props }) {
+  const [draft, setDraft] = useState(value === undefined || value === null ? "" : String(value));
+
+  useEffect(() => {
+    setDraft(value === undefined || value === null ? "" : String(value));
+  }, [value]);
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    if (raw === "" || /^[0-9]+$/.test(raw)) {
+      setDraft(raw);
+      if (raw !== "") {
+        const parsed = parseInt(raw, 10);
+        if (!Number.isNaN(parsed)) onChange(parsed);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    if (draft === "") {
+      setDraft(String(fallback));
+      onChange(fallback);
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={draft}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 outline-none transition-all font-mono"
+      {...props}
+    />
+  );
+}
+
 function SaveBtn({ saving, saved, onClick, label = "Save" }) {
   return (
     <button
@@ -138,8 +194,32 @@ export function Settings() {
           if (n.telegram) { setTelegramEnabled(n.telegram.enabled || false); setTelegramBotToken(n.telegram.botToken || ""); setTelegramChatId(n.telegram.chatId || ""); }
           if (n.email) { setEmailEnabled(n.email.enabled || false); setEmailAddress(n.email.emailAddress || ""); }
         }
-        if (s.env && typeof s.env === "object") {
-          setEnvVars(Object.entries(s.env).map(([key, value]) => ({ key, value })));
+
+        // ──────────────────────────────────────────────────────────
+        // FIX: backend stores env as an ARRAY of { key, encryptedValue }
+        // (per the Mongoose schema: env: [{ key, encryptedValue }]),
+        // NOT a plain { KEY: value } object. The old code did:
+        //
+        //   if (s.env && typeof s.env === "object") {
+        //     setEnvVars(Object.entries(s.env).map(([key, value]) => ...))
+        //   }
+        //
+        // Object.entries() on an ARRAY returns [["0", {...}], ["1", {...}]]
+        // — index "0","1","2"... as keys, and the raw {key, encryptedValue}
+        // object as the value. Same root cause as the "0=[object Object]"
+        // bug on the backend side.
+        //
+        // We also don't show decrypted values here — existing values
+        // stay blank (masked) and are only overwritten if the user
+        // types a new value, matching the helper text below.
+        // ──────────────────────────────────────────────────────────
+        if (Array.isArray(s.env) && s.env.length > 0) {
+          setEnvVars(s.env.map(entry => ({ key: entry.key || "", value: "" })));
+        } else if (s.env && typeof s.env === "object" && !Array.isArray(s.env)) {
+          const entries = Object.entries(s.env);
+          if (entries.length > 0) {
+            setEnvVars(entries.map(([key]) => ({ key, value: "" })));
+          }
         }
       } catch {
         setError("Failed to load project settings.");
@@ -169,10 +249,14 @@ export function Settings() {
   const handleSaveEnv = async () => {
     setSavingEnv(true);
     setSavedEnv(false);
-    const env = envVars.reduce((acc, { key, value }) => {
-      if (key.trim() && value.trim()) acc[key.trim()] = value.trim();
-      return acc;
-    }, {});
+
+    // Send as an array of { key, value } pairs (only rows with both
+    // a key and a NEW value). A blank value means "leave the existing
+    // encrypted value untouched" — handled server-side.
+    const env = envVars
+      .filter(({ key, value }) => key.trim() && value.trim())
+      .map(({ key, value }) => ({ key: key.trim(), value: value.trim() }));
+
     try {
       await api.patch(`/project/settings/env/${projectId}`, { env });
       setSavedEnv(true);
@@ -288,7 +372,10 @@ export function Settings() {
                 <div className="grid grid-cols-3 gap-4">
                   <div><FieldLabel>Root Directory</FieldLabel><TextInput value={rootDirectory} onChange={e => setRootDirectory(e.target.value)} placeholder="." /></div>
                   <div><FieldLabel>Start Command</FieldLabel><TextInput value={startCommand} onChange={e => setStartCommand(e.target.value)} placeholder="node index.js" /></div>
-                  <div><FieldLabel>Port</FieldLabel><TextInput type="number" value={port} onChange={e => setPort(parseInt(e.target.value) || 3000)} /></div>
+                  <div>
+                    <FieldLabel>Port</FieldLabel>
+                    <NumberInput value={port} onChange={setPort} fallback={3000} />
+                  </div>
                 </div>
               )}
             </div>
@@ -347,9 +434,15 @@ export function Settings() {
                   </div>
                   {monitorEnabled && (
                     <div className="px-4 py-4 grid grid-cols-3 gap-4 border-t border-white/[0.06]">
-                      <div><FieldLabel>Interval (sec)</FieldLabel><TextInput type="number" value={intervalSeconds} onChange={e => setIntervalSeconds(parseInt(e.target.value) || 60)} /></div>
+                      <div>
+                        <FieldLabel>Interval (sec)</FieldLabel>
+                        <NumberInput value={intervalSeconds} onChange={setIntervalSeconds} fallback={60} />
+                      </div>
                       <div><FieldLabel>Health Path</FieldLabel><TextInput value={healthPath} onChange={e => setHealthPath(e.target.value)} placeholder="/health" /></div>
-                      <div><FieldLabel>Failed Tries</FieldLabel><TextInput type="number" value={failedTries} onChange={e => setFailedTries(parseInt(e.target.value) || 2)} /></div>
+                      <div>
+                        <FieldLabel>Failed Tries</FieldLabel>
+                        <NumberInput value={failedTries} onChange={setFailedTries} fallback={2} />
+                      </div>
                     </div>
                   )}
                 </div>
