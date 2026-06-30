@@ -32,6 +32,7 @@ export function useProjectLogs(projectId) {
 
         const handleLog = async (data) => {
             if (data.projectId !== projectIdRef.current) return;
+            console.log('🔔 build_log received:', data);
 
             switch (data.type) {
                 case 'reset':
