@@ -278,34 +278,41 @@ class ProjectLogsWatcher {
         try {
             const container = docker.getContainer(containerName);
 
-            // Phase 1: Snapshot — follow:false means Docker returns a plain Buffer instantly
-            // No idle-stream issue, no buffering. Ye ALWAYS kaam karega chahe container
-            // 10 days se idle ho.
-            const snap = await container.logs({
+            const since = Math.floor(Date.now() / 1000);
+
+            const snapStream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: false,
                 tail: 200
             });
 
-            if (active && snap?.length) {
-                this.socket.emit('build_log', {
-                    projectId: this.projectId,
-                    type: 'log',
-                    log: snap.toString()
+            await new Promise((resolve) => {
+                const chunks = [];
+                snapStream.on('data', (chunk) => {
+                    if (active) chunks.push(chunk);
                 });
-            }
+                snapStream.on('end', () => {
+                    if (active && chunks.length) {
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId,
+                            type: 'log',
+                            log: Buffer.concat(chunks).toString()
+                        });
+                    }
+                    resolve();
+                });
+                snapStream.on('error', () => resolve());
+            });
 
             if (!active) return { type: 'docker', stop, containerName };
 
-            // Phase 2: Live tail from NOW only — abhi se naye logs aaye to capture ho
-            // Agar naye logs nahi aate (idle container) — koi problem nahi, stream bas wait karega
             liveStream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: true,
-                since: Math.floor(Date.now() / 1000),
-                tail: 0  // snapshot se overlap avoid karo
+                since,
+                tail: 0
             });
 
             liveStream.on('data', (chunk) => {
