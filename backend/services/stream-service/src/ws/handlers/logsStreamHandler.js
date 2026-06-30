@@ -275,24 +275,57 @@ class ProjectLogsWatcher {
             }
         };
 
+        let container;
         try {
-            const container = docker.getContainer(containerName);
-
-            const since = Math.floor(Date.now() / 1000);
-
-            const snapStream = await container.logs({
-                stdout: true,
-                stderr: true,
-                follow: false,
-                tail: 200
+            container = docker.getContainer(containerName);
+        } catch (err) {
+            this.socket.emit('build_log', {
+                projectId: this.projectId, type: 'error', message: err.message
             });
+            return { type: 'docker', stop: () => { }, dockerError: true };
+        }
 
-            await new Promise((resolve) => {
+        const since = Math.floor(Date.now() / 1000);
+
+        const startLive = () => {
+            if (!active) return;
+            container.logs(
+                { stdout: true, stderr: true, follow: true, since, tail: 0 },
+                (err, stream) => {
+                    if (!active || err || !stream) return;
+                    liveStream = stream;
+                    stream.on('data', (chunk) => {
+                        if (!active) return;
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId, type: 'log', log: chunk.toString()
+                        });
+                    });
+                    stream.on('end', () => {
+                        if (active) this.socket.emit('build_log', {
+                            projectId: this.projectId, type: 'complete', log: 'Stream ended.'
+                        });
+                        active = false;
+                    });
+                    stream.on('error', (e) => {
+                        if (active) this.socket.emit('build_log', {
+                            projectId: this.projectId, type: 'error', message: e.message
+                        });
+                        active = false;
+                    });
+                }
+            );
+        };
+
+        
+        container.logs(
+            { stdout: true, stderr: true, follow: false, tail: 200 },
+            (err, stream) => {
+                if (!active) return;
+                if (err || !stream) { startLive(); return; }
+
                 const chunks = [];
-                snapStream.on('data', (chunk) => {
-                    if (active) chunks.push(chunk);
-                });
-                snapStream.on('end', () => {
+                stream.on('data', (chunk) => chunks.push(chunk));
+                stream.on('end', () => {
                     if (active && chunks.length) {
                         this.socket.emit('build_log', {
                             projectId: this.projectId,
@@ -300,60 +333,11 @@ class ProjectLogsWatcher {
                             log: Buffer.concat(chunks).toString()
                         });
                     }
-                    resolve();
+                    startLive();
                 });
-                snapStream.on('error', () => resolve());
-            });
-
-            if (!active) return { type: 'docker', stop, containerName };
-
-            liveStream = await container.logs({
-                stdout: true,
-                stderr: true,
-                follow: true,
-                since,
-                tail: 0
-            });
-
-            liveStream.on('data', (chunk) => {
-                if (!active) return;
-                this.socket.emit('build_log', {
-                    projectId: this.projectId,
-                    type: 'log',
-                    log: chunk.toString()
-                });
-            });
-
-            liveStream.on('end', () => {
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'complete',
-                        log: 'Container log stream ended.'
-                    });
-                }
-                active = false;
-            });
-
-            liveStream.on('error', (err) => {
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'error',
-                        message: err.message
-                    });
-                }
-                active = false;
-            });
-
-        } catch (err) {
-            this.socket.emit('build_log', {
-                projectId: this.projectId,
-                type: 'error',
-                message: err.message
-            });
-            return { type: 'docker', stop: () => { }, dockerError: true };
-        }
+                stream.on('error', () => startLive());
+            }
+        );
 
         return { type: 'docker', stop, containerName };
     }
