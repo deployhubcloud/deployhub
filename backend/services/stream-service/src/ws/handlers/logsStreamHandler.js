@@ -53,37 +53,18 @@ class ProjectLogsWatcher {
         this.active = true;
         this.currentStream = null;
         this.lastStatus = null;
-        this.refreshTimer = null;
-        this.heartbeatTimer = null;
-        this.lastLogTimestamp = null;
-        this.MAX_IDLE_MS = 5 * 60 * 1000; // 5 minutes
     }
 
     async start() {
-        console.log(`[Watcher ${this.projectId}] Starting`);
         await this.refreshAndSwitch();
         this.watchStatusStream();
     }
 
     stop() {
-        console.log(`[Watcher ${this.projectId}] Stopping`);
         this.active = false;
-        this._clearTimers();
         if (this.currentStream) {
             this.currentStream.stop();
             this.currentStream = null;
-        }
-    }
-
-    _clearTimers() {
-        if (this.refreshTimer) {
-            clearTimeout(this.refreshTimer);
-            this.refreshTimer = null;
-        }
-        if (this.heartbeatTimer) {
-            clearInterval(this.heartbeatTimer);
-            this.heartbeatTimer = null;
-            console.log(`[Watcher ${this.projectId}] Heartbeat cleared`);
         }
     }
 
@@ -136,7 +117,9 @@ class ProjectLogsWatcher {
                     neededType = 'none';
                 }
             }
-        } else if (status === 'failed' && type === 'static') {
+        }
+
+        else if (status === 'failed' && type === 'static') {
             if (logsUrl) {
                 neededType = 'static';
                 neededParams = { logsUrl };
@@ -144,42 +127,37 @@ class ProjectLogsWatcher {
                 neededType = 'none';
                 this.emitInfo('Static build failed, but logs URL is not available.');
             }
-        } else {
+        }
+        else {
             neededType = 'none';
         }
 
-        // Keep existing stream if possible
+
         if (this.currentStream && this.currentStream.type === neededType) {
             if (neededType === 'static' && this.currentStream.logsUrl !== logsUrl) {
                 this.currentStream.stop();
                 this.currentStream = null;
             } else {
-                // Stream is still valid
-                if (neededType === 'docker') {
-                    this._startHeartbeat(); // re‑start heartbeat if it was cleared by a status event
-                }
                 return;
             }
         }
 
-        // Need to create a new stream
-        this._clearTimers();
+
         if (this.currentStream) {
             this.currentStream.stop();
             this.currentStream = null;
         }
 
+
         this.emitReset();
 
+        // Start new stream
         switch (neededType) {
             case 'build':
                 this.currentStream = await this.startBuildLogStream(buildId);
                 break;
             case 'docker':
                 this.currentStream = await this.startDockerLogStream(projectContainerName);
-                if (this.currentStream && this.currentStream.type === 'docker' && this.active) {
-                    this._startHeartbeat();
-                }
                 break;
             case 'static':
                 this.currentStream = this.startStaticLogStream(logsUrl);
@@ -231,7 +209,6 @@ class ProjectLogsWatcher {
                         const newStatus = payload.status;
                         if (newStatus && newStatus !== this.lastStatus) {
                             this.lastStatus = newStatus;
-                            console.log(`[Watcher ${this.projectId}] Status changed to: ${newStatus}`);
                             await this.refreshAndSwitch();
                         }
                     }
@@ -288,55 +265,51 @@ class ProjectLogsWatcher {
 
     async startDockerLogStream(containerName) {
         let active = true;
-        let stream = null;
-        let ended = false;
+        let liveStream = null;
 
-        const handleStreamEnd = (messageType, message) => {
-            if (ended) return;
-            ended = true;
+        const stop = () => {
             active = false;
-            if (stream) {
-                try { stream.destroy(); } catch (e) {}
-            }
-
-            console.log(`[Watcher ${this.projectId}] Docker stream ended (${messageType}): ${message}`);
-
-            this.socket.emit('build_log', {
-                projectId: this.projectId,
-                type: messageType,
-                message: message,
-                log: messageType === 'complete' ? 'Container log stream ended.' : undefined
-            });
-
-            this.currentStream = null;
-            this._clearTimers();
-
-            if (this.active && this.socket.connected) {
-                console.log(`[Watcher ${this.projectId}] Scheduling reconnect in 5s`);
-                this.refreshTimer = setTimeout(() => {
-                    this.refreshTimer = null;
-                    if (this.active && this.socket.connected) {
-                        this.refreshAndSwitch();
-                    }
-                }, 5000);
+            if (liveStream) {
+                try { liveStream.destroy(); } catch (e) { }
+                liveStream = null;
             }
         };
 
         try {
             const container = docker.getContainer(containerName);
-            stream = await container.logs({
+
+            // Phase 1: Snapshot — follow:false means Docker returns a plain Buffer instantly
+            // No idle-stream issue, no buffering. Ye ALWAYS kaam karega chahe container
+            // 10 days se idle ho.
+            const snap = await container.logs({
+                stdout: true,
+                stderr: true,
+                follow: false,
+                tail: 200
+            });
+
+            if (active && snap?.length) {
+                this.socket.emit('build_log', {
+                    projectId: this.projectId,
+                    type: 'log',
+                    log: snap.toString()
+                });
+            }
+
+            if (!active) return { type: 'docker', stop, containerName };
+
+            // Phase 2: Live tail from NOW only — abhi se naye logs aaye to capture ho
+            // Agar naye logs nahi aate (idle container) — koi problem nahi, stream bas wait karega
+            liveStream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: true,
-                tail: 100
+                since: Math.floor(Date.now() / 1000),
+                tail: 0  // snapshot se overlap avoid karo
             });
 
-            console.log(`[Watcher ${this.projectId}] Docker log stream started for ${containerName}`);
-            this.lastLogTimestamp = Date.now();
-
-            stream.on('data', (chunk) => {
+            liveStream.on('data', (chunk) => {
                 if (!active) return;
-                this.lastLogTimestamp = Date.now();
                 this.socket.emit('build_log', {
                     projectId: this.projectId,
                     type: 'log',
@@ -344,52 +317,38 @@ class ProjectLogsWatcher {
                 });
             });
 
-            stream.on('end', () => handleStreamEnd('complete', 'Container log stream ended.'));
-            stream.on('error', (err) => handleStreamEnd('error', err.message));
+            liveStream.on('end', () => {
+                if (active) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'complete',
+                        log: 'Container log stream ended.'
+                    });
+                }
+                active = false;
+            });
+
+            liveStream.on('error', (err) => {
+                if (active) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'error',
+                        message: err.message
+                    });
+                }
+                active = false;
+            });
 
         } catch (err) {
-            console.error(`[Watcher ${this.projectId}] Error starting docker log stream:`, err);
             this.socket.emit('build_log', {
                 projectId: this.projectId,
                 type: 'error',
                 message: err.message
             });
-            return { type: 'docker', stop: () => {}, dockerError: true };
+            return { type: 'docker', stop: () => { }, dockerError: true };
         }
 
-        return {
-            type: 'docker',
-            stop: () => {
-                active = false;
-                if (stream) try { stream.destroy(); } catch (e) {}
-            },
-            containerName
-        };
-    }
-
-    _startHeartbeat() {
-        if (this.heartbeatTimer) {
-            return; // already running
-        }
-        console.log(`[Watcher ${this.projectId}] Heartbeat started (check every 30s, max idle 5m)`);
-        this.heartbeatTimer = setInterval(() => {
-            if (!this.active || !this.currentStream || this.currentStream.type !== 'docker') {
-                console.log(`[Watcher ${this.projectId}] Heartbeat stopping: watcher inactive or not docker stream`);
-                this._clearTimers();
-                return;
-            }
-
-            const idleTime = Date.now() - (this.lastLogTimestamp || 0);
-            if (idleTime > this.MAX_IDLE_MS) {
-                console.log(`[Watcher ${this.projectId}] Docker stream idle for ${idleTime}ms, forcing reconnect`);
-                this.currentStream.stop();
-                this.currentStream = null;
-                this._clearTimers();
-                if (this.active && this.socket.connected) {
-                    this.refreshAndSwitch();
-                }
-            }
-        }, 30_000);
+        return { type: 'docker', stop, containerName };
     }
 
     startStaticLogStream(logsUrl) {
