@@ -53,6 +53,7 @@ class ProjectLogsWatcher {
         this.active = true;
         this.currentStream = null;
         this.lastStatus = null;
+        this.refreshTimer = null;   // NEW: reconnection timer
     }
 
     async start() {
@@ -62,6 +63,11 @@ class ProjectLogsWatcher {
 
     stop() {
         this.active = false;
+        // NEW: clear any pending reconnection timer
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+        }
         if (this.currentStream) {
             this.currentStream.stop();
             this.currentStream = null;
@@ -76,6 +82,11 @@ class ProjectLogsWatcher {
     }
 
     async refreshAndSwitch() {
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+
         if (!this.active) return;
 
         const status = await this.getCurrentStatus();
@@ -132,7 +143,6 @@ class ProjectLogsWatcher {
             neededType = 'none';
         }
 
-
         if (this.currentStream && this.currentStream.type === neededType) {
             if (neededType === 'static' && this.currentStream.logsUrl !== logsUrl) {
                 this.currentStream.stop();
@@ -142,16 +152,13 @@ class ProjectLogsWatcher {
             }
         }
 
-
         if (this.currentStream) {
             this.currentStream.stop();
             this.currentStream = null;
         }
 
-
         this.emitReset();
 
-        // Start new stream
         switch (neededType) {
             case 'build':
                 this.currentStream = await this.startBuildLogStream(buildId);
@@ -266,10 +273,35 @@ class ProjectLogsWatcher {
     async startDockerLogStream(containerName) {
         let active = true;
         let stream = null;
-        const stop = () => {
+        let ended = false;
+
+        const handleStreamEnd = (messageType, message) => {
+            if (ended) return;
+            ended = true;
             active = false;
-            if (stream) try { stream.destroy(); } catch (e) { }
+            if (stream) {
+                try { stream.destroy(); } catch (e) {}
+            }
+
+            this.socket.emit('build_log', {
+                projectId: this.projectId,
+                type: messageType,
+                message: message,
+                log: messageType === 'complete' ? 'Container log stream ended.' : undefined
+            });
+
+            this.currentStream = null;
+
+            if (this.active && this.socket.connected) {
+                this.refreshTimer = setTimeout(() => {
+                    this.refreshTimer = null;
+                    if (this.active && this.socket.connected) {
+                        this.refreshAndSwitch();
+                    }
+                }, 5000);
+            }
         };
+
         try {
             const container = docker.getContainer(containerName);
             stream = await container.logs({
@@ -278,6 +310,7 @@ class ProjectLogsWatcher {
                 follow: true,
                 tail: 100
             });
+
             stream.on('data', (chunk) => {
                 if (!active) return;
                 this.socket.emit('build_log', {
@@ -286,35 +319,27 @@ class ProjectLogsWatcher {
                     log: chunk.toString()
                 });
             });
-            stream.on('end', () => {
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'complete',
-                        log: 'Container log stream ended.'
-                    });
-                }
-                active = false;
-            });
-            stream.on('error', (err) => {
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'error',
-                        message: err.message
-                    });
-                }
-                active = false;
-            });
+
+            stream.on('end', () => handleStreamEnd('complete', 'Container log stream ended.'));
+            stream.on('error', (err) => handleStreamEnd('error', err.message));
+
         } catch (err) {
             this.socket.emit('build_log', {
                 projectId: this.projectId,
                 type: 'error',
                 message: err.message
             });
-            return { type: 'docker', stop: () => { }, dockerError: true };
+            return { type: 'docker', stop: () => {}, dockerError: true };
         }
-        return { type: 'docker', stop, containerName };
+
+        return {
+            type: 'docker',
+            stop: () => {
+                active = false;
+                if (stream) try { stream.destroy(); } catch (e) {}
+            },
+            containerName
+        };
     }
 
     startStaticLogStream(logsUrl) {
