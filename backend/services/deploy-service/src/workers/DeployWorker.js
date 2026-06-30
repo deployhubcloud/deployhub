@@ -118,13 +118,12 @@ async function deployStaticProject({ docker, projectId, buildId, buildsZipUrl, s
 
 const insertEnv = (projectEnv) => {
     const envVariables = [];
-
-    if (projectEnv) {
-        for (const [key, value] of Object.entries(projectEnv)) {
-            envVariables.push(`${key}=${value}`);
+    if (Array.isArray(projectEnv)) {
+        for (const entry of projectEnv) {
+            if (!entry || !entry.key) continue;
+            envVariables.push(`${entry.key}=${entry.encryptedValue}`); 
         }
     }
-
     return envVariables;
 };
 
