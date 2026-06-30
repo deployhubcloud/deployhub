@@ -38,58 +38,48 @@ function TextInput({ ...props }) {
   );
 }
 
-// ──────────────────────────────────────────────────────────────
-// FIX: dedicated numeric-input component.
-//
-// The old bug: <TextInput type="number" value={port}
-//   onChange={e => setPort(parseInt(e.target.value) || 3000)} />
-//
-// While typing, e.target.value briefly becomes "" (e.g. user
-// backspaces, or edits mid-string). parseInt("") is NaN, and
-// `NaN || 3000` instantly snapped the value back to 3000 on every
-// such keystroke — fighting the user's input and making it look
-// like the field was "incrementing" or resetting randomly.
-//
-// Fix: keep what's typed as a plain string while editing (so React
-// never fights the cursor), only coerce to a number as it's typed
-// (when valid) and only apply a fallback default on blur, when the
-// field is genuinely left empty.
-// ──────────────────────────────────────────────────────────────
-function NumberInput({ value, onChange, fallback = 0, ...props }) {
-  const [draft, setDraft] = useState(value === undefined || value === null ? "" : String(value));
 
+
+function NumberInput({ value, onChange, fallback = 0, ...props }) {
+  const [draft, setDraft] = useState(
+    value === undefined || value === null ? '' : String(value)
+  );
+
+ 
   useEffect(() => {
-    setDraft(value === undefined || value === null ? "" : String(value));
+    setDraft(value === undefined || value === null ? '' : String(value));
   }, [value]);
 
   const handleChange = (e) => {
     const raw = e.target.value;
-    if (raw === "" || /^[0-9]+$/.test(raw)) {
+    if (raw === '' || /^\d+$/.test(raw)) {
       setDraft(raw);
-      if (raw !== "") {
-        const parsed = parseInt(raw, 10);
-        if (!Number.isNaN(parsed)) onChange(parsed);
-      }
     }
   };
 
   const handleBlur = () => {
-    if (draft === "") {
+    if (draft === '') {
       setDraft(String(fallback));
       onChange(fallback);
+    } else {
+      const parsed = parseInt(draft, 10);
+      if (!Number.isNaN(parsed)) {
+        setDraft(String(parsed));
+        onChange(parsed);
+      }
     }
   };
 
   return (
     <input
       type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
       value={draft}
       onChange={handleChange}
       onBlur={handleBlur}
       className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 outline-none transition-all font-mono"
       {...props}
+      inputMode={undefined}
+      pattern={undefined}
     />
   );
 }
@@ -100,11 +90,10 @@ function SaveBtn({ saving, saved, onClick, label = "Save" }) {
       type="button"
       onClick={onClick}
       disabled={saving}
-      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-        saved
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${saved
           ? "bg-green-500/10 text-green-400 border border-green-500/30"
           : "bg-amber-500 hover:bg-amber-400 text-black"
-      }`}
+        }`}
     >
       {saving ? "Saving…" : saved ? "Saved" : label}
     </button>
@@ -450,18 +439,24 @@ export function Settings() {
 
               <div className="rounded-lg border border-white/[0.06] overflow-hidden divide-y divide-white/[0.06]">
                 {[
-                  { key: 'discord', label: 'Discord', enabled: discordEnabled, setEnabled: setDiscordEnabled, fields: discordEnabled && (
-                    <div className="px-4 pb-3"><FieldLabel>Webhook URL</FieldLabel><TextInput type="url" value={discordWebhook} onChange={e => setDiscordWebhook(e.target.value)} placeholder="https://discord.com/api/webhooks/…" /></div>
-                  )},
-                  { key: 'telegram', label: 'Telegram', enabled: telegramEnabled, setEnabled: setTelegramEnabled, fields: telegramEnabled && (
-                    <div className="px-4 pb-3 grid grid-cols-2 gap-3">
-                      <div><FieldLabel>Bot Token</FieldLabel><TextInput value={telegramBotToken} onChange={e => setTelegramBotToken(e.target.value)} /></div>
-                      <div><FieldLabel>Chat ID</FieldLabel><TextInput value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)} /></div>
-                    </div>
-                  )},
-                  { key: 'email', label: 'Email', enabled: emailEnabled, setEnabled: setEmailEnabled, fields: emailEnabled && (
-                    <div className="px-4 pb-3"><FieldLabel>Email Address</FieldLabel><TextInput type="email" value={emailAddress} onChange={e => setEmailAddress(e.target.value)} placeholder="you@example.com" /></div>
-                  )},
+                  {
+                    key: 'discord', label: 'Discord', enabled: discordEnabled, setEnabled: setDiscordEnabled, fields: discordEnabled && (
+                      <div className="px-4 pb-3"><FieldLabel>Webhook URL</FieldLabel><TextInput type="url" value={discordWebhook} onChange={e => setDiscordWebhook(e.target.value)} placeholder="https://discord.com/api/webhooks/…" /></div>
+                    )
+                  },
+                  {
+                    key: 'telegram', label: 'Telegram', enabled: telegramEnabled, setEnabled: setTelegramEnabled, fields: telegramEnabled && (
+                      <div className="px-4 pb-3 grid grid-cols-2 gap-3">
+                        <div><FieldLabel>Bot Token</FieldLabel><TextInput value={telegramBotToken} onChange={e => setTelegramBotToken(e.target.value)} /></div>
+                        <div><FieldLabel>Chat ID</FieldLabel><TextInput value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)} /></div>
+                      </div>
+                    )
+                  },
+                  {
+                    key: 'email', label: 'Email', enabled: emailEnabled, setEnabled: setEmailEnabled, fields: emailEnabled && (
+                      <div className="px-4 pb-3"><FieldLabel>Email Address</FieldLabel><TextInput type="email" value={emailAddress} onChange={e => setEmailAddress(e.target.value)} placeholder="you@example.com" /></div>
+                    )
+                  },
                 ].map(item => (
                   <div key={item.key}>
                     <div className="flex items-center justify-between px-4 py-3">
