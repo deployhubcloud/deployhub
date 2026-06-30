@@ -2,9 +2,128 @@ import { getRedis } from '../../core/redis/client.js';
 import { docker } from '../../utils/docker.js';
 import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cacheLatestBuildIdofProject.js';
 
+
+const globalStreams = new Map();          
+const projectSockets = new Map();        
+const stopTimers = new Map();         
+
+
+async function ensureGlobalDockerStream(projectId, containerName) {
+    if (globalStreams.has(projectId)) return;
+
+    try {
+        const container = docker.getContainer(containerName);
+        const stream = await container.logs({
+            stdout: true,
+            stderr: true,
+            follow: true,
+            tail: 100,
+        });
+
+        let active = true;
+        const stop = () => {
+            active = false;
+            try { stream.destroy(); } catch (e) { }
+        };
+
+        globalStreams.set(projectId, { stream, stop, containerName });
+
+        stream.on('data', (chunk) => {
+            const sockets = projectSockets.get(projectId);
+            if (!sockets || !active) return;
+            const log = chunk.toString();
+            for (const sock of sockets) {
+                if (sock.connected) {
+                    sock.emit('build_log', {
+                        projectId,
+                        type: 'log',
+                        log,
+                    });
+                }
+            }
+        });
+
+        stream.on('end', () => {
+            globalStreams.delete(projectId);
+        });
+
+        stream.on('error', (err) => {
+            console.error(`[Global stream ${projectId}] error:`, err.message);
+            globalStreams.delete(projectId);
+            setTimeout(() => {
+                if (projectSockets.has(projectId) && projectSockets.get(projectId).size > 0) {
+                    ensureGlobalDockerStream(projectId, containerName);
+                }
+            }, 5000);
+        });
+
+        stream.on('close', () => {
+            globalStreams.delete(projectId);
+        });
+
+    } catch (err) {
+        console.error(`[Global stream ${projectId}] failed to start:`, err.message);
+    }
+}
+
+
+function stopGlobalStream(projectId) {
+    const entry = globalStreams.get(projectId);
+    if (entry) {
+        entry.stop();
+        globalStreams.delete(projectId);
+    }
+}
+
+function scheduleStop(projectId) {
+    // Clear any existing timer
+    if (stopTimers.has(projectId)) {
+        clearTimeout(stopTimers.get(projectId));
+        stopTimers.delete(projectId);
+    }
+    // Set a new timer
+    const timer = setTimeout(() => {
+        stopTimers.delete(projectId);
+        const sockets = projectSockets.get(projectId);
+        if (!sockets || sockets.size === 0) {
+            stopGlobalStream(projectId);
+        }
+    }, 30_000); // 30 seconds
+    stopTimers.set(projectId, timer);
+}
+
+
+async function subscribeSocketToProject(socket, projectId, containerName) {
+    if (!projectSockets.has(projectId)) {
+        projectSockets.set(projectId, new Set());
+    }
+    const sockets = projectSockets.get(projectId);
+    sockets.add(socket);
+
+    if (stopTimers.has(projectId)) {
+        clearTimeout(stopTimers.get(projectId));
+        stopTimers.delete(projectId);
+    }
+
+    
+    await ensureGlobalDockerStream(projectId, containerName);
+}
+
+
+function unsubscribeSocketFromProject(socket, projectId) {
+    const sockets = projectSockets.get(projectId);
+    if (sockets) {
+        sockets.delete(socket);
+        if (sockets.size === 0) {
+            scheduleStop(projectId);
+        }
+    }
+}
+
+
 export function registerLogsStreamHandler(io) {
     io.on('connection', (socket) => {
-        let currentWatcher = null;
+        let currentWatcher = null; 
 
         socket.on('subscribe_logs', async ({ projectId }) => {
             if (!projectId) return;
@@ -16,16 +135,26 @@ export function registerLogsStreamHandler(io) {
 
             try {
                 const redis = getRedis();
+                const cache = await getCacheLatestBuildIdOfProject(projectId, redis);
+                if (!cache) {
+                    socket.emit('build_log', { projectId, type: 'error', message: 'Project not found.' });
+                    return;
+                }
+
+                const { projectContainerName, projectType } = cache;
+                const type = (projectType || '').trim().toLowerCase();
+
+                if (type !== 'static' && projectContainerName) {
+                    await subscribeSocketToProject(socket, projectId, projectContainerName);
+                    socket.emit('build_log', { projectId, type: 'reset' });
+                }
+
                 const watcher = new ProjectLogsWatcher(socket, projectId, redis);
                 currentWatcher = watcher;
                 await watcher.start();
             } catch (error) {
                 console.error(`Log subscription error for ${projectId}:`, error);
-                socket.emit('build_log', {
-                    projectId,
-                    type: 'error',
-                    message: 'Failed to subscribe to logs.'
-                });
+                socket.emit('build_log', { projectId, type: 'error', message: 'Failed to subscribe to logs.' });
             }
         });
 
@@ -34,6 +163,7 @@ export function registerLogsStreamHandler(io) {
                 currentWatcher.stop();
                 currentWatcher = null;
             }
+            unsubscribeSocketFromProject(socket, projectId);
         });
 
         socket.on('disconnect', () => {
@@ -41,9 +171,15 @@ export function registerLogsStreamHandler(io) {
                 currentWatcher.stop();
                 currentWatcher = null;
             }
+            for (const [pid, sockets] of projectSockets) {
+                if (sockets.has(socket)) {
+                    unsubscribeSocketFromProject(socket, pid);
+                }
+            }
         });
     });
 }
+
 
 class ProjectLogsWatcher {
     constructor(socket, projectId, redis) {
@@ -68,13 +204,6 @@ class ProjectLogsWatcher {
         }
     }
 
-    emitReset() {
-        this.socket.emit('build_log', {
-            projectId: this.projectId,
-            type: 'reset'
-        });
-    }
-
     async refreshAndSwitch() {
         if (!this.active) return;
 
@@ -89,93 +218,58 @@ class ProjectLogsWatcher {
         const type = (projectType || '').trim().toLowerCase();
 
         let neededType = null;
-        let neededParams = null;
 
         if (!status) {
             neededType = 'none';
         } else if (status === 'building' || status === 'queued') {
-            if (buildId) {
-                neededType = 'build';
-                neededParams = { buildId };
-            } else {
-                neededType = 'none';
-            }
+            neededType = buildId ? 'build' : 'none';
         } else if (status === 'running') {
             if (type === 'static') {
-                if (logsUrl) {
-                    neededType = 'static';
-                    neededParams = { logsUrl };
-                } else {
-                    neededType = 'none';
-                    this.emitInfo('Static project is running, but logs URL is not yet available. Waiting...');
-                }
+                neededType = logsUrl ? 'static' : 'none';
+                if (!logsUrl) this.emitInfo('Static project is running, but logs URL is not yet available. Waiting...');
             } else {
-                if (projectContainerName) {
-                    neededType = 'docker';
-                    neededParams = { containerName: projectContainerName };
-                } else {
-                    neededType = 'none';
-                }
+                neededType = 'docker';
             }
-        }
-
-        else if (status === 'failed' && type === 'static') {
-            if (logsUrl) {
-                neededType = 'static';
-                neededParams = { logsUrl };
-            } else {
-                neededType = 'none';
-                this.emitInfo('Static build failed, but logs URL is not available.');
-            }
-        }
-        else {
+        } else if (status === 'failed' && type === 'static') {
+            neededType = logsUrl ? 'static' : 'none';
+            if (!logsUrl) this.emitInfo('Static build failed, but logs URL is not available.');
+        } else {
             neededType = 'none';
         }
 
-
-        if (this.currentStream && this.currentStream.type === neededType) {
-            if (neededType === 'static' && this.currentStream.logsUrl !== logsUrl) {
+        if (neededType !== 'docker') {
+            if (this.currentStream && this.currentStream.type !== 'docker') {
                 this.currentStream.stop();
                 this.currentStream = null;
-            } else {
-                return;
             }
-        }
+            this.socket.emit('build_log', { projectId: this.projectId, type: 'reset' });
 
-
-        if (this.currentStream) {
-            this.currentStream.stop();
-            this.currentStream = null;
-        }
-
-
-        this.emitReset();
-
-        // Start new stream
-        switch (neededType) {
-            case 'build':
-                this.currentStream = await this.startBuildLogStream(buildId);
-                break;
-            case 'docker':
-                this.currentStream = await this.startDockerLogStream(projectContainerName);
-                break;
-            case 'static':
-                this.currentStream = this.startStaticLogStream(logsUrl);
-                break;
-            case 'none':
-                this.emitInfo('No logs available at this moment.');
+            switch (neededType) {
+                case 'build':
+                    this.currentStream = await this.startBuildLogStream(buildId);
+                    break;
+                case 'static':
+                    this.currentStream = this.startStaticLogStream(logsUrl);
+                    break;
+                case 'none':
+                    this.emitInfo('No logs available at this moment.');
+                    this.currentStream = null;
+                    break;
+            }
+        } else {
+            if (this.currentStream) {
+                this.currentStream.stop();
                 this.currentStream = null;
-                break;
+            }
+            this.socket.emit('build_log', { projectId: this.projectId, type: 'reset' });
+            this.currentStream = { type: 'docker', stop: () => { } };
         }
     }
 
     async getCurrentStatus() {
         const entries = await this.redis.xrevrange(
             `deployhub:users:projects:status:${this.projectId}`,
-            '+',
-            '-',
-            'COUNT',
-            1
+            '+', '-', 'COUNT', 1
         );
         if (entries?.length) {
             const [, fields] = entries[0];
@@ -192,12 +286,10 @@ class ProjectLogsWatcher {
         if (!this.active) return;
         const streamKey = `deployhub:users:projects:status:${this.projectId}`;
         let lastId = '$';
-
         while (this.active && this.socket.connected) {
             try {
                 const results = await this.redis.xread('BLOCK', 2000, 'STREAMS', streamKey, lastId);
                 if (!this.active) break;
-
                 if (results) {
                     const messages = results[0][1];
                     for (const [id, fields] of messages) {
@@ -261,60 +353,6 @@ class ProjectLogsWatcher {
         };
         run();
         return { type: 'build', stop, buildId };
-    }
-
-    async startDockerLogStream(containerName) {
-        let active = true;
-        let stream = null;
-        const stop = () => {
-            active = false;
-            if (stream) try { stream.destroy(); } catch (e) { }
-        };
-        try {
-            const container = docker.getContainer(containerName);
-            stream = await container.logs({
-                stdout: true,
-                stderr: true,
-                follow: true,
-                tail: 100
-            });
-            stream.on('data', (chunk) => {
-                if (!active) return;
-                this.socket.emit('build_log', {
-                    projectId: this.projectId,
-                    type: 'log',
-                    log: chunk.toString()
-                });
-            });
-            stream.on('end', () => {
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'complete',
-                        log: 'Container log stream ended.'
-                    });
-                }
-                active = false;
-            });
-            stream.on('error', (err) => {
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'error',
-                        message: err.message
-                    });
-                }
-                active = false;
-            });
-        } catch (err) {
-            this.socket.emit('build_log', {
-                projectId: this.projectId,
-                type: 'error',
-                message: err.message
-            });
-            return { type: 'docker', stop: () => { }, dockerError: true };
-        }
-        return { type: 'docker', stop, containerName };
     }
 
     startStaticLogStream(logsUrl) {
