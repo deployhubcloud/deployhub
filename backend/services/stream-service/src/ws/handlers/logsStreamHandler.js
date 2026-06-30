@@ -265,80 +265,55 @@ class ProjectLogsWatcher {
 
     async startDockerLogStream(containerName) {
         let active = true;
-        let liveStream = null;
-
+        let stream = null;
         const stop = () => {
             active = false;
-            if (liveStream) {
-                try { liveStream.destroy(); } catch (e) { }
-                liveStream = null;
-            }
+            if (stream) try { stream.destroy(); } catch (e) { }
         };
-
-        let container;
         try {
-            container = docker.getContainer(containerName);
+            const container = docker.getContainer(containerName);
+            stream = await container.logs({
+                stdout: true,
+                stderr: true,
+                follow: true,
+                tail: 100
+            });
+            stream.on('data', (chunk) => {
+                if (!active) return;
+                this.socket.emit('build_log', {
+                    projectId: this.projectId,
+                    type: 'log',
+                    log: chunk.toString()
+                });
+            });
+            stream.on('end', () => {
+                if (active) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'complete',
+                        log: 'Container log stream ended.'
+                    });
+                }
+                active = false;
+            });
+            stream.on('error', (err) => {
+                if (active) {
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'error',
+                        message: err.message
+                    });
+                }
+                active = false;
+            });
         } catch (err) {
             this.socket.emit('build_log', {
-                projectId: this.projectId, type: 'error', message: err.message
+                projectId: this.projectId,
+                type: 'error',
+                message: err.message
             });
             return { type: 'docker', stop: () => { }, dockerError: true };
         }
-
-        const since = Math.floor(Date.now() / 1000);
-
-        const startLive = () => {
-            if (!active) return;
-            container.logs(
-                { stdout: true, stderr: true, follow: true, since, tail: 0 },
-                (err, stream) => {
-                    if (!active || err || !stream) return;
-                    liveStream = stream;
-                    stream.on('data', (chunk) => {
-                        if (!active) return;
-                        this.socket.emit('build_log', {
-                            projectId: this.projectId, type: 'log', log: chunk.toString()
-                        });
-                    });
-                    stream.on('end', () => {
-                        if (active) this.socket.emit('build_log', {
-                            projectId: this.projectId, type: 'complete', log: 'Stream ended.'
-                        });
-                        active = false;
-                    });
-                    stream.on('error', (e) => {
-                        if (active) this.socket.emit('build_log', {
-                            projectId: this.projectId, type: 'error', message: e.message
-                        });
-                        active = false;
-                    });
-                }
-            );
-        };
-
-        
-        container.logs(
-            { stdout: true, stderr: true, follow: false, tail: 200 },
-            (err, stream) => {
-                if (!active) return;
-                if (err || !stream) { startLive(); return; }
-
-                const chunks = [];
-                stream.on('data', (chunk) => chunks.push(chunk));
-                stream.on('end', () => {
-                    if (active && chunks.length) {
-                        this.socket.emit('build_log', {
-                            projectId: this.projectId,
-                            type: 'log',
-                            log: Buffer.concat(chunks).toString()
-                        });
-                    }
-                    startLive();
-                });
-                stream.on('error', () => startLive());
-            }
-        );
-
         return { type: 'docker', stop, containerName };
     }
 
