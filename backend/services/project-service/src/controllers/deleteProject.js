@@ -12,7 +12,12 @@ export const deleteProjectController = async (req, res) => {
         const result = await deleteProject(userId, projectId);
 
         const redisKey = `deployhub:RateLimit:${req.user._id}:service:project:createFreeProject`;
-        await redis.decr(redisKey);
+        const count = await redis.decr(redisKey);
+
+        if (count < 0) {
+            await redis.set(redisKey, 0);
+        }
+
 
         return res.status(200).json(result);
     } catch (error) {
