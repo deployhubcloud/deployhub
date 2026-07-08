@@ -255,7 +255,7 @@ export const deleteProject = async (userId, projectId) => {
     }
 
     project.status = 'deleted';
-    await project.save();
+    await project.save({validateBeforeSave: false});
 
     await deleteProjectQueue.add('delete-project', { projectId });
 
