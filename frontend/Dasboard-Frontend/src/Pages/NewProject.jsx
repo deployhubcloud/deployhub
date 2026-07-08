@@ -3,9 +3,7 @@ import { Link, Navigate, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/apiclient";
 
-/* ============================================================
- * Updated Plan Definitions (exactly as you described)
- * ============================================================ */
+
 const PLAN_OPTIONS = {
   free: {
     name: "Free",
@@ -162,13 +160,13 @@ function buildPayload(form, plan, months, projectType, selectedRepo) {
     },
     ...(isStatic
       ? {
-        buildCommand: form.buildCommand.trim(),
-        publishDir: form.publishDir.trim(),
-      }
+          buildCommand: form.buildCommand.trim(),
+          publishDir: form.publishDir.trim(),
+        }
       : {
-        startCommand: form.startCommand.trim(),
-        port: Number(form.port),
-      }),
+          startCommand: form.startCommand.trim(),
+          port: Number(form.port),
+        }),
   };
 
   if (selectedRepo) {
@@ -289,8 +287,8 @@ function StepIndicator({ step, setStep, validateStep, completed }) {
                     isDone
                       ? "border-amber-500 bg-amber-500 text-white"
                       : isCurrent
-                        ? "border-amber-500 bg-[#111114] text-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]"
-                        : "border-white/15 bg-[#111114] text-neutral-400"
+                      ? "border-amber-500 bg-[#111114] text-amber-400 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]"
+                      : "border-white/15 bg-[#111114] text-neutral-400"
                   )}
                 >
                   {isDone ? (
@@ -354,6 +352,10 @@ export default function NewProject() {
   const [stepErrors, setStepErrors] = useState({});
   const topRef = useRef(null);
 
+  // NEW: states for redirect overlay
+  const [redirecting, setRedirecting] = useState(false);
+  const [countdown, setCountdown] = useState(2);
+
   const [form, setForm] = useState({
     projectName: "",
     repoUrl: "",
@@ -408,11 +410,29 @@ export default function NewProject() {
     fetchRepos();
   }, [user]);
 
+  // UPDATED: redirect with countdown overlay
   useEffect(() => {
+    let timer;
     if (created) {
       const projectId = created.projectId || created?.project?._id;
-      if (projectId) navigate(`/project/${projectId}/logs`);
+      if (projectId) {
+        setRedirecting(true);
+        setCountdown(2);
+        timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              navigate(`/project/${projectId}/logs`);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [created, navigate]);
 
   useEffect(() => {
@@ -1398,6 +1418,35 @@ export default function NewProject() {
           )}
         </div>
       </div>
+
+      {/* ====== REDIRECT OVERLAY ====== */}
+      {redirecting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="rounded-2xl border border-white/10 bg-[#111114] p-8 text-center max-w-md w-full shadow-2xl">
+            <div className="mb-4 flex justify-center">
+              <div className="relative h-16 w-16">
+                <svg className="h-16 w-16 animate-spin text-amber-500" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">
+                  {countdown}
+                </span>
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-white">Redirecting to logs</h3>
+            <p className="mt-1 text-sm text-neutral-400">
+              Your project is ready! You’ll be redirected in {countdown}s.
+            </p>
+            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all duration-1000 ease-linear"
+                style={{ width: `${(countdown / 2) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
