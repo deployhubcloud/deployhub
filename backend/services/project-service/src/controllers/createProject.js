@@ -1,6 +1,7 @@
 import { validationResult } from 'express-validator';
 import { AppError } from '../../../../shared/errors/AppError.js';
 import { createFreeProject } from '../services/project.service.js';
+import { getRedis } from '../core/redis/client.js';
 
 const sendError = (res, error) => {
     const status = error?.status || 500;
@@ -28,6 +29,17 @@ export const createProject = async (req, res) => {
         }
 
         const { project } = await createFreeProject(user._id, req.body);
+
+
+        const redisKey = `deployhub:RateLimit:${req.user._id}:service:project:createFreeProject`;
+
+        const redis = getRedis();
+        const count = await redis.incr(redisKey);
+
+        if ((Number(count) || 0) === 0) {
+            await redis.expire(redisKey, 2592000);
+        }
+
 
         return res.status(201).json({
             success: true,

@@ -14,10 +14,12 @@ import { projectSettingsController, updateBuildandStartSettingsController, updat
 import { getProjectBillingValidators } from '../validators/billing.validators.js';
 import { getProjectBillingController } from '../controllers/billing.controller.js';
 import { getLatestPlans } from '../controllers/getPlans.controller.js';
+import rateLimitMiddleware from '../../../../shared/middlewares/rateLimit.js';
+import { getRedis } from '../core/redis/client.js';
 
 const projectRouter = express.Router();
 
-projectRouter.post('/projects', createProjectValidator, createProject);
+projectRouter.post('/projects', rateLimitMiddleware('project', 'createFreeProject', 'You have exceeded the rate limit for creating free projects.', getRedis), createProjectValidator, createProject);
 projectRouter.get('/projects', getProjectsController);
 projectRouter.post('/payment/init', paymentInitValidator, paymentInitController);
 projectRouter.post('/payment/verify', paymentVerifyValidator, paymentVerifyController);
@@ -42,9 +44,9 @@ projectRouter.delete('/custom-domain/:projectId', deleteCustomDomainValidator, d
 
 
 // project billing
-projectRouter.get("/billing/:projectId" , getProjectBillingValidators , getProjectBillingController)
+projectRouter.get("/billing/:projectId", getProjectBillingValidators, getProjectBillingController)
 
 
 // plans
-projectRouter.get('/plans' , getLatestPlans)
+projectRouter.get('/plans', getLatestPlans)
 export default projectRouter;
