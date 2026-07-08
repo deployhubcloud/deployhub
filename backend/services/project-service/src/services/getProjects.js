@@ -8,7 +8,7 @@ import { getRedis } from "../core/redis/client.js";
 
 export const getProjects = async (userId) => {
 
-    const projects = await Project.find({ userId })
+    const projects = await Project.find({ userId, status: { $ne: 'deleted' } })
         .select("name type status version isMicroservice internalUrl subdomain customDomains totalBuilds plan monitor notifications cretedAt updatedAt")
         .sort({ createdAt: -1 })
         .lean();
@@ -45,7 +45,7 @@ export const getProjectMetaService = async (projectId) => {
 
     const raw = await redis.get(`deployhub:users:project:${projectId}:meta`)
     if (!raw) {
-        const projectData = await Project.findById(projectId).select('plan name type').lean();
+        const projectData = await Project.findById({ _id: projectId, $ne: { status: 'deleted' } }).select('plan name type').lean();
         if (!projectData) {
             throw new AppError("Invalid ProjectId", 404)
         }
@@ -75,7 +75,10 @@ export const getProjectDataByIdService = async (projectId) => {
     const cacheData = await getCacheProjectData(projectId, redis);
     if (!cacheData) {
 
-        const projectData = await Project.findById(projectId).select('name type version status isMicroservice repoUrl branch buildCommand startCommand internalUrl subdomain customDomains monitor notifications buildId totalBuilds').lean();
+        const projectData = await Project.findById({
+            _id: projectId,
+            $ne: { status: 'deleted' }
+        }).select('name type version status isMicroservice repoUrl branch buildCommand startCommand internalUrl subdomain customDomains monitor notifications buildId totalBuilds').lean();
 
 
         if (!projectData) {
