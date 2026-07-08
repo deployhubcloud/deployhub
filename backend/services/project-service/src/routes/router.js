@@ -16,6 +16,7 @@ import { getProjectBillingController } from '../controllers/billing.controller.j
 import { getLatestPlans } from '../controllers/getPlans.controller.js';
 import rateLimitMiddleware from '../../../../shared/middlewares/rateLimit.js';
 import { getRedis } from '../core/redis/client.js';
+import { deleteProjectController } from '../controllers/deleteProject.js';
 
 const projectRouter = express.Router();
 
@@ -50,3 +51,6 @@ projectRouter.get("/billing/:projectId", getProjectBillingValidators, getProject
 // plans
 projectRouter.get('/plans', getLatestPlans)
 export default projectRouter;
+
+// delete project
+projectRouter.delete('/project/:projectId', deleteProjectController)

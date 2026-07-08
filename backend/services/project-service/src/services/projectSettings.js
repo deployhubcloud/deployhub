@@ -1,7 +1,7 @@
 import { AppError } from "../../../../shared/errors/AppError.js";
 import { getRedis } from "../core/redis/client.js";
 import { Project } from "../models/project.model.js"
-import { startStopHealthCheck } from "../utils/queues.js";
+import { deleteProjectQueue, startStopHealthCheck } from "../utils/queues.js";
 
 export const projectSettings = async (projectId) => {
 
@@ -245,3 +245,20 @@ export const updateHealthMonitoringAndNotification = async (userId, projectId, b
 
     return updated;
 };
+
+
+export const deleteProject = async (userId, projectId) => {
+
+    const project = await Project.findById(projectId);
+    if (!project || project.userId.toString() !== userId.toString()) {
+        throw new AppError("Project not found or you don't have permission to delete this project", 404);
+    }
+
+    project.status = 'deleted';
+    await project.save();
+
+    await deleteProjectQueue.add('delete-project', { projectId });
+
+    return { message: "Project deleted successfully" };
+
+}
