@@ -49,6 +49,7 @@ export const getProjectDataByIdConroller = async (req, res) => {
         })
 
     } catch (error) {
+        console.log(error);
         res.status(error.status || 500).json({
             message: error?.msg || "Internal Server Error"
         })

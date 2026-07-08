@@ -45,7 +45,7 @@ export const getProjectMetaService = async (projectId) => {
 
     const raw = await redis.get(`deployhub:users:project:${projectId}:meta`)
     if (!raw) {
-        const projectData = await Project.findById({ _id: projectId, $ne: { status: 'deleted' } }).select('plan name type').lean();
+        const projectData = await Project.findOne({ _id: projectId, $ne: { status: 'deleted' } }).select('plan name type').lean();
         if (!projectData) {
             throw new AppError("Invalid ProjectId", 404)
         }
@@ -75,7 +75,7 @@ export const getProjectDataByIdService = async (projectId) => {
     const cacheData = await getCacheProjectData(projectId, redis);
     if (!cacheData) {
 
-        const projectData = await Project.findById({
+        const projectData = await Project.findOne({
             _id: projectId,
             $ne: { status: 'deleted' }
         }).select('name type version status isMicroservice repoUrl branch buildCommand startCommand internalUrl subdomain customDomains monitor notifications buildId totalBuilds').lean();
@@ -89,7 +89,7 @@ export const getProjectDataByIdService = async (projectId) => {
 
         const buildData = await getBuildDataById(axios, projectData.buildId, project_env.BUILD_SERVICE_URL, project_env.INTERNAL_SECRET, project_env.INTERNAL_SERVICE_TALKING_SECRET);
 
-        const timeTakenSeconds = Math.floor((new Date(buildData.finishedAt) - new Date(buildData.startedAt)) / 1000);
+        const timeTakenSeconds = Math.floor((new Date(buildData?.finishedAt) - new Date(buildData?.startedAt)) / 1000);
 
 
         const enabledNotification = {
@@ -115,10 +115,10 @@ export const getProjectDataByIdService = async (projectId) => {
             monitorHealthPath: projectData.monitor.healthPath,
             notifications: enabledNotification,
             latestBuildData: {
-                commitSha: buildData.commitSha,
-                status: buildData.status,
+                commitSha: buildData?.commitSha,
+                status: buildData?.status,
                 timeTaken: timeTakenSeconds,
-                createdAt: buildData.createdAt
+                createdAt: buildData?.createdAt
             },
             totalBuilds: projectData.totalBuilds
         }
