@@ -223,7 +223,7 @@ export function Settings() {
     if (confirmName !== projectName) return;
     setDeleting(true);
     try {
-      await api.delete(`/project/${projectId}`);
+      await api.delete(`/project/project/${projectId}`);
       window.location.href = "/";
     } catch {
       setError("Failed to delete project.");
