@@ -11,7 +11,7 @@ import { createInternalAUthMiddleware } from "../../../shared/middlewares/intern
 const app = express();
 
 
-// security
+// security middlewares
 app.use(helmet());
 app.use(hpp());
 app.set("trust proxy", 1);
