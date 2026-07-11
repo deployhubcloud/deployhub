@@ -45,4 +45,45 @@ export function buildZipUrl(objectName) {
   return `${DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? "https" : "http"}://${publicHost}/${BUCKET}/${objectName}`
 }
 
+export async function deleteProjectLogs(projectId) {
+  const prefix = `buildsLogsUrl/${projectId}/`;
+
+  const objectsToDelete = [];
+
+  const stream = client.listObjectsV2(
+    BUCKET,
+    prefix,
+    true
+  );
+
+  return new Promise((resolve, reject) => {
+    stream.on("data", (obj) => {
+      objectsToDelete.push(obj.name);
+    });
+
+    stream.on("error", reject);
+
+    stream.on("end", async () => {
+      if (objectsToDelete.length === 0) {
+        return resolve();
+      }
+
+      try {
+        await client.removeObjects(
+          BUCKET,
+          objectsToDelete
+        );
+
+        console.log(
+          `Deleted ${objectsToDelete.length} logs for project ${projectId}`
+        );
+
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
 export default client
