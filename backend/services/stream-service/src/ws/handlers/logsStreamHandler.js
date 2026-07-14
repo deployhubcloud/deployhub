@@ -1,7 +1,6 @@
 import { getRedis } from '../../core/redis/client.js';
 import { docker } from '../../utils/docker.js';
 import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cacheLatestBuildIdofProject.js';
-import { spawn } from 'child_process';
 
 export function registerLogsStreamHandler(io) {
     io.on('connection', (socket) => {
@@ -270,23 +269,33 @@ class ProjectLogsWatcher {
     }
 
     async startDockerLogStream(containerName) {
-        console.log(`[LogsWatcher] startDockerLogStream (CLI) for container ${containerName}`);
+        console.log(`[LogsWatcher] startDockerLogStream (Dockerode) for container ${containerName}`);
         let active = true;
-        let childProcess = null;
+        let liveStream = null;
 
         const stop = () => {
             console.log(`[LogsWatcher] docker stream stop requested`);
             active = false;
-            if (childProcess) {
-                childProcess.kill('SIGTERM');
-                childProcess = null;
+            if (liveStream) {
+                try { liveStream.destroy(); } catch (e) { }
             }
         };
 
         try {
-            const args = ['logs', '--tail', '500', '-f', containerName];
-            console.log(`[LogsWatcher] spawning: docker ${args.join(' ')}`);
-            childProcess = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+            const container = docker.getContainer(containerName);
+            console.log(`[LogsWatcher] got docker container object`);
+
+    
+            liveStream = await container.logs({
+                stdout: true,
+                stderr: true,
+                follow: true,
+                tail: 500,
+                isNotDemux: false,
+            });
+
+           
+            liveStream.resume();
 
             let dataReceived = false;
             const initialInfoTimer = setTimeout(() => {
@@ -298,27 +307,24 @@ class ProjectLogsWatcher {
                         message: 'Connected to container logs. No recent output, waiting for new logs...'
                     });
                 }
-            }, 500);
+            }, 1000);
 
-            const handleData = (chunk) => {
+            liveStream.on('data', (chunk) => {
                 if (!active) return;
                 if (!dataReceived) {
                     dataReceived = true;
                     clearTimeout(initialInfoTimer);
-                    console.log(`[LogsWatcher] first data chunk received, length: ${chunk.length}`);
+                    console.log(`[LogsWatcher] first data chunk, length: ${chunk.length}`);
                 }
                 this.socket.emit('build_log', {
                     projectId: this.projectId,
                     type: 'log',
                     log: chunk.toString()
                 });
-            };
+            });
 
-            childProcess.stdout.on('data', handleData);
-            childProcess.stderr.on('data', handleData);
-
-            childProcess.on('close', (code) => {
-                console.log(`[LogsWatcher] docker process closed with code ${code}`);
+            liveStream.on('end', () => {
+                console.log(`[LogsWatcher] live stream ended`);
                 clearTimeout(initialInfoTimer);
                 if (active) {
                     this.socket.emit('build_log', {
@@ -330,8 +336,8 @@ class ProjectLogsWatcher {
                 active = false;
             });
 
-            childProcess.on('error', (err) => {
-                console.error(`[LogsWatcher] docker process error:`, err);
+            liveStream.on('error', (err) => {
+                console.error(`[LogsWatcher] live stream error:`, err);
                 clearTimeout(initialInfoTimer);
                 if (active) {
                     this.socket.emit('build_log', {
@@ -353,7 +359,7 @@ class ProjectLogsWatcher {
             return { type: 'docker', stop: () => { }, dockerError: true };
         }
 
-        console.log(`[LogsWatcher] docker CLI stream setup complete`);
+        console.log(`[LogsWatcher] docker stream setup complete`);
         return { type: 'docker', stop, containerName };
     }
 
