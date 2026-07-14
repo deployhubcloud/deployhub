@@ -1,6 +1,7 @@
 import { getRedis } from '../../core/redis/client.js';
 import { docker } from '../../utils/docker.js';
 import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cacheLatestBuildIdofProject.js';
+import { spawn } from 'child_process';
 
 export function registerLogsStreamHandler(io) {
     io.on('connection', (socket) => {
@@ -269,28 +270,23 @@ class ProjectLogsWatcher {
     }
 
     async startDockerLogStream(containerName) {
-        console.log(`[LogsWatcher] startDockerLogStream (combined) for container ${containerName}`);
+        console.log(`[LogsWatcher] startDockerLogStream (CLI) for container ${containerName}`);
         let active = true;
-        let liveStream = null;
+        let childProcess = null;
 
         const stop = () => {
             console.log(`[LogsWatcher] docker stream stop requested`);
             active = false;
-            if (liveStream) {
-                try { liveStream.destroy(); } catch (e) { }
+            if (childProcess) {
+                childProcess.kill('SIGTERM');
+                childProcess = null;
             }
         };
 
         try {
-            const container = docker.getContainer(containerName);
-            console.log(`[LogsWatcher] got docker container object, starting combined stream`);
-
-            liveStream = await container.logs({
-                stdout: true,
-                stderr: true,
-                follow: true,
-                tail: 500,
-            });
+            const args = ['logs', '--tail', '500', '-f', containerName];
+            console.log(`[LogsWatcher] spawning: docker ${args.join(' ')}`);
+            childProcess = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
 
             let dataReceived = false;
             const initialInfoTimer = setTimeout(() => {
@@ -304,7 +300,7 @@ class ProjectLogsWatcher {
                 }
             }, 500);
 
-            liveStream.on('data', (chunk) => {
+            const handleData = (chunk) => {
                 if (!active) return;
                 if (!dataReceived) {
                     dataReceived = true;
@@ -316,10 +312,13 @@ class ProjectLogsWatcher {
                     type: 'log',
                     log: chunk.toString()
                 });
-            });
+            };
 
-            liveStream.on('end', () => {
-                console.log(`[LogsWatcher] live stream ended`);
+            childProcess.stdout.on('data', handleData);
+            childProcess.stderr.on('data', handleData);
+
+            childProcess.on('close', (code) => {
+                console.log(`[LogsWatcher] docker process closed with code ${code}`);
                 clearTimeout(initialInfoTimer);
                 if (active) {
                     this.socket.emit('build_log', {
@@ -331,8 +330,8 @@ class ProjectLogsWatcher {
                 active = false;
             });
 
-            liveStream.on('error', (err) => {
-                console.error(`[LogsWatcher] live stream error:`, err);
+            childProcess.on('error', (err) => {
+                console.error(`[LogsWatcher] docker process error:`, err);
                 clearTimeout(initialInfoTimer);
                 if (active) {
                     this.socket.emit('build_log', {
@@ -354,7 +353,7 @@ class ProjectLogsWatcher {
             return { type: 'docker', stop: () => { }, dockerError: true };
         }
 
-        console.log(`[LogsWatcher] docker stream setup complete`);
+        console.log(`[LogsWatcher] docker CLI stream setup complete`);
         return { type: 'docker', stop, containerName };
     }
 
