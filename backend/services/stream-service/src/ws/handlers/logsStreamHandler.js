@@ -274,12 +274,14 @@ class ProjectLogsWatcher {
         try {
             const container = docker.getContainer(containerName);
 
-            // PHASE 1: snapshot — follow:false, turant resolve hota hai, buffer wait nahi karta
-            const snapshotBuffer = await container.logs({
-                stdout: true,
-                stderr: true,
-                follow: false,
-                tail: 100
+            const snapshotBuffer = await new Promise((resolve, reject) => {
+                container.logs(
+                    { stdout: true, stderr: true, follow: false, tail: 100 },
+                    (err, data) => {
+                        if (err) return reject(err);
+                        resolve(data);
+                    }
+                );
             });
 
             if (active && snapshotBuffer?.length) {
@@ -292,7 +294,7 @@ class ProjectLogsWatcher {
 
             if (!active) return { type: 'docker', stop, containerName };
 
-            // PHASE 2: live follow — tail:0, sirf ab se naye logs
+            
             liveStream = await container.logs({
                 stdout: true,
                 stderr: true,
