@@ -91,44 +91,25 @@ class ProjectLogsWatcher {
         let neededType = null;
         let neededParams = null;
 
-        if (!status) {
-            neededType = 'none';
-        } else if (status === 'building' || status === 'queued') {
-            if (buildId) {
-                neededType = 'build';
-                neededParams = { buildId };
-            } else {
-                neededType = 'none';
-            }
+
+        if (!status) neededType = 'none';
+        else if (status === 'building' || status === 'queued') {
+            neededType = buildId ? 'build' : 'none';
+            if (buildId) neededParams = { buildId };
         } else if (status === 'running') {
             if (type === 'static') {
-                if (logsUrl) {
-                    neededType = 'static';
-                    neededParams = { logsUrl };
-                } else {
-                    neededType = 'none';
-                    this.emitInfo('Static project is running, but logs URL is not yet available. Waiting...');
-                }
+                neededType = logsUrl ? 'static' : 'none';
+                if (logsUrl) neededParams = { logsUrl };
+                else this.emitInfo('Static project is running, but logs URL is not yet available. Waiting...');
             } else {
-                if (projectContainerName) {
-                    neededType = 'docker';
-                    neededParams = { containerName: projectContainerName };
-                } else {
-                    neededType = 'none';
-                }
+                neededType = projectContainerName ? 'docker' : 'none';
+                if (projectContainerName) neededParams = { containerName: projectContainerName };
             }
-        }
-
-        else if (status === 'failed' && type === 'static') {
-            if (logsUrl) {
-                neededType = 'static';
-                neededParams = { logsUrl };
-            } else {
-                neededType = 'none';
-                this.emitInfo('Static build failed, but logs URL is not available.');
-            }
-        }
-        else {
+        } else if (status === 'failed' && type === 'static') {
+            neededType = logsUrl ? 'static' : 'none';
+            if (logsUrl) neededParams = { logsUrl };
+            else this.emitInfo('Static build failed, but logs URL is not available.');
+        } else {
             neededType = 'none';
         }
 
@@ -149,17 +130,17 @@ class ProjectLogsWatcher {
         }
 
 
-        this.emitReset();
-
-        // Start new stream
         switch (neededType) {
             case 'build':
+                this.emitReset();
                 this.currentStream = await this.startBuildLogStream(buildId);
                 break;
             case 'docker':
+                this.emitReset();
                 this.currentStream = await this.startDockerLogStream(projectContainerName);
                 break;
             case 'static':
+                this.emitReset();
                 this.currentStream = this.startStaticLogStream(logsUrl);
                 break;
             case 'none':
@@ -276,7 +257,7 @@ class ProjectLogsWatcher {
 
             const snapshotBuffer = await new Promise((resolve, reject) => {
                 container.logs(
-                    { stdout: true, stderr: true, follow: false, tail: 500 }, 
+                    { stdout: true, stderr: true, follow: false, tail: 500 },
                     (err, data) => {
                         if (err) return reject(err);
                         resolve(data);
@@ -300,7 +281,7 @@ class ProjectLogsWatcher {
 
             if (!active) return { type: 'docker', stop, containerName };
 
-            
+
             liveStream = await container.logs({
                 stdout: true,
                 stderr: true,
