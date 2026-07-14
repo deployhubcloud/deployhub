@@ -19,9 +19,9 @@ const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async (job)
         }
 
         let status = "crash";
-
+        let response;
         try {
-            const response = await axios.get(monitorData.pingUrl, {
+            response = await axios.get(monitorData.pingUrl, {
                 timeout: 10000,
             });
 
@@ -29,7 +29,12 @@ const healthCheckWorker = new Worker(QUEUE_NAMES.HEALTH_CHECK_QUEUE, async (job)
                 status = "running";
             }
         } catch {
-            status = "crash";
+            if (response?.status === 404) {
+                status = "running";
+            }
+            else {
+                status = "crash";
+            }
         }
 
         const currentStatusData = await redis.xrevrange(
