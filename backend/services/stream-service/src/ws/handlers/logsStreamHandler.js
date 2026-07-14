@@ -310,6 +310,7 @@ class ProjectLogsWatcher {
             }, 1000);
 
             liveStream.on('data', (chunk) => {
+                console.log(`[LogsWatcher] live stream data chunk received, length: ${chunk.toString().length}`);
                 if (!active) return;
                 if (!dataReceived) {
                     dataReceived = true;
