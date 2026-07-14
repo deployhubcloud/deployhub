@@ -265,20 +265,42 @@ class ProjectLogsWatcher {
 
     async startDockerLogStream(containerName) {
         let active = true;
-        let stream = null;
+        let liveStream = null;
         const stop = () => {
             active = false;
-            if (stream) try { stream.destroy(); } catch (e) { }
+            if (liveStream) try { liveStream.destroy(); } catch (e) { }
         };
+
         try {
             const container = docker.getContainer(containerName);
-            stream = await container.logs({
+
+            // PHASE 1: snapshot — follow:false, turant resolve hota hai, buffer wait nahi karta
+            const snapshotBuffer = await container.logs({
+                stdout: true,
+                stderr: true,
+                follow: false,
+                tail: 100
+            });
+
+            if (active && snapshotBuffer?.length) {
+                this.socket.emit('build_log', {
+                    projectId: this.projectId,
+                    type: 'log',
+                    log: snapshotBuffer.toString()
+                });
+            }
+
+            if (!active) return { type: 'docker', stop, containerName };
+
+            // PHASE 2: live follow — tail:0, sirf ab se naye logs
+            liveStream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: true,
-                tail: 100
+                tail: 0
             });
-            stream.on('data', (chunk) => {
+
+            liveStream.on('data', (chunk) => {
                 if (!active) return;
                 this.socket.emit('build_log', {
                     projectId: this.projectId,
@@ -286,7 +308,8 @@ class ProjectLogsWatcher {
                     log: chunk.toString()
                 });
             });
-            stream.on('end', () => {
+
+            liveStream.on('end', () => {
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
@@ -296,7 +319,8 @@ class ProjectLogsWatcher {
                 }
                 active = false;
             });
-            stream.on('error', (err) => {
+
+            liveStream.on('error', (err) => {
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
@@ -306,6 +330,7 @@ class ProjectLogsWatcher {
                 }
                 active = false;
             });
+
         } catch (err) {
             this.socket.emit('build_log', {
                 projectId: this.projectId,
@@ -314,6 +339,7 @@ class ProjectLogsWatcher {
             });
             return { type: 'docker', stop: () => { }, dockerError: true };
         }
+
         return { type: 'docker', stop, containerName };
     }
 
