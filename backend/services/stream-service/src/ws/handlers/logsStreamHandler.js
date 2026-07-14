@@ -276,7 +276,7 @@ class ProjectLogsWatcher {
 
             const snapshotBuffer = await new Promise((resolve, reject) => {
                 container.logs(
-                    { stdout: true, stderr: true, follow: false, tail: 100 },
+                    { stdout: true, stderr: true, follow: false, tail: 500 }, 
                     (err, data) => {
                         if (err) return reject(err);
                         resolve(data);
@@ -284,11 +284,17 @@ class ProjectLogsWatcher {
                 );
             });
 
-            if (active && snapshotBuffer?.length) {
+            if (active && snapshotBuffer && snapshotBuffer.length > 0) {
                 this.socket.emit('build_log', {
                     projectId: this.projectId,
                     type: 'log',
                     log: snapshotBuffer.toString()
+                });
+            } else if (active) {
+                this.socket.emit('build_log', {
+                    projectId: this.projectId,
+                    type: 'info',
+                    message: 'Connected to container logs. No recent output, waiting for new logs...'
                 });
             }
 
