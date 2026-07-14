@@ -269,64 +269,31 @@ class ProjectLogsWatcher {
     }
 
     async startDockerLogStream(containerName) {
-        console.log(`[LogsWatcher] startDockerLogStream (Dockerode) for container ${containerName}`);
         let active = true;
-        let liveStream = null;
-
+        let stream = null;
         const stop = () => {
-            console.log(`[LogsWatcher] docker stream stop requested`);
             active = false;
-            if (liveStream) {
-                try { liveStream.destroy(); } catch (e) { }
-            }
+            if (stream) try { stream.destroy(); } catch (e) { }
         };
-
         try {
             const container = docker.getContainer(containerName);
-            console.log(`[LogsWatcher] got docker container object`);
-
-    
-            liveStream = await container.logs({
+            stream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: true,
-                tail: 500,
-                isNotDemux: false,
+                tail: 100
             });
-
-           
-            liveStream.resume();
-
-            let dataReceived = false;
-            const initialInfoTimer = setTimeout(() => {
-                if (!dataReceived && active) {
-                    console.log(`[LogsWatcher] no initial data, emitting info`);
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'info',
-                        message: 'Connected to container logs. No recent output, waiting for new logs...'
-                    });
-                }
-            }, 1000);
-
-            liveStream.on('data', (chunk) => {
-                console.log(`[LogsWatcher] live stream data chunk received, length: ${chunk.toString().length}`);
+            stream.on('data', (chunk) => {
+                console.log(`[LogsWatcher] docker log chunk: ${chunk.toString()}`);
                 if (!active) return;
-                if (!dataReceived) {
-                    dataReceived = true;
-                    clearTimeout(initialInfoTimer);
-                    console.log(`[LogsWatcher] first data chunk, length: ${chunk.length}`);
-                }
                 this.socket.emit('build_log', {
                     projectId: this.projectId,
                     type: 'log',
                     log: chunk.toString()
                 });
             });
-
-            liveStream.on('end', () => {
-                console.log(`[LogsWatcher] live stream ended`);
-                clearTimeout(initialInfoTimer);
+            stream.on('end', () => {
+                console.log(`[LogsWatcher] docker log stream ended for container: ${containerName}`);
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
@@ -336,10 +303,8 @@ class ProjectLogsWatcher {
                 }
                 active = false;
             });
-
-            liveStream.on('error', (err) => {
-                console.error(`[LogsWatcher] live stream error:`, err);
-                clearTimeout(initialInfoTimer);
+            stream.on('error', (err) => {
+                console.error(`[LogsWatcher] docker log stream error for container: ${containerName}`, err);
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
@@ -349,9 +314,8 @@ class ProjectLogsWatcher {
                 }
                 active = false;
             });
-
         } catch (err) {
-            console.error(`[LogsWatcher] startDockerLogStream catch:`, err);
+            console.error(`[LogsWatcher] error starting docker log stream for container: ${containerName}`, err);
             this.socket.emit('build_log', {
                 projectId: this.projectId,
                 type: 'error',
@@ -359,8 +323,6 @@ class ProjectLogsWatcher {
             });
             return { type: 'docker', stop: () => { }, dockerError: true };
         }
-
-        console.log(`[LogsWatcher] docker stream setup complete`);
         return { type: 'docker', stop, containerName };
     }
 
