@@ -276,13 +276,22 @@ class ProjectLogsWatcher {
             if (stream) try { stream.destroy(); } catch (e) { }
         };
         try {
-            const container = docker.getContainer(containerName);
+            const containers = await docker.listContainers({ all: true })
+
+            const existingContainer = containers.find(c =>
+                c.Names.some(n => n.includes(containerName))
+            )
+
+            if (!existingContainer) return
+
+            const container = docker.getContainer(existingContainer.Id)
             stream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: true,
                 tail: 100
             });
+
             stream.on('data', (chunk) => {
                 console.log(`[LogsWatcher] docker log chunk: ${chunk.toString()}`);
                 if (!active) return;
