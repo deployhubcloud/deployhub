@@ -104,7 +104,7 @@ class ProjectLogsWatcher {
         let neededType = null;
         let neededParams = null;
 
-        
+
         if (!status) neededType = 'none';
         else if (status === 'building' || status === 'queued') {
             neededType = buildId ? 'build' : 'none';
@@ -269,65 +269,48 @@ class ProjectLogsWatcher {
     }
 
     async startDockerLogStream(containerName) {
-        console.log(`[LogsWatcher] startDockerLogStream for container ${containerName}`);
+        console.log(`[LogsWatcher] startDockerLogStream (combined) for container ${containerName}`);
         let active = true;
         let liveStream = null;
+
         const stop = () => {
             console.log(`[LogsWatcher] docker stream stop requested`);
             active = false;
-            if (liveStream) try { liveStream.destroy(); } catch (e) { }
+            if (liveStream) {
+                try { liveStream.destroy(); } catch (e) { }
+            }
         };
 
         try {
             const container = docker.getContainer(containerName);
-            console.log(`[LogsWatcher] got docker container object`);
+            console.log(`[LogsWatcher] got docker container object, starting combined stream`);
 
-            const snapshotBuffer = await new Promise((resolve, reject) => {
-                container.logs(
-                    { stdout: true, stderr: true, follow: false, tail: 500 },
-                    (err, data) => {
-                        if (err) {
-                            console.error(`[LogsWatcher] snapshot error:`, err);
-                            return reject(err);
-                        }
-                        console.log(`[LogsWatcher] snapshot received, length: ${data?.length || 0}`);
-                        resolve(data);
-                    }
-                );
-            });
-
-            if (active && snapshotBuffer && snapshotBuffer.length > 0) {
-                console.log(`[LogsWatcher] emitting snapshot logs (${snapshotBuffer.length} bytes)`);
-                this.socket.emit('build_log', {
-                    projectId: this.projectId,
-                    type: 'log',
-                    log: snapshotBuffer.toString()
-                });
-            } else if (active) {
-                console.log(`[LogsWatcher] snapshot empty, emitting info`);
-                this.socket.emit('build_log', {
-                    projectId: this.projectId,
-                    type: 'info',
-                    message: 'Connected to container logs. No recent output, waiting for new logs...'
-                });
-            }
-
-            if (!active) {
-                console.log(`[LogsWatcher] no longer active after snapshot, returning`);
-                return { type: 'docker', stop, containerName };
-            }
-
-            console.log(`[LogsWatcher] starting live docker log stream`);
             liveStream = await container.logs({
                 stdout: true,
                 stderr: true,
                 follow: true,
-                tail: 0
+                tail: 500,
             });
+
+            let dataReceived = false;
+            const initialInfoTimer = setTimeout(() => {
+                if (!dataReceived && active) {
+                    console.log(`[LogsWatcher] no initial data, emitting info`);
+                    this.socket.emit('build_log', {
+                        projectId: this.projectId,
+                        type: 'info',
+                        message: 'Connected to container logs. No recent output, waiting for new logs...'
+                    });
+                }
+            }, 500);
 
             liveStream.on('data', (chunk) => {
                 if (!active) return;
-                console.log(`[LogsWatcher] live data chunk, length: ${chunk.length}`);
+                if (!dataReceived) {
+                    dataReceived = true;
+                    clearTimeout(initialInfoTimer);
+                    console.log(`[LogsWatcher] first data chunk received, length: ${chunk.length}`);
+                }
                 this.socket.emit('build_log', {
                     projectId: this.projectId,
                     type: 'log',
@@ -337,6 +320,7 @@ class ProjectLogsWatcher {
 
             liveStream.on('end', () => {
                 console.log(`[LogsWatcher] live stream ended`);
+                clearTimeout(initialInfoTimer);
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
@@ -349,6 +333,7 @@ class ProjectLogsWatcher {
 
             liveStream.on('error', (err) => {
                 console.error(`[LogsWatcher] live stream error:`, err);
+                clearTimeout(initialInfoTimer);
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
