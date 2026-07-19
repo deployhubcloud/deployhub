@@ -202,7 +202,7 @@ export const updateHealthMonitoringAndNotification = async (userId, projectId, b
         if (monitor.healthPath) update['monitor.healthPath'] = monitor.healthPath;
         if (monitor.failedTries) update['monitor.failedTries'] = monitor.failedTries;
 
-        if (monitor.enabled === true && projectPlan === 'pro') {
+        if (monitor.enabled !== undefined && projectPlan === 'pro') {
             await startStopHealthCheck.add('start-stop-health-check', {
                 projectId: projectId,
                 enabled: monitor.enabled,
@@ -255,7 +255,7 @@ export const deleteProject = async (userId, projectId) => {
     }
 
     project.status = 'deleted';
-    await project.save({ validateBeforeSave: false });
+    await project.save({validateBeforeSave: false});
 
     await deleteProjectQueue.add('delete-project', { projectId });
 
