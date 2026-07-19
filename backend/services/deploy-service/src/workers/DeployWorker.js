@@ -121,7 +121,7 @@ const insertEnv = (projectEnv) => {
     if (Array.isArray(projectEnv)) {
         for (const entry of projectEnv) {
             if (!entry || !entry.key) continue;
-            envVariables.push(`${entry.key}=${entry.encryptedValue}`); 
+            envVariables.push(`${entry.key}=${entry.encryptedValue}`);
         }
     }
     return envVariables;
@@ -527,7 +527,7 @@ deployWorker.on("completed", async (job, results) => {
                         config: {
                             url:
                                 DEPLOY_SERVICE_ENV.NODE_ENV === "production"
-                                    ? "https://api.deployhub.cloud/api/v1/project/github-webhook"
+                                    ? "https://api.deployhub.cloud/api/v1/project/github-webhook/trigger"
                                     : "https://d712-2401-4900-8927-3fc1-8d23-dc2e-7df7-7e03.ngrok-free.app/github-webhook",
                             content_type: "json",
                             secret: DEPLOY_SERVICE_ENV.GITHUB_WEBHOOK_SECRET
