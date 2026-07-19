@@ -213,7 +213,7 @@ jobs:
               VOLUME_ARGS=""
               case $svc in
                 build-service|deploy-service|project-service|stream-service)
-                  VOLUME_ARGS="-v /var/run/docker.sock:/var/run/docker.sock"
+                  VOLUME_ARGS="-v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker:ro"
                   ;;
               esac
               case $svc in
