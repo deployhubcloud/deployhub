@@ -1,7 +1,8 @@
 import { getRedis } from '../../core/redis/client.js';
 import { docker } from '../../utils/docker.js';
 import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cacheLatestBuildIdofProject.js';
-import { spawn } from 'child_process';
+import http from 'http';
+import { Buffer } from 'buffer';
 
 export function registerLogsStreamHandler(io) {
     io.on('connection', (socket) => {
@@ -271,70 +272,127 @@ class ProjectLogsWatcher {
 
 
 
+
+
     async startDockerLogStream(containerName) {
-        console.log(`[LogsWatcher] startDockerLogStream (CLI) for container ${containerName}`);
+        console.log(`[LogsWatcher] startDockerLogStream (raw HTTP) for ${containerName}`);
         let active = true;
-        let childProcess = null;
+        let request = null;
 
         const stop = () => {
-            console.log(`[LogsWatcher] docker stream stop requested`);
             active = false;
-            if (childProcess) {
-                childProcess.kill('SIGTERM');
-                childProcess = null;
+            if (request) {
+                request.destroy();
+                request = null;
             }
         };
 
         try {
-            const args = ['logs', '--tail', '500', '-f', containerName];
-            console.log(`[LogsWatcher] spawning: docker ${args.join(' ')}`);
-            childProcess = spawn('docker', args, { stdio: ['ignore', 'pipe', 'pipe'] });
-
-            let dataReceived = false;
-            const initialInfoTimer = setTimeout(() => {
-                if (!dataReceived && active) {
-                    console.log(`[LogsWatcher] no initial data, emitting info`);
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'info',
-                        message: 'Connected to container logs. No recent output, waiting for new logs...'
+            const containerId = await new Promise((resolve, reject) => {
+                const req = http.request({
+                    socketPath: '/var/run/docker.sock',
+                    path: `/containers/${containerName}/json`,
+                    method: 'GET',
+                }, (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                        if (res.statusCode === 200) {
+                            resolve(JSON.parse(data).Id);
+                        } else {
+                            reject(new Error(`Failed to inspect container: ${res.statusCode}`));
+                        }
                     });
-                }
-            }, 500);
-
-            const handleData = (chunk) => {
-                if (!active) return;
-                if (!dataReceived) {
-                    dataReceived = true;
-                    clearTimeout(initialInfoTimer);
-                    console.log(`[LogsWatcher] first data chunk received, length: ${chunk.length}`);
-                }
-                this.socket.emit('build_log', {
-                    projectId: this.projectId,
-                    type: 'log',
-                    log: chunk.toString()
                 });
-            };
-
-            childProcess.stdout.on('data', handleData);
-            childProcess.stderr.on('data', handleData);
-
-            childProcess.on('close', (code) => {
-                console.log(`[LogsWatcher] docker process closed with code ${code}`);
-                clearTimeout(initialInfoTimer);
-                if (active) {
-                    this.socket.emit('build_log', {
-                        projectId: this.projectId,
-                        type: 'complete',
-                        log: 'Container log stream ended.'
-                    });
-                }
-                active = false;
+                req.on('error', reject);
+                req.end();
             });
 
-            childProcess.on('error', (err) => {
-                console.error(`[LogsWatcher] docker process error:`, err);
-                clearTimeout(initialInfoTimer);
+            console.log(`[LogsWatcher] resolved container ID: ${containerId}`);
+
+            request = http.request({
+                socketPath: '/var/run/docker.sock',
+                path: `/containers/${containerId}/logs?stdout=1&stderr=1&tail=500&follow=1`,
+                method: 'GET',
+            });
+
+            request.on('response', (res) => {
+                console.log(`[LogsWatcher] logs API responded with status ${res.statusCode}`);
+                if (res.statusCode !== 200) {
+                    this.socket.emit('build_log', { projectId: this.projectId, type: 'error', message: `Docker logs API error: ${res.statusCode}` });
+                    active = false;
+                    return;
+                }
+
+                let dataReceived = false;
+                const initialInfoTimer = setTimeout(() => {
+                    if (!dataReceived && active) {
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId,
+                            type: 'info',
+                            message: 'Connected to container logs. No recent output, waiting for new logs...'
+                        });
+                    }
+                }, 1000);
+
+                let leftover = Buffer.alloc(0);
+
+                res.on('data', (chunk) => {
+                    if (!active) return;
+                    leftover = Buffer.concat([leftover, chunk]);
+
+                    while (leftover.length >= 8) {
+                        const streamType = leftover[0];
+                        const length = leftover.readUInt32BE(4);
+                        if (leftover.length < 8 + length) break;
+
+                        const payload = leftover.slice(8, 8 + length);
+                        leftover = leftover.slice(8 + length);
+
+                        if (streamType === 1 || streamType === 2) {
+                            if (!dataReceived) {
+                                dataReceived = true;
+                                clearTimeout(initialInfoTimer);
+                                console.log(`[LogsWatcher] first log frame, size: ${payload.length}`);
+                            }
+                            this.socket.emit('build_log', {
+                                projectId: this.projectId,
+                                type: 'log',
+                                log: payload.toString()
+                            });
+                        }
+                    }
+                });
+
+                res.on('end', () => {
+                    console.log(`[LogsWatcher] log stream ended`);
+                    clearTimeout(initialInfoTimer);
+                    if (active) {
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId,
+                            type: 'complete',
+                            log: 'Container log stream ended.'
+                        });
+                    }
+                    active = false;
+                });
+
+                res.on('error', (err) => {
+                    console.error(`[LogsWatcher] log response error:`, err);
+                    clearTimeout(initialInfoTimer);
+                    if (active) {
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId,
+                            type: 'error',
+                            message: err.message
+                        });
+                    }
+                    active = false;
+                });
+            });
+
+            request.on('error', (err) => {
+                console.error(`[LogsWatcher] request error:`, err);
                 if (active) {
                     this.socket.emit('build_log', {
                         projectId: this.projectId,
@@ -344,6 +402,8 @@ class ProjectLogsWatcher {
                 }
                 active = false;
             });
+
+            request.end();
 
         } catch (err) {
             console.error(`[LogsWatcher] startDockerLogStream catch:`, err);
@@ -355,7 +415,6 @@ class ProjectLogsWatcher {
             return { type: 'docker', stop: () => { }, dockerError: true };
         }
 
-        console.log(`[LogsWatcher] docker CLI stream setup complete`);
         return { type: 'docker', stop, containerName };
     }
 
