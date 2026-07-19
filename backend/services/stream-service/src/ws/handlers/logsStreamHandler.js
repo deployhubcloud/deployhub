@@ -310,63 +310,73 @@ class ProjectLogsWatcher {
 
             console.log(`[LogsWatcher] resolved container ID: ${containerId}`);
 
+            const emitFrames = (buf) => {
+                let leftover = buf;
+                while (leftover.length >= 8) {
+                    const streamType = leftover[0];
+                    const length = leftover.readUInt32BE(4);
+                    if (leftover.length < 8 + length) break;
+                    const payload = leftover.slice(8, 8 + length);
+                    leftover = leftover.slice(8 + length);
+                    if (streamType === 1 || streamType === 2) {
+                        this.socket.emit('build_log', {
+                            projectId: this.projectId,
+                            type: 'log',
+                            log: payload.toString()
+                        });
+                    }
+                }
+                return leftover;
+            };
+
+            await new Promise((resolve, reject) => {
+                const snapReq = http.request({
+                    socketPath: '/var/run/docker.sock',
+                    path: `/containers/${containerId}/logs?stdout=1&stderr=1&tail=500&follow=0`,
+                    method: 'GET',
+                }, (res) => {
+                    if (res.statusCode !== 200) {
+                        return reject(new Error(`Docker logs snapshot error: ${res.statusCode}`));
+                    }
+                    let buf = Buffer.alloc(0);
+                    res.on('data', chunk => { buf = Buffer.concat([buf, chunk]); });
+                    res.on('end', () => {
+                        console.log(`[LogsWatcher] snapshot received, bytes: ${buf.length}`);
+                        if (active && buf.length) emitFrames(buf);
+                        resolve();
+                    });
+                    res.on('error', reject);
+                });
+                snapReq.on('error', reject);
+                snapReq.end();
+            });
+
+            if (!active) return { type: 'docker', stop, containerName };
+
             request = http.request({
                 socketPath: '/var/run/docker.sock',
-                path: `/containers/${containerId}/logs?stdout=1&stderr=1&tail=500&follow=1`,
+                path: `/containers/${containerId}/logs?stdout=1&stderr=1&tail=0&follow=1`,
                 method: 'GET',
             });
 
             request.on('response', (res) => {
-                console.log(`[LogsWatcher] logs API responded with status ${res.statusCode}`);
+                console.log(`[LogsWatcher] live logs API responded with status ${res.statusCode}`);
                 if (res.statusCode !== 200) {
                     this.socket.emit('build_log', { projectId: this.projectId, type: 'error', message: `Docker logs API error: ${res.statusCode}` });
                     active = false;
                     return;
                 }
 
-                let dataReceived = false;
-                const initialInfoTimer = setTimeout(() => {
-                    if (!dataReceived && active) {
-                        this.socket.emit('build_log', {
-                            projectId: this.projectId,
-                            type: 'info',
-                            message: 'Connected to container logs. No recent output, waiting for new logs...'
-                        });
-                    }
-                }, 1000);
-
                 let leftover = Buffer.alloc(0);
 
                 res.on('data', (chunk) => {
                     if (!active) return;
                     leftover = Buffer.concat([leftover, chunk]);
-
-                    while (leftover.length >= 8) {
-                        const streamType = leftover[0];
-                        const length = leftover.readUInt32BE(4);
-                        if (leftover.length < 8 + length) break;
-
-                        const payload = leftover.slice(8, 8 + length);
-                        leftover = leftover.slice(8 + length);
-
-                        if (streamType === 1 || streamType === 2) {
-                            if (!dataReceived) {
-                                dataReceived = true;
-                                clearTimeout(initialInfoTimer);
-                                console.log(`[LogsWatcher] first log frame, size: ${payload.length}`);
-                            }
-                            this.socket.emit('build_log', {
-                                projectId: this.projectId,
-                                type: 'log',
-                                log: payload.toString()
-                            });
-                        }
-                    }
+                    leftover = emitFrames(leftover);
                 });
 
                 res.on('end', () => {
-                    console.log(`[LogsWatcher] log stream ended`);
-                    clearTimeout(initialInfoTimer);
+                    console.log(`[LogsWatcher] live log stream ended`);
                     if (active) {
                         this.socket.emit('build_log', {
                             projectId: this.projectId,
@@ -379,7 +389,6 @@ class ProjectLogsWatcher {
 
                 res.on('error', (err) => {
                     console.error(`[LogsWatcher] log response error:`, err);
-                    clearTimeout(initialInfoTimer);
                     if (active) {
                         this.socket.emit('build_log', {
                             projectId: this.projectId,
