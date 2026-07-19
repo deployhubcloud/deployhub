@@ -146,7 +146,10 @@ class ProjectLogsWatcher {
             neededType = logsUrl ? 'static' : 'none';
             if (logsUrl) neededParams = { logsUrl };
             else this.emitInfo('Static build failed, but logs URL is not available.');
-        } else {
+        } else if (status === 'failed' && type !== "static") {
+            neededType = 'docker'
+        }
+        else {
             neededType = 'none';
         }
         console.log(`[LogsWatcher] decided neededType: ${neededType}, params:`, neededParams);
