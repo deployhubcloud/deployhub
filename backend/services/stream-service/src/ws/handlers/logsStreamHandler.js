@@ -4,7 +4,7 @@ import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cach
 import http from 'http';
 import { Buffer } from 'buffer';
 
-const emitFramesTailLimited = (buf, maxLines) => {
+const emitFramesTailLimited = (buf, maxLines, socket, projectId) => {
     const lines = [];
     let leftover = buf;
     while (leftover.length >= 8) {
@@ -19,8 +19,8 @@ const emitFramesTailLimited = (buf, maxLines) => {
     }
     const tailLines = lines.slice(-maxLines);
     for (const line of tailLines) {
-        this.socket.emit('build_log', {
-            projectId: this.projectId,
+        socket.emit('build_log', {
+            projectId: projectId,
             type: 'log',
             log: line
         });
@@ -128,7 +128,6 @@ class ProjectLogsWatcher {
 
         let neededType = null;
         let neededParams = null;
-
 
         if (!status) neededType = 'none';
         else if (status === 'building' || status === 'queued') {
@@ -293,10 +292,6 @@ class ProjectLogsWatcher {
         return { type: 'build', stop, buildId };
     }
 
-
-
-
-
     async startDockerLogStream(containerName) {
         console.log(`[LogsWatcher] startDockerLogStream (raw HTTP) for ${containerName}`);
         let active = true;
@@ -355,7 +350,7 @@ class ProjectLogsWatcher {
             await new Promise((resolve, reject) => {
                 const snapReq = http.request({
                     socketPath: '/var/run/docker.sock',
-                    path: `/containers/${containerId}/logs?stdout=1&stderr=1&follow=0`,  
+                    path: `/containers/${containerId}/logs?stdout=1&stderr=1&follow=0`,
                     method: 'GET',
                 }, (res) => {
                     if (res.statusCode !== 200) {
@@ -366,7 +361,7 @@ class ProjectLogsWatcher {
                     res.on('end', () => {
                         console.log(`[LogsWatcher] snapshot received, bytes: ${buf.length}`);
                         if (active && buf.length) {
-                            emitFramesTailLimited(buf, 500);
+                            emitFramesTailLimited(buf, 500, this.socket, this.projectId);
                         }
                         resolve();
                     });
