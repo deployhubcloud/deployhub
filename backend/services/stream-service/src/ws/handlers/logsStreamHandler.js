@@ -4,6 +4,29 @@ import { getCacheLatestBuildIdOfProject } from '../../../../../shared/utils/cach
 import http from 'http';
 import { Buffer } from 'buffer';
 
+const emitFramesTailLimited = (buf, maxLines) => {
+    const lines = [];
+    let leftover = buf;
+    while (leftover.length >= 8) {
+        const streamType = leftover[0];
+        const length = leftover.readUInt32BE(4);
+        if (leftover.length < 8 + length) break;
+        const payload = leftover.slice(8, 8 + length);
+        leftover = leftover.slice(8 + length);
+        if (streamType === 1 || streamType === 2) {
+            lines.push(payload.toString());
+        }
+    }
+    const tailLines = lines.slice(-maxLines);
+    for (const line of tailLines) {
+        this.socket.emit('build_log', {
+            projectId: this.projectId,
+            type: 'log',
+            log: line
+        });
+    }
+};
+
 export function registerLogsStreamHandler(io) {
     io.on('connection', (socket) => {
         let currentWatcher = null;
@@ -332,7 +355,7 @@ class ProjectLogsWatcher {
             await new Promise((resolve, reject) => {
                 const snapReq = http.request({
                     socketPath: '/var/run/docker.sock',
-                    path: `/containers/${containerId}/logs?stdout=1&stderr=1&tail=500&follow=0`,
+                    path: `/containers/${containerId}/logs?stdout=1&stderr=1&follow=0`,  
                     method: 'GET',
                 }, (res) => {
                     if (res.statusCode !== 200) {
@@ -342,7 +365,9 @@ class ProjectLogsWatcher {
                     res.on('data', chunk => { buf = Buffer.concat([buf, chunk]); });
                     res.on('end', () => {
                         console.log(`[LogsWatcher] snapshot received, bytes: ${buf.length}`);
-                        if (active && buf.length) emitFrames(buf);
+                        if (active && buf.length) {
+                            emitFramesTailLimited(buf, 500);
+                        }
                         resolve();
                     });
                     res.on('error', reject);
