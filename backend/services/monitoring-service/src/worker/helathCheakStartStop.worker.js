@@ -18,8 +18,6 @@ const worker = new Worker(QUEUE_NAMES.START_STOP_HEALTH_CHECK, async (job) => {
             { returnDocument: 'after' },
         );
 
-        console
-
         if (enabled) {
 
             const nextPingAt = Date.now() + (uptime.intervalSeconds * 1000);

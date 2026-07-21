@@ -456,7 +456,9 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                     monitorfailedTries: projectData.monitor.failedTries
                 };
 
-                await monitoringQueue.add('monitoring', monitoringQueueData);
+                if (projectData.monitor.enabled) {
+                    await monitoringQueue.add('monitoring', monitoringQueueData);
+                }
 
             }
         }
