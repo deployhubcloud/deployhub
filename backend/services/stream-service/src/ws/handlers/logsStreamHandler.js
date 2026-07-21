@@ -142,11 +142,11 @@ class ProjectLogsWatcher {
                 neededType = projectContainerName ? 'docker' : 'none';
                 if (projectContainerName) neededParams = { containerName: projectContainerName };
             }
-        } else if (status === 'failed' && type === 'static') {
+        } else if (status === 'failed' || status === 'crash' || status === 'stopped' && type === 'static') {
             neededType = logsUrl ? 'static' : 'none';
             if (logsUrl) neededParams = { logsUrl };
             else this.emitInfo('Static build failed, but logs URL is not available.');
-        } else if (status === 'failed' && type !== "static") {
+        } else if (status === 'failed' || status === 'crash' || status === 'stopped' && type !== "static") {
             neededType = 'docker'
         }
         else {
