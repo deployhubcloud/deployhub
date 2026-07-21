@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/apiclient";
 import PageHeader from "../../components/PageHeader";
@@ -38,15 +38,17 @@ function TextInput({ ...props }) {
   );
 }
 
-function SaveBtn({ saving, saved, onClick, label = "Save" }) {
+function SaveBtn({ saving, saved, onClick, label = "Save", dirty = true }) {
+  const disabled = saving || !dirty;
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={saving}
-      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${saved
-        ? "bg-green-500/10 text-green-400 border border-green-500/30"
-        : "bg-amber-500 hover:bg-amber-400 text-black"
+      disabled={disabled}
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 disabled:cursor-not-allowed ${disabled ? "opacity-40 blur-[0.4px] saturate-50" : "opacity-100 blur-0"
+        } ${saved
+          ? "bg-green-500/10 text-green-400 border border-green-500/30"
+          : "bg-amber-500 hover:bg-amber-400 text-black"
         }`}
     >
       {saving ? "Saving…" : saved ? "Saved" : label}
@@ -109,6 +111,11 @@ export function Settings() {
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Snapshots used to detect unsaved changes per-section
+  const [initialBuild, setInitialBuild] = useState(null);
+  const [initialEnv, setInitialEnv] = useState(null);
+  const [initialNotif, setInitialNotif] = useState(null);
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -125,21 +132,49 @@ export function Settings() {
         if (s.port) setPort(String(s.port));
         if (s.publishDir) setPublishDir(s.publishDir);
         if (s.buildCommand) setBuildCommand(s.buildCommand);
+
+        let monitor = { enabled: false, intervalSeconds: 60, healthPath: "/health", failedTries: 2 };
         if (s.monitor) {
-          setMonitorEnabled(s.monitor.enabled || false);
-          setIntervalSeconds(s.monitor.intervalSeconds || 60);
-          setHealthPath(s.monitor.healthPath || "/health");
-          setFailedTries(s.monitor.failedTries || 2);
+          monitor = {
+            enabled: s.monitor.enabled || false,
+            intervalSeconds: s.monitor.intervalSeconds || 60,
+            healthPath: s.monitor.healthPath || "/health",
+            failedTries: s.monitor.failedTries || 2,
+          };
+          setMonitorEnabled(monitor.enabled);
+          setIntervalSeconds(monitor.intervalSeconds);
+          setHealthPath(monitor.healthPath);
+          setFailedTries(monitor.failedTries);
         }
+
+        let notif = {
+          discordEnabled: false, discordWebhook: "",
+          telegramEnabled: false, telegramBotToken: "", telegramChatId: "",
+          emailEnabled: false, emailAddress: "",
+        };
         if (s.notifications) {
           const n = s.notifications;
-          if (n.discord) { setDiscordEnabled(n.discord.enabled || false); setDiscordWebhook(n.discord.webhookUrl || ""); }
-          if (n.telegram) { setTelegramEnabled(n.telegram.enabled || false); setTelegramBotToken(n.telegram.botToken || ""); setTelegramChatId(n.telegram.chatId || ""); }
-          if (n.email) { setEmailEnabled(n.email.enabled || false); setEmailAddress(n.email.emailAddress || ""); }
+          if (n.discord) { notif.discordEnabled = n.discord.enabled || false; notif.discordWebhook = n.discord.webhookUrl || ""; setDiscordEnabled(notif.discordEnabled); setDiscordWebhook(notif.discordWebhook); }
+          if (n.telegram) { notif.telegramEnabled = n.telegram.enabled || false; notif.telegramBotToken = n.telegram.botToken || ""; notif.telegramChatId = n.telegram.chatId || ""; setTelegramEnabled(notif.telegramEnabled); setTelegramBotToken(notif.telegramBotToken); setTelegramChatId(notif.telegramChatId); }
+          if (n.email) { notif.emailEnabled = n.email.enabled || false; notif.emailAddress = n.email.emailAddress || ""; setEmailEnabled(notif.emailEnabled); setEmailAddress(notif.emailAddress); }
         }
-        if (s.env && typeof s.env === "object") {
-          setEnvVars(Object.entries(s.env).map(([key, value]) => ({ key, value })));
+
+        let env = [{ key: "", value: "" }];
+        if (s.env && typeof s.env === "object" && Object.keys(s.env).length > 0) {
+          env = Object.entries(s.env).map(([key, value]) => ({ key, value }));
+          setEnvVars(env);
         }
+
+        
+        setInitialBuild({
+          buildCommand: s.buildCommand || "",
+          publishDir: s.publishDir || "",
+          startCommand: s.startCommand || "",
+          port: s.port ? String(s.port) : "3000",
+          rootDirectory: s.rootDirectory || ".",
+        });
+        setInitialEnv(env);
+        setInitialNotif({ monitor, ...notif });
       } catch {
         setError("Failed to load project settings.");
       } finally {
@@ -149,6 +184,27 @@ export function Settings() {
     fetchSettings();
   }, [projectId]);
 
+  const buildDirty = useMemo(() => {
+    if (!initialBuild) return false;
+    return JSON.stringify(initialBuild) !== JSON.stringify({ buildCommand, publishDir, startCommand, port, rootDirectory });
+  }, [initialBuild, buildCommand, publishDir, startCommand, port, rootDirectory]);
+
+  const envDirty = useMemo(() => {
+    if (!initialEnv) return false;
+    return JSON.stringify(initialEnv) !== JSON.stringify(envVars);
+  }, [initialEnv, envVars]);
+
+  const notifDirty = useMemo(() => {
+    if (!initialNotif) return false;
+    const current = {
+      monitor: { enabled: monitorEnabled, intervalSeconds, healthPath, failedTries },
+      discordEnabled, discordWebhook,
+      telegramEnabled, telegramBotToken, telegramChatId,
+      emailEnabled, emailAddress,
+    };
+    return JSON.stringify(initialNotif) !== JSON.stringify(current);
+  }, [initialNotif, monitorEnabled, intervalSeconds, healthPath, failedTries, discordEnabled, discordWebhook, telegramEnabled, telegramBotToken, telegramChatId, emailEnabled, emailAddress]);
+
   const handleSaveBuild = async () => {
     setSavingBuild(true);
     setSavedBuild(false);
@@ -156,6 +212,7 @@ export function Settings() {
       await api.patch(`/project/settings/build-and-start/${projectId}`, {
         buildCommand, publishDir, startCommand, port: parseInt(port) || 3000, rootDirectory,
       });
+      setInitialBuild({ buildCommand, publishDir, startCommand, port, rootDirectory });
       setSavedBuild(true);
       setTimeout(() => setSavedBuild(false), 3000);
     } catch (err) {
@@ -174,6 +231,7 @@ export function Settings() {
     }, {});
     try {
       await api.patch(`/project/settings/env/${projectId}`, { env });
+      setInitialEnv(envVars);
       setSavedEnv(true);
       setTimeout(() => setSavedEnv(false), 3000);
     } catch (err) {
@@ -201,6 +259,12 @@ export function Settings() {
           telegram: { enabled: telegramEnabled, botToken: telegramEnabled ? telegramBotToken : undefined, chatId: telegramEnabled ? telegramChatId : undefined },
           email: { enabled: emailEnabled, emailAddress: emailEnabled ? emailAddress : undefined },
         },
+      });
+      setInitialNotif({
+        monitor: { enabled: monitorEnabled, intervalSeconds, healthPath, failedTries },
+        discordEnabled, discordWebhook,
+        telegramEnabled, telegramBotToken, telegramChatId,
+        emailEnabled, emailAddress,
       });
       setSavedNotif(true);
       setTimeout(() => setSavedNotif(false), 3000);
@@ -274,7 +338,7 @@ export function Settings() {
           <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
             <SectionHeader
               title={projectType === "static" ? "Build & Output" : "Start Command & Port"}
-              right={<SaveBtn saving={savingBuild} saved={savedBuild} onClick={handleSaveBuild} />}
+              right={<SaveBtn saving={savingBuild} saved={savedBuild} onClick={handleSaveBuild} dirty={buildDirty} />}
             />
             <div className="p-5">
               {projectType === "static" ? (
@@ -308,7 +372,7 @@ export function Settings() {
                   <button type="button" onClick={addEnvRow} className="px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 text-neutral-300 hover:bg-white/5 transition-colors">
                     Add
                   </button>
-                  <SaveBtn saving={savingEnv} saved={savedEnv} onClick={handleSaveEnv} />
+                  <SaveBtn saving={savingEnv} saved={savedEnv} onClick={handleSaveEnv} dirty={envDirty} />
                 </div>
               }
             />
@@ -331,35 +395,33 @@ export function Settings() {
           </section>
 
           <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
-            <SectionHeader title="Monitoring & Alerts" right={<SaveBtn saving={savingNotif} saved={savedNotif} onClick={handleSaveNotif} />} />
+            <SectionHeader title="Monitoring & Alerts" right={<SaveBtn saving={savingNotif} saved={savedNotif} onClick={handleSaveNotif} dirty={notifDirty} />} />
             {notifError && (
               <div className="mx-5 mt-4 bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-2 rounded-lg text-xs">{notifError}</div>
             )}
             <div className="p-5 space-y-5">
-              {projectType !== "static" && (
-                <div className="rounded-lg border border-white/[0.06] overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white">Health Monitoring</span>
-                      {projectPlan !== "pro" && (
-                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pro</span>
-                      )}
-                    </div>
-                    <Toggle value={monitorEnabled} onChange={v => {
-                      if (v && projectPlan !== "pro") { setNotifError("Upgrade to Pro to enable health monitoring."); return; }
-                      setNotifError(null);
-                      setMonitorEnabled(v);
-                    }} />
+              <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-white">Health Monitoring</span>
+                    {projectPlan !== "pro" && (
+                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Pro</span>
+                    )}
                   </div>
-                  {monitorEnabled && (
-                    <div className="px-4 py-4 grid grid-cols-3 gap-4 border-t border-white/[0.06]">
-                      <div><FieldLabel>Interval (sec)</FieldLabel><TextInput type="number" value={intervalSeconds} onChange={e => setIntervalSeconds(parseInt(e.target.value) || 60)} /></div>
-                      <div><FieldLabel>Health Path</FieldLabel><TextInput value={healthPath} onChange={e => setHealthPath(e.target.value)} placeholder="/health" /></div>
-                      <div><FieldLabel>Failed Tries</FieldLabel><TextInput type="number" value={failedTries} onChange={e => setFailedTries(parseInt(e.target.value) || 2)} /></div>
-                    </div>
-                  )}
+                  <Toggle value={monitorEnabled} onChange={v => {
+                    if (v && projectPlan !== "pro") { setNotifError("Upgrade to Pro to enable health monitoring."); return; }
+                    setNotifError(null);
+                    setMonitorEnabled(v);
+                  }} />
                 </div>
-              )}
+                {monitorEnabled && (
+                  <div className="px-4 py-4 grid grid-cols-3 gap-4 border-t border-white/[0.06]">
+                    <div><FieldLabel>Interval (sec)</FieldLabel><TextInput type="number" value={intervalSeconds} onChange={e => setIntervalSeconds(parseInt(e.target.value) || 60)} /></div>
+                    <div><FieldLabel>Health Path</FieldLabel><TextInput value={healthPath} onChange={e => setHealthPath(e.target.value)} placeholder="/health" /></div>
+                    <div><FieldLabel>Failed Tries</FieldLabel><TextInput type="number" value={failedTries} onChange={e => setFailedTries(parseInt(e.target.value) || 2)} /></div>
+                  </div>
+                )}
+              </div>
 
               <div className="rounded-lg border border-white/[0.06] overflow-hidden divide-y divide-white/[0.06]">
                 {[
