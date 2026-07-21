@@ -143,7 +143,6 @@ const projectschema = new mongoose.Schema({
     buildId: {
         type: mongoose.Schema.Types.ObjectId,
     },
-
     plan: {
         type: String,
         enum: ["free", "starter", "pro"],
