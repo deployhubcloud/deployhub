@@ -115,7 +115,7 @@ export const githubCallback = async (data) => {
         }
 
         if (user.status === 'suspend') {
-           throw new AppError('Email already registered with password login. Please sign in and link GitHub from account settings.', 403); 
+            throw new AppError('Your account has been suspended Due to You break some rules', 403);
         }
 
         user.githubAccessToken = encryptedGithubAccessToken;
