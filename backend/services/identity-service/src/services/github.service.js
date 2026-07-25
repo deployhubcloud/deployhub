@@ -114,6 +114,10 @@ export const githubCallback = async (data) => {
             throw new AppError('Email already registered with password login. Please sign in and link GitHub from account settings.', 409);
         }
 
+        if (user.status === 'suspend') {
+           throw new AppError('Email already registered with password login. Please sign in and link GitHub from account settings.', 403); 
+        }
+
         user.githubAccessToken = encryptedGithubAccessToken;
         user.githubId = githubUser.id;
         user.githubUsername = githubUser.login;
