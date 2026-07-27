@@ -9,9 +9,8 @@ const BUCKET = buildEnv.MINIO_BUCKET;
 
 
 const client = new Minio.Client({
-  endPoint: buildEnv.NODE_ENV === "production" ? 'minio' : "localhost",
-  port: 9000,
-  useSSL: false,
+  endPoint: buildEnv.NODE_ENV === "production" ? 'https://storage.cloudcoderhub.in' : "localhost",
+  region: "auto",
   accessKey: buildEnv.NODE_ENV === "production" ? buildEnv.MINIO_ACCESS_KEY : "admin",
   secretKey: buildEnv.NODE_ENV === "production" ? buildEnv.MINIO_SECRET_KEY : "rahul@dkfd48"
 })
