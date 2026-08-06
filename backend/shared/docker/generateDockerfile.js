@@ -143,7 +143,7 @@ ENV PORT=$APP_PORT
 
 EXPOSE $APP_PORT
 
-ARG START_CMD="${startCommand || "java -jar app.jar"}"
+ARG START_CMD="${"java -jar app.jar"}"
 ENV START_CMD=$START_CMD
 
 CMD ["sh", "-c", "$START_CMD"]
