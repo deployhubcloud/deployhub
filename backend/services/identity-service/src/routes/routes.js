@@ -16,6 +16,12 @@ import upload, { handleUploadError } from '../middleware/multer.middleware.js';
 import { rateLimitMiddleware } from '../middleware/rateLimit.middleware.js';
 import { internalApiCallMiddleware } from '../../../../shared/middlewares/interalApiCall.js';
 import { AUTH_ENV } from '../lib/env.js'
+import {
+    deleteUserAdminController,
+    getUserAdminController,
+    listUsersAdminController,
+    updateUserAdminController,
+} from '../controllers/adminUsers.controller.js';
 
 const indetityServiceRouter = express.Router();
 
@@ -35,6 +41,12 @@ indetityServiceRouter.put('/user/profile-pic', verifyJWT, rateLimitMiddleware('u
 indetityServiceRouter.get('/user/repos', verifyJWT, getUserReposController);
 indetityServiceRouter.get('/users/:userId/network-name', internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET }), getUserNetworkNameController);
 indetityServiceRouter.get('/users/:userId/github-access-token', internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET }), githubAccessTokenController)
+
+const adminInternal = internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET });
+indetityServiceRouter.get('/admin/users', adminInternal, listUsersAdminController);
+indetityServiceRouter.get('/admin/users/:userId', adminInternal, getUserAdminController);
+indetityServiceRouter.patch('/admin/users/:userId', adminInternal, updateUserAdminController);
+indetityServiceRouter.delete('/admin/users/:userId', adminInternal, deleteUserAdminController);
 
 
 export default indetityServiceRouter;

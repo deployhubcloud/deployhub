@@ -7,6 +7,7 @@ const requiredEnv = [
     'INTERNAL_SECRET',
     'APIGATEWAY_SERVICE_NAME',
     'IDENTITY_SERVICE_URL', 'PROJECT_SERVICE_URL', 'MONITORING_SERVICE_URL', 'ANALYTICS_SERVICE_URL',
+    'ADMIN_SERVICE_URL',
     'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASS']
 
 for (const key of requiredEnv) {
@@ -19,6 +20,7 @@ export const ENV = {
     NODE_ENV: process.env.NODE_ENV,
     PORT: process.env.PORT,
     FRONTEND_URI: process.env.FRONTEND_URL,
+    ADMIN_FRONTEND_URL: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174',
     REDIS_HOST: process.env.REDIS_HOST,
     REDIS_PORT: process.env.REDIS_PORT,
     REDIS_PASSWORD: process.env.REDIS_PASSWORD,
@@ -26,7 +28,8 @@ export const ENV = {
         AUTH: process.env.IDENTITY_SERVICE_URL,
         PROJECT: process.env.PROJECT_SERVICE_URL,
         BUILD: process.env.BUILD_SERVICE_URL,
-        ANALYTICS: process.env.ANALYTICS_SERVICE_URL
+        ANALYTICS: process.env.ANALYTICS_SERVICE_URL,
+        ADMIN: process.env.ADMIN_SERVICE_URL,
     },
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,

@@ -24,5 +24,11 @@ export const services = {
         isHealthy: false,
         lastChecked: null,
         lastError: null
+    },
+    Admin: {
+        url: ENV.SERVICES_URL.ADMIN,
+        isHealthy: false,
+        lastChecked: null,
+        lastError: null
     }
 }

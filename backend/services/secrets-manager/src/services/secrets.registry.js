@@ -2,47 +2,32 @@ import { env } from '../config/env.js';
 
 export function getSecretsForService(serviceName) {
   const registry = {
-
-
     'identity-service': {
-
       NODE_ENV: env.NODE_ENV,
       PORT: env.IDENTITY_SERVICE_PORT,
-
       MONGODB_URI: env.IDENTITY_SERVICE_MONGODB_URI,
-
       REDIS_HOST: env.REDIS_HOST,
       REDIS_PORT: env.REDIS_PORT,
       REDIS_PASSWORD: env.REDIS_PASSWORD,
-
       ACCESS_TOKEN_SECRET: env.ACCESS_TOKEN_SECRET,
       ACCESS_TOKEN_EXPIRY: env.ACCESS_TOKEN_EXPIRY,
       REFRESH_TOKEN_SECRET: env.REFRESH_TOKEN_SECRET,
       REFRESH_TOKEN_EXPIRY: env.REFRESH_TOKEN_EXPIRY,
-
       GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
       GITHUB_CLIENT_SECRET: env.GITHUB_CLIENT_SECRET,
       GITHUB_TOKEN_ENCRYPTION_KEY: env.GITHUB_TOKEN_ENCRYPTION_KEY,
-
       EMAIL_HOST: env.EMAIL_HOST,
       EMAIL_PORT: String(env.EMAIL_PORT),
       EMAIL_USER: env.EMAIL_USER,
       EMAIL_PASS: env.EMAIL_PASS,
-
       INTERNAL_SECRET: env.INTERNAL_SECRET,
-
       DEVLOAD_API_KEY: env.DEVLOAD_API_KEY || '',
       DEVLOAD_PROJECT_ID: env.DEVLOAD_PROJECT_ID || '',
-
       RABBITMQ_URL: env.RABBITMQ_URL,
-
       FRONTEND_URL: env.FRONTEND_URL,
-
       INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET,
-
       BCRYPT_ROUNDS: env.BCRYPT_ROUNDS || '10'
     },
-
 
     'build-service': {
       NODE_ENV: env.NODE_ENV,
@@ -64,7 +49,6 @@ export function getSecretsForService(serviceName) {
       MINIO_PUBLIC_HOST: env.MINIO_PUBLIC_HOST
     },
 
-
     'project-service': {
       NODE_ENV: env.NODE_ENV,
       PORT: env.PROJECT_SERVICE_PORT,
@@ -84,7 +68,6 @@ export function getSecretsForService(serviceName) {
       GITHUB_WEBHOOK_SECRET: env.GITHUB_WEBHOOK_SECRET
     },
 
-
     'deploy-service': {
       NODE_ENV: env.NODE_ENV,
       PORT: env.DEPLOY_SERVICE_PORT,
@@ -100,8 +83,6 @@ export function getSecretsForService(serviceName) {
       PROJECT_SERVICE_URL: env.PROJECT_SERVICE_URL,
       IDENTITY_SERVICE_URL: env.IDENTITY_SERVICE_URL,
       BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
-      DOCKER_USERNAME: env.DOCKER_USERNAME,
-      DOCKER_PASSWORD: env.DOCKER_PASSWORD,
       MINIO_BUCKET: env.MINIO_BUCKET,
       MINIO_SECRET_KEY: env.MINIO_SECRET_KEY,
       MINIO_ACCESS_KEY: env.MINIO_ACCESS_KEY,
@@ -120,8 +101,10 @@ export function getSecretsForService(serviceName) {
       BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
       MONITORING_SERVICE_URL: env.MONITORING_SERVICE_URL || '',
       ANALYTICS_SERVICE_URL: env.ANALYTICS_SERVICE_URL,
+      ADMIN_SERVICE_URL: env.ADMIN_SERVICE_URL,
       INTERNAL_SECRET: env.INTERNAL_SECRET,
       FRONTEND_URL: env.FRONTEND_URL,
+      ADMIN_FRONTEND_URL: env.ADMIN_FRONTEND_URL,
       ACCESS_TOKEN_SECRET: env.ACCESS_TOKEN_SECRET,
       ACCESS_TOKEN_EXPIRY: env.ACCESS_TOKEN_EXPIRY,
       EMAIL_PASS: env.EMAIL_PASS,
@@ -187,12 +170,35 @@ export function getSecretsForService(serviceName) {
       PORT: env.ANALYTICS_SERVICE_PORT,
       DOCKER_USERNAME: env.DOCKER_USERNAME,
       DOCKER_PASSWORD: env.DOCKER_PASSWORD,
-    }
+    },
+
+    'admin-service': {
+      NODE_ENV: env.NODE_ENV,
+      PORT: env.ADMIN_SERVICE_PORT,
+      ADMIN_SERVICE_NAME: 'admin-service',
+      REDIS_HOST: env.REDIS_HOST,
+      REDIS_PORT: env.REDIS_PORT,
+      REDIS_PASSWORD: env.REDIS_PASSWORD,
+      INTERNAL_SECRET: env.INTERNAL_SECRET,
+      INTERNAL_SERVICE_TALKING_SECRET: env.INTERNAL_SERVICE_TALKING_SECRET,
+      IDENTITY_SERVICE_URL: env.IDENTITY_SERVICE_URL,
+      PROJECT_SERVICE_URL: env.PROJECT_SERVICE_URL,
+      BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
+      DEPLOY_SERVICE_URL: env.DEPLOY_SERVICE_URL,
+      EMAIL_HOST: env.EMAIL_HOST,
+      EMAIL_PORT: String(env.EMAIL_PORT),
+      EMAIL_USER: env.EMAIL_USER,
+      EMAIL_PASS: env.EMAIL_PASS,
+      ADMIN_ID: env.ADMIN_ID,
+      ADMIN_PASSWORD: env.ADMIN_PASSWORD,
+      ADMIN_EMAIL: env.ADMIN_EMAIL,
+      ADMIN_SESSION_SECRET: env.ADMIN_SESSION_SECRET,
+      ADMIN_FRONTEND_URL: env.ADMIN_FRONTEND_URL,
+    },
   };
 
   return registry[serviceName] ?? null;
 }
-
 
 export function getRegisteredServices() {
   return [
@@ -203,6 +209,8 @@ export function getRegisteredServices() {
     'api-gateway',
     'monitoring-service',
     'notification-service',
-    'stream-service'
+    'stream-service',
+    'analytics-service',
+    'admin-service',
   ];
 }

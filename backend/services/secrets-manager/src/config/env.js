@@ -19,6 +19,7 @@ const schema = z.object({
   MONITORING_SERVICE_PORT: z.coerce.number().default(4007),
   STREAM_SERVICE_PORT: z.coerce.number().default(4008),
   ANALYTICS_SERVICE_PORT: z.coerce.number().default(4009),
+  ADMIN_SERVICE_PORT: z.coerce.number().default(4010),
 
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
@@ -66,6 +67,7 @@ const schema = z.object({
   DEVLOAD_PROJECT_ID: z.string().optional(),
 
   FRONTEND_URL: z.string(),
+  ADMIN_FRONTEND_URL: z.string().default('http://localhost:5174'),
 
   RABBITMQ_URL: z.string(),
 
@@ -76,6 +78,13 @@ const schema = z.object({
   BUILD_SERVICE_URL: z.string().optional(),
   DEPLOY_SERVICE_URL: z.string().optional(),
   ANALYTICS_SERVICE_URL: z.string(),
+  ADMIN_SERVICE_URL: z.string().default('http://localhost:4010'),
+
+  // admin panel credentials (single admin)
+  ADMIN_ID: z.string().min(3),
+  ADMIN_PASSWORD: z.string().min(8),
+  ADMIN_EMAIL: z.string().email(),
+  ADMIN_SESSION_SECRET: z.string().min(32),
 
   INTERNAL_SERVICE_TALKING_SECRET: z.string().min(32),
 

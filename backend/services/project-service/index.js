@@ -47,6 +47,9 @@ app.use(createInternalAUthMiddleware({
 import forOtherServices from './src/routes/forOtherSrvice.js';
 app.use('/for-other-service', forOtherServices)
 
+import adminProjectsRouter from './src/routes/admin.routes.js';
+app.use('/admin', adminProjectsRouter)
+
 
 import userContext from '../../shared/middlewares/userContext.js';
 app.use(userContext);
