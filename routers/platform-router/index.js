@@ -56,7 +56,8 @@ const staticMap = {
   "app-devload.cloudcoderhub.in": "http://appdevload:80",
   "api-devload.cloudcoderhub.in": "http://apidevload:6700",
   "dashboard.deployhub.cloud": "http://appdeployhub:80",
-  "ws.deployhub.cloud": "http://deployhubstreamservice:4008"
+  "ws.deployhub.cloud": "http://deployhubstreamservice:4008",
+  "admin.deployhub.cloud": "http://adminfrontend:80",
 };
 
 
