@@ -41,7 +41,8 @@ app.use(createInternalAUthMiddleware({
 import forOtherServices from "./routes/forOtherSrvice.js";
 app.use('/for-other-service', forOtherServices)
 
-
+import adminBuildsRouter from "./routes/admin.routes.js";
+app.use('/admin', adminBuildsRouter)
 
 // ye user chec kakrne ke liye hai means agar user routes pe req ja raha hai jab req.user hona chiaye
 import userContext from "../../../shared/middlewares/userContext.js";

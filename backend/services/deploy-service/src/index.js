@@ -35,6 +35,9 @@ app.use(createInternalAUthMiddleware({
     header: "x-internal-secret",
 }));
 
+import adminDeploymentsRouter from "./routes/admin.routes.js";
+app.use('/admin', adminDeploymentsRouter);
+
 
 export default async function startApp(port, service_name) {
     await connectDb();

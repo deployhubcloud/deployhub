@@ -20,7 +20,9 @@ import {
     deleteUserAdminController,
     getUserAdminController,
     listUsersAdminController,
+    revokeSessionsAdminController,
     updateUserAdminController,
+    userStatsAdminController,
 } from '../controllers/adminUsers.controller.js';
 
 const indetityServiceRouter = express.Router();
@@ -43,10 +45,12 @@ indetityServiceRouter.get('/users/:userId/network-name', internalApiCallMiddlewa
 indetityServiceRouter.get('/users/:userId/github-access-token', internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET }), githubAccessTokenController)
 
 const adminInternal = internalApiCallMiddleware({ secret: AUTH_ENV.INTERNAL_SERVICE_TALKING_SECRET });
+indetityServiceRouter.get('/admin/stats', adminInternal, userStatsAdminController);
 indetityServiceRouter.get('/admin/users', adminInternal, listUsersAdminController);
 indetityServiceRouter.get('/admin/users/:userId', adminInternal, getUserAdminController);
 indetityServiceRouter.patch('/admin/users/:userId', adminInternal, updateUserAdminController);
 indetityServiceRouter.delete('/admin/users/:userId', adminInternal, deleteUserAdminController);
+indetityServiceRouter.post('/admin/users/:userId/revoke-sessions', adminInternal, revokeSessionsAdminController);
 
 
 export default indetityServiceRouter;
