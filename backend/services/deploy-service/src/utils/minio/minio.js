@@ -46,27 +46,26 @@ export function buildZipUrl(objectName) {
   return `${DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? "https" : "http"}://${publicHost}/${BUCKET}/${objectName}`
 }
 
-export async function deleteProjectLogs(projectId) {
-  const prefix = `buildsLogsUrl/${projectId}/`;
-
+export async function deleteObjectsByPrefix(prefix) {
+  const normalizedPrefix = prefix.endsWith('/') ? prefix : `${prefix}/`;
   const objectsToDelete = [];
 
   const stream = client.listObjectsV2(
     BUCKET,
-    prefix,
+    normalizedPrefix,
     true
   );
 
   return new Promise((resolve, reject) => {
     stream.on("data", (obj) => {
-      objectsToDelete.push(obj.name);
+      if (obj?.name) objectsToDelete.push(obj.name);
     });
 
     stream.on("error", reject);
 
     stream.on("end", async () => {
       if (objectsToDelete.length === 0) {
-        return resolve();
+        return resolve(0);
       }
 
       try {
@@ -76,15 +75,23 @@ export async function deleteProjectLogs(projectId) {
         );
 
         console.log(
-          `Deleted ${objectsToDelete.length} logs for project ${projectId}`
+          `[minio] Deleted ${objectsToDelete.length} objects under ${normalizedPrefix}`
         );
 
-        resolve();
+        resolve(objectsToDelete.length);
       } catch (error) {
         reject(error);
       }
     });
   });
+}
+
+/** @deprecated Prefer deleteObjectsByPrefix */
+export async function deleteProjectLogs(prefixOrProjectId) {
+  const prefix = String(prefixOrProjectId).includes('/')
+    ? prefixOrProjectId
+    : `buildsLogsUrl/${prefixOrProjectId}`;
+  return deleteObjectsByPrefix(prefix);
 }
 
 export default client

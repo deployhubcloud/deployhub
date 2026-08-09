@@ -15,3 +15,4 @@ ensureBucket()
 
 await import("./workers/DeployWorker.js");
 await import("./workers/subdomainChangeWorker.js");
+await import("./workers/delete.worker.js");

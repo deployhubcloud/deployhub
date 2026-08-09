@@ -2,7 +2,7 @@ import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { project_env } from '../lib/env.js';
 
-const connection = {
+export const connection = {
     host: project_env.REDIS_HOST,
     port: Number(project_env.REDIS_PORT),
     maxRetriesPerRequest: null,

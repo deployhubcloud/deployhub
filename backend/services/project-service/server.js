@@ -14,6 +14,7 @@ await startup(project_env.PORT)
 await import('./src/workers/projectStatus.js')
 await import('./src/workers/projectExpireChekcShedularMidNight.js');
 await import('./src/workers/projectDeleteShedular.js');
+await import('./src/workers/projectDeleteWorker.js');
 
 const { Port } = await import("./src/models/port.model.js")
 const { cachePortWhenServerStart } = await import("./src/utils/cachePortWhenServerStart.js")

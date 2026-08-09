@@ -11,6 +11,7 @@ await startApp(buildEnv.PORT, buildEnv.SERVICE_NAME);
 
 
 await import("./workers/build.worker.js");
+await import("./workers/delete.worker.js");
 
 const { ensureBucket } = await import('./utils/minio/minio.js')
 ensureBucket()
