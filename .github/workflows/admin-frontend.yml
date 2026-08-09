@@ -68,11 +68,11 @@ jobs:
 
             docker pull "$DOCKER_USERNAME/deployhubadminfrontend:latest"
 
-            docker stop deployhub || true
-            docker rm deployhub || true
+            docker stop adminfrontend || true
+            docker rm adminfrontend || true
 
             docker run -d \
-              --name deployhub \
+              --name adminfrontend \
               --network cloud \
               --restart always \
               "$DOCKER_USERNAME/deployhubadminfrontend:latest"
