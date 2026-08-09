@@ -1,9 +1,8 @@
-import Redis from "ioredis";
+import { Worker } from "bullmq";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import RedisPubSub from "../../../../shared/redis/pubSubRedis.js";
-import { REDIS_CHANNELS } from "../../../../shared/redis/channels.js";
+import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
 import { deleteDockerHubRepository } from "../../../../shared/docker/deleteDockerHubImage.js";
 import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
 import { reloadNginx } from "../../../../shared/nginx/reloadNginx.js";
@@ -13,15 +12,7 @@ import { deleteObjectsByPrefix } from "../utils/minio/minio.js";
 import { execInContainer } from "../utils/execInContainer.js";
 import { docker } from "../utils/docker.js";
 import { deleteCacheBuildData } from "../utils/cache/deleteCacheBuildData.js";
-
-const redisPubSub = new RedisPubSub(Redis, {
-    host: DEPLOY_SERVICE_ENV.REDIS_HOST,
-    port: DEPLOY_SERVICE_ENV.REDIS_PORT,
-    password: DEPLOY_SERVICE_ENV.REDIS_PASSWORD,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-});
+import { connection } from "../utils/queues/queues.js";
 
 await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`);
 
@@ -164,15 +155,16 @@ async function cleanupNginxAndStatic({ projectId, subdomain, projectType, custom
     }
 }
 
-redisPubSub.consume(REDIS_CHANNELS.PROJECT_DELETED, async (message) => {
-    const { projectId, projectData } = JSON.parse(message);
+const deleteWorker = new Worker(
+    QUEUE_NAMES.DELETE_PROJECT_DEPLOY,
+    async (job) => {
+        const { projectId, projectData } = job.data;
 
-    if (!projectId) {
-        console.warn("[deploy-delete] Missing projectId in project-deleted event");
-        return;
-    }
+        if (!projectId) {
+            console.warn("[deploy-delete] Missing projectId");
+            return;
+        }
 
-    try {
         const projectType = projectData?.type;
         const subdomain = projectData?.subdomain;
         const customDomains = Array.isArray(projectData?.customDomains)
@@ -203,10 +195,19 @@ redisPubSub.consume(REDIS_CHANNELS.PROJECT_DELETED, async (message) => {
         await deleteCacheBuildData(projectId);
 
         console.log(`[deploy-delete] Cleanup done for project ${projectId}`);
-    } catch (error) {
-        console.error(`[deploy-delete] Failed for project ${projectId}:`, error?.message || error);
-        throw error;
+    },
+    {
+        connection,
+        concurrency: 1,
     }
+);
+
+deleteWorker.on("completed", (job) => {
+    console.log(`[deploy-delete] Job completed for projectId: ${job.data.projectId}`);
 });
 
-console.log(`[deploy-delete] Listening on ${REDIS_CHANNELS.PROJECT_DELETED}`);
+deleteWorker.on("failed", (job, err) => {
+    console.error(`[deploy-delete] Job failed for projectId: ${job?.data?.projectId}`, err);
+});
+
+export default deleteWorker;

@@ -1,17 +1,7 @@
-import Redis from "ioredis";
-import RedisPubSub from "../../../../shared/redis/pubSubRedis.js";
-import { REDIS_CHANNELS } from "../../../../shared/redis/channels.js";
-import { env } from "../lib/env.js";
+import { Worker } from "bullmq";
+import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
 import { getRedis } from "../redis/client.js";
-
-const redisPubSub = new RedisPubSub(Redis, {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-    password: env.REDIS_PASSWORD,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-});
+import { connection } from "../utils/queues.js";
 
 async function deleteKeysByPattern(redis, pattern) {
     let cursor = "0";
@@ -29,11 +19,12 @@ async function deleteKeysByPattern(redis, pattern) {
     return deleted;
 }
 
-redisPubSub.consume(REDIS_CHANNELS.PROJECT_DELETED, async (message) => {
-    try {
-        const { projectId } = JSON.parse(message);
+const deleteWorker = new Worker(
+    QUEUE_NAMES.DELETE_PROJECT_ANALYTICS,
+    async (job) => {
+        const { projectId } = job.data;
         if (!projectId) {
-            console.warn("[analytics-delete] Missing projectId in project-deleted event");
+            console.warn("[analytics-delete] Missing projectId");
             return;
         }
 
@@ -44,10 +35,19 @@ redisPubSub.consume(REDIS_CHANNELS.PROJECT_DELETED, async (message) => {
         );
 
         console.log(`[analytics-delete] Deleted ${deleted} analytics keys for project ${projectId}`);
-    } catch (error) {
-        console.error("[analytics-delete] Failed:", error?.message || error);
-        throw error;
+    },
+    {
+        connection,
+        concurrency: 1,
     }
+);
+
+deleteWorker.on("completed", (job) => {
+    console.log(`[analytics-delete] Job completed for projectId: ${job.data.projectId}`);
 });
 
-console.log(`[analytics-delete] Listening on ${REDIS_CHANNELS.PROJECT_DELETED}`);
+deleteWorker.on("failed", (job, err) => {
+    console.error(`[analytics-delete] Job failed for projectId: ${job?.data?.projectId}`, err);
+});
+
+export default deleteWorker;

@@ -8,5 +8,9 @@ export const QUEUE_NAMES = {
     MONITORING: 'deplyhub-monitoring',
     HEALTH_CHECK_QUEUE: 'healthCheckQueue',
     START_STOP_HEALTH_CHECK: 'start-stop-health-check',
-    DELETE_PROJECT: 'deployhub-project-delete'
+    DELETE_PROJECT: 'deployhub-project-delete',
+    DELETE_PROJECT_BUILD: 'deployhub-project-delete-build',
+    DELETE_PROJECT_DEPLOY: 'deployhub-project-delete-deploy',
+    DELETE_PROJECT_MONITORING: 'deployhub-project-delete-monitoring',
+    DELETE_PROJECT_ANALYTICS: 'deployhub-project-delete-analytics',
 }

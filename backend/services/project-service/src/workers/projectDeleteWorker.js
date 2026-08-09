@@ -1,5 +1,4 @@
 import { Worker } from "bullmq";
-import Redis from "ioredis";
 import fs from "fs";
 import path from "path";
 import { Project } from "../models/project.model.js";
@@ -7,25 +6,23 @@ import { SslCertificate } from "../models/sslCertificate.js";
 import { Port } from "../models/port.model.js";
 import { PendingOrder } from "../models/PendingOrder.js";
 import { getRedis } from "../core/redis/client.js";
-import RedisPubSub from "../../../../shared/redis/pubSubRedis.js";
-import { REDIS_CHANNELS } from "../../../../shared/redis/channels.js";
 import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
 import { cacheKey } from "../../../../shared/cache/cacheKey.js";
 import { checkAndPullImage } from "../../../../shared/docker/checkAndPullImage.js";
 import { project_env } from "../lib/env.js";
-import { connection, startStopHealthCheck } from "../utils/queues.js";
+import {
+    connection,
+    startStopHealthCheck,
+    deleteProjectBuildQueue,
+    deleteProjectDeployQueue,
+    deleteProjectMonitoringQueue,
+    deleteProjectAnalyticsQueue,
+} from "../utils/queues.js";
 import { docker } from "../utils/docker.js";
 import { execInContainer } from "../utils/execInContainer.js";
 
 const LETSENCRYPT_HOST_DIR = "/home/rahul/docker/letsencrypt";
-
-const redisPubSub = new RedisPubSub(Redis, {
-    host: project_env.REDIS_HOST,
-    port: project_env.REDIS_PORT,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-});
+const JOB_NAME = "delete-project";
 
 async function clearProjectRedisData(redis, projectId, projectData, port) {
     const keys = [
@@ -133,6 +130,20 @@ async function cleanupCustomDomainNginxAndCerts(projectId, customDomains = []) {
     }
 }
 
+async function enqueueDownstreamDeletes(projectId, projectData) {
+    const payload = {
+        projectId: String(projectId),
+        projectData,
+    };
+
+    await Promise.all([
+        deleteProjectBuildQueue.add(JOB_NAME, payload),
+        deleteProjectDeployQueue.add(JOB_NAME, payload),
+        deleteProjectMonitoringQueue.add(JOB_NAME, payload),
+        deleteProjectAnalyticsQueue.add(JOB_NAME, payload),
+    ]);
+}
+
 const projectDeleteWorker = new Worker(
     QUEUE_NAMES.DELETE_PROJECT,
     async (job) => {
@@ -168,12 +179,9 @@ const projectDeleteWorker = new Worker(
         const port = portData?.port || projectData.assignedPort;
         await clearProjectRedisData(redis, projectId, projectData, port);
 
-        await redisPubSub.produce(
-            REDIS_CHANNELS.PROJECT_DELETED,
-            JSON.stringify({ projectId: String(projectId), projectData })
-        );
+        await enqueueDownstreamDeletes(projectId, projectData);
 
-        console.log(`[project-delete] Project ${projectId} deleted and event published`);
+        console.log(`[project-delete] Project ${projectId} deleted and downstream delete jobs queued`);
     },
     {
         connection,

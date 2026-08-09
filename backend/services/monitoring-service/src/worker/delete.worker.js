@@ -1,24 +1,15 @@
-import Redis from "ioredis";
-import RedisPubSub from "../../../../shared/redis/pubSubRedis.js";
-import { REDIS_CHANNELS } from "../../../../shared/redis/channels.js";
-import { env } from "../lib/env.js";
+import { Worker } from "bullmq";
+import { QUEUE_NAMES } from "../../../../shared/queues/queueNames.js";
 import { getRedis } from "../core/redis/client.js";
 import Uptime from "../models/uptime.model.js";
+import { connection } from "../utils/queues.js";
 
-const redisPubSub = new RedisPubSub(Redis, {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-    password: env.REDIS_PASSWORD,
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true,
-});
-
-redisPubSub.consume(REDIS_CHANNELS.PROJECT_DELETED, async (message) => {
-    try {
-        const { projectId } = JSON.parse(message);
+const deleteWorker = new Worker(
+    QUEUE_NAMES.DELETE_PROJECT_MONITORING,
+    async (job) => {
+        const { projectId } = job.data;
         if (!projectId) {
-            console.warn("[monitoring-delete] Missing projectId in project-deleted event");
+            console.warn("[monitoring-delete] Missing projectId");
             return;
         }
 
@@ -29,10 +20,19 @@ redisPubSub.consume(REDIS_CHANNELS.PROJECT_DELETED, async (message) => {
         await redis.del(`deployhub:user:project:${projectId}:monitoring`);
 
         console.log(`[monitoring-delete] Cleanup done for project ${projectId}`);
-    } catch (error) {
-        console.error("[monitoring-delete] Failed:", error?.message || error);
-        throw error;
+    },
+    {
+        connection,
+        concurrency: 1,
     }
+);
+
+deleteWorker.on("completed", (job) => {
+    console.log(`[monitoring-delete] Job completed for projectId: ${job.data.projectId}`);
 });
 
-console.log(`[monitoring-delete] Listening on ${REDIS_CHANNELS.PROJECT_DELETED}`);
+deleteWorker.on("failed", (job, err) => {
+    console.error(`[monitoring-delete] Job failed for projectId: ${job?.data?.projectId}`, err);
+});
+
+export default deleteWorker;
