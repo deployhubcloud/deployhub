@@ -2,16 +2,29 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../api/client'
+import { EmptyState, PageHeader, StatusBadge } from '../components/ui'
 
 export default function ProjectsPage() {
   const [q, setQ] = useState('')
+  const [status, setStatus] = useState('')
+  const [plan, setPlan] = useState('')
+  const [type, setType] = useState('')
   const [data, setData] = useState({ projects: [] })
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/projects', { params: { q, page: 1, limit: 50 } })
+      const res = await api.get('/projects', {
+        params: {
+          q,
+          status: status || undefined,
+          plan: plan || undefined,
+          type: type || undefined,
+          page: 1,
+          limit: 100,
+        },
+      })
       setData(res.data)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load projects')
@@ -20,64 +33,78 @@ export default function ProjectsPage() {
     }
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold">Projects</h1>
-          <p className="text-[var(--muted)] mt-1">Inspect domains, status, and ownership.</p>
-        </div>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            load()
-          }}
-        >
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name / subdomain / domain"
-            className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 min-w-[260px]"
-          />
-          <button className="rounded-lg bg-[var(--accent)] text-black px-4 font-medium">Search</button>
-        </form>
-      </div>
+      <PageHeader
+        title="Projects"
+        subtitle="Filter by status/plan/type. Open any project for full infrastructure detail."
+        actions={
+          <form
+            className="flex flex-wrap gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              load()
+            }}
+          >
+            <input className="input min-w-[220px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name / subdomain / domain / repo" />
+            <select className="select w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">Status</option>
+              {['queued','building','deploying','running','failed','stopped','crash','draft'].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <select className="select w-auto" value={plan} onChange={(e) => setPlan(e.target.value)}>
+              <option value="">Plan</option>
+              <option value="free">free</option>
+              <option value="starter">starter</option>
+              <option value="pro">pro</option>
+            </select>
+            <select className="select w-auto" value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="">Type</option>
+              {['static','node','go','python','java'].map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button className="btn btn-primary">Filter</button>
+          </form>
+        }
+      />
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--panel-2)] text-[var(--muted)] text-left">
+      <div className="table-wrap card !shadow-none">
+        <table className="table">
+          <thead>
             <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Plan</th>
-              <th className="px-4 py-3 font-medium">Subdomain</th>
+              <th>Project</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>Plan</th>
+              <th>Subdomain</th>
+              <th>Port</th>
+              <th>Owner</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="px-4 py-6 text-[var(--muted)]" colSpan={5}>Loading…</td></tr>
-            ) : data.projects?.length ? (
-              data.projects.map((p) => (
-                <tr key={p._id} className="border-t border-[var(--line)] hover:bg-[var(--panel-2)]/50">
-                  <td className="px-4 py-3">
-                    <Link className="text-[var(--accent)] hover:underline" to={`/projects/${p._id}`}>
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">{p.type}</td>
-                  <td className="px-4 py-3">{p.status}</td>
-                  <td className="px-4 py-3">{p.plan}</td>
-                  <td className="px-4 py-3 mono text-xs">{p.subdomain || '—'}</td>
-                </tr>
-              ))
-            ) : (
-              <tr><td className="px-4 py-6 text-[var(--muted)]" colSpan={5}>No projects found</td></tr>
+              <tr><td colSpan={7} className="text-[var(--muted)]">Loading…</td></tr>
+            ) : data.projects?.length ? data.projects.map((p) => (
+              <tr key={p._id}>
+                <td>
+                  <Link to={`/projects/${p._id}`} className="font-medium text-[#7ddeb0] hover:underline">{p.name}</Link>
+                  <div className="text-[11px] text-[var(--muted)] mono">{p._id}</div>
+                </td>
+                <td><StatusBadge value={p.status} /></td>
+                <td>{p.type}</td>
+                <td>{p.plan}</td>
+                <td className="mono text-xs">{p.subdomain || '—'}</td>
+                <td className="mono text-xs">{p.assignedPort || p.port || '—'}</td>
+                <td>
+                  <Link className="text-xs text-[var(--muted)] hover:text-[var(--text)]" to={`/users/${p.userId}`}>
+                    {String(p.userId).slice(-6)}
+                  </Link>
+                </td>
+              </tr>
+            )) : (
+              <tr><td colSpan={7}><EmptyState title="No projects found" /></td></tr>
             )}
           </tbody>
         </table>

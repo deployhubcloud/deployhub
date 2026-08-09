@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
+import { Shield } from 'lucide-react'
 
 export default function LoginPage() {
   const { login, verifyOtp } = useAuth()
@@ -33,7 +34,7 @@ export default function LoginPage() {
     setBusy(true)
     try {
       await verifyOtp(loginId, otp)
-      toast.success('Welcome, admin')
+      toast.success('Welcome back')
       navigate('/')
     } catch (err) {
       toast.error(err.response?.data?.message || 'OTP verification failed')
@@ -44,77 +45,54 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen grid place-items-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--panel)]/90 p-8 shadow-2xl">
-        <div className="mb-6">
-          <div className="text-xs uppercase tracking-[0.25em] text-[var(--muted)]">DeployHub</div>
-          <h1 className="text-3xl font-semibold mt-2">Admin access</h1>
-          <p className="text-sm text-[var(--muted)] mt-2">
-            {step === 'credentials'
-              ? 'Sign in with admin ID and password. A one-time code will be emailed.'
-              : 'Enter the OTP sent to the registered admin email.'}
-          </p>
+      <div className="w-full max-w-md card p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-11 w-11 rounded-xl bg-[var(--accent-soft)] border border-[rgba(47,158,108,.3)] grid place-items-center">
+            <Shield size={18} className="text-[#7ddeb0]" />
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">DeployHub</div>
+            <h1 className="text-2xl font-semibold">Admin Control</h1>
+          </div>
         </div>
+
+        <p className="text-sm text-[var(--muted)] mb-6">
+          {step === 'credentials'
+            ? 'Authenticate with admin credentials. A one-time code will be emailed.'
+            : 'Enter the OTP sent to the registered admin mailbox.'}
+        </p>
 
         {step === 'credentials' ? (
           <form onSubmit={onCredentials} className="space-y-4">
             <label className="block text-sm">
               <span className="text-[var(--muted)]">Admin ID</span>
-              <input
-                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 outline-none focus:border-[var(--accent)]"
-                value={adminId}
-                onChange={(e) => setAdminId(e.target.value)}
-                autoComplete="username"
-                required
-              />
+              <input className="input mt-1" value={adminId} onChange={(e) => setAdminId(e.target.value)} required autoComplete="username" />
             </label>
             <label className="block text-sm">
               <span className="text-[var(--muted)]">Password</span>
-              <input
-                type="password"
-                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 outline-none focus:border-[var(--accent)]"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
+              <input type="password" className="input mt-1" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </label>
-            <button
-              disabled={busy}
-              className="w-full rounded-lg bg-[var(--accent)] text-black font-semibold py-2.5 disabled:opacity-60"
-            >
-              {busy ? 'Sending OTP…' : 'Continue'}
-            </button>
+            <button disabled={busy} className="btn btn-primary w-full">{busy ? 'Sending OTP…' : 'Continue'}</button>
           </form>
         ) : (
           <form onSubmit={onOtp} className="space-y-4">
             <label className="block text-sm">
               <span className="text-[var(--muted)]">OTP</span>
               <input
-                className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 outline-none focus:border-[var(--accent)] mono tracking-[0.3em] text-center text-lg"
+                className="input mt-1 mono tracking-[0.35em] text-center text-lg"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 maxLength={6}
                 required
               />
             </label>
-            <button
-              disabled={busy}
-              className="w-full rounded-lg bg-[var(--accent)] text-black font-semibold py-2.5 disabled:opacity-60"
-            >
-              {busy ? 'Verifying…' : 'Verify & login'}
-            </button>
-            <button
-              type="button"
-              className="w-full text-sm text-[var(--muted)]"
-              onClick={() => setStep('credentials')}
-            >
-              Back
-            </button>
+            <button disabled={busy} className="btn btn-primary w-full">{busy ? 'Verifying…' : 'Verify & enter'}</button>
+            <button type="button" className="btn btn-ghost w-full" onClick={() => setStep('credentials')}>Back</button>
           </form>
         )}
 
         <p className="text-xs text-[var(--muted)] mt-6">
-          Session cookie only — closes with the browser.
+          Session cookie only — ends when the browser closes.
         </p>
       </div>
     </div>
