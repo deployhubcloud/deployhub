@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../../api/apiclient'
 
-const WELCOME = 'Hi — how can I help with your DeployHub projects?\n\nI can check status & logs, diagnose failures, analytics, domains, billing, redeploy, and more.'
+const WELCOME = 'Hi — how can I help with your DeployHub projects?\n\nI can check fleet health, diagnose failures, analytics, domains, billing, create a free static project, redeploy, and more.'
 
 function MessageBubble({ role, content }) {
   const isUser = role === 'user'
