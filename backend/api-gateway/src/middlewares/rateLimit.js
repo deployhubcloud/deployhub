@@ -16,6 +16,10 @@ const limits = {
     analytics: {
         time: 60,
         limit: 200
+    },
+    agent: {
+        time: 60,
+        limit: 40
     }
 }
 

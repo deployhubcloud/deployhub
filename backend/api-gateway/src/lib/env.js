@@ -7,7 +7,7 @@ const requiredEnv = [
     'INTERNAL_SECRET',
     'APIGATEWAY_SERVICE_NAME',
     'IDENTITY_SERVICE_URL', 'PROJECT_SERVICE_URL', 'MONITORING_SERVICE_URL', 'ANALYTICS_SERVICE_URL',
-    'ADMIN_SERVICE_URL',
+    'ADMIN_SERVICE_URL', 'AGENT_SERVICE_URL',
     'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASS']
 
 for (const key of requiredEnv) {
@@ -30,6 +30,7 @@ export const ENV = {
         BUILD: process.env.BUILD_SERVICE_URL,
         ANALYTICS: process.env.ANALYTICS_SERVICE_URL,
         ADMIN: process.env.ADMIN_SERVICE_URL,
+        AGENT: process.env.AGENT_SERVICE_URL,
     },
     ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
     ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,

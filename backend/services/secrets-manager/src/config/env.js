@@ -20,6 +20,7 @@ const schema = z.object({
   STREAM_SERVICE_PORT: z.coerce.number().default(4008),
   ANALYTICS_SERVICE_PORT: z.coerce.number().default(4009),
   ADMIN_SERVICE_PORT: z.coerce.number().default(4010),
+  AGENT_SERVICE_PORT: z.coerce.number().default(4011),
 
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
@@ -79,6 +80,11 @@ const schema = z.object({
   DEPLOY_SERVICE_URL: z.string().optional(),
   ANALYTICS_SERVICE_URL: z.string(),
   ADMIN_SERVICE_URL: z.string().default('http://localhost:4010'),
+  AGENT_SERVICE_URL: z.string().default('http://localhost:4011'),
+
+  GEMINI_API_KEY: z.string().min(20),
+  GEMINI_API_KEYS: z.string().optional(),
+  GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
 
   // admin panel credentials (single admin)
   ADMIN_ID: z.string().min(3),

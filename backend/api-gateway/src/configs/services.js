@@ -30,5 +30,11 @@ export const services = {
         isHealthy: false,
         lastChecked: null,
         lastError: null
+    },
+    Agent: {
+        url: ENV.SERVICES_URL.AGENT,
+        isHealthy: false,
+        lastChecked: null,
+        lastError: null
     }
 }
