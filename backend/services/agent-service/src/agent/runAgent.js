@@ -29,10 +29,12 @@ const groqPool = createGroqKeyPool(loadGroqApiKeys(process.env));
 console.log(`[groq] loaded ${groqPool.size} API key(s) for rotation`);
 
 function parseToolArgs(raw) {
-    if (!raw) return {};
-    if (typeof raw === 'object') return raw;
+    if (raw == null || raw === '') return {};
+    if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
     try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+        return {};
     } catch {
         return {};
     }
@@ -91,11 +93,14 @@ export async function runAgentChat({ user, messages, auth }) {
             const name = call.function?.name;
             const args = parseToolArgs(call.function?.arguments);
             const result = await executeTool(name, args, user, auth);
-            toolsUsed.push({ name, args: { ...args, confirmed: args.confirmed === true } });
+            toolsUsed.push({
+                name,
+                args: { ...args, confirmed: args?.confirmed === true },
+            });
             chatMessages.push({
                 role: 'tool',
                 tool_call_id: call.id,
-                content: JSON.stringify(result),
+                content: JSON.stringify(result ?? { ok: false, message: 'Empty tool result' }),
             });
         }
     }

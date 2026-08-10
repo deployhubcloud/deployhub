@@ -76,6 +76,7 @@ function isFailedStatus(s = '') {
 }
 
 export async function executeTool(name, args, user, auth = {}) {
+    args = args && typeof args === 'object' && !Array.isArray(args) ? args : {};
     const blocked = requireConfirmed(name, args);
     if (blocked) return blocked;
 
