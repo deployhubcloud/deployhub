@@ -82,9 +82,14 @@ const schema = z.object({
   ADMIN_SERVICE_URL: z.string().default('http://localhost:4010'),
   AGENT_SERVICE_URL: z.string().default('http://localhost:4011'),
 
-  GEMINI_API_KEY: z.string().min(20),
-  GEMINI_API_KEYS: z.string().optional(),
-  GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
+  // Groq for dashboard AI agent (rotate up to 5 free keys)
+  GROQ_API_KEY: z.string().min(20),
+  GROQ_API_KEY_2: z.string().min(20).optional(),
+  GROQ_API_KEY_3: z.string().min(20).optional(),
+  GROQ_API_KEY_4: z.string().min(20).optional(),
+  GROQ_API_KEY_5: z.string().min(20).optional(),
+  GROQ_API_KEYS: z.string().optional(),
+  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
 
   // admin panel credentials (single admin)
   ADMIN_ID: z.string().min(3),

@@ -11,13 +11,12 @@ for (const key of required) {
     }
 }
 
-const hasGeminiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.GEMINI_API_KEYS ||
-    process.env.GEMINI_API_KEY_2;
+const hasGroqKey =
+    process.env.GROQ_API_KEY ||
+    process.env.GROQ_API_KEYS
 
-if (!hasGeminiKey) {
-    throw new Error('Missing Env: GEMINI_API_KEY (or GEMINI_API_KEYS / GEMINI_API_KEY_2…)');
+if (!hasGroqKey) {
+    throw new Error('Missing Env: GROQ_API_KEY (or GROQ_API_KEYS / GROQ_API_KEY_2…)');
 }
 
 export const agentEnv = {
@@ -34,6 +33,6 @@ export const agentEnv = {
     BUILD_SERVICE_URL: process.env.BUILD_SERVICE_URL,
     DEPLOY_SERVICE_URL: process.env.DEPLOY_SERVICE_URL,
     ANALYTICS_SERVICE_URL: process.env.ANALYTICS_SERVICE_URL,
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+    GROQ_API_KEY: process.env.GROQ_API_KEY,
+    GROQ_MODEL: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
 };

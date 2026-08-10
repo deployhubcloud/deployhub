@@ -1,7 +1,7 @@
 import { agentEnv } from '../lib/env.js';
-import { toolDeclarations } from './toolDeclarations.js';
+import { groqTools } from './toolDeclarations.js';
 import { executeTool } from './executeTool.js';
-import { createGeminiKeyPool, loadGeminiApiKeys } from './geminiKeys.js';
+import { createGroqKeyPool, loadGroqApiKeys } from './groqKeys.js';
 
 const SYSTEM_INSTRUCTION = `You are DeployHub Assistant — an advanced ops helper for a logged-in DeployHub user.
 
@@ -25,83 +25,79 @@ Security:
 - Do not dump full env secret values (tools already redact them).
 `;
 
-const geminiPool = createGeminiKeyPool(loadGeminiApiKeys(process.env));
-console.log(`[gemini] loaded ${geminiPool.size} API key(s) for rotation`);
+const groqPool = createGroqKeyPool(loadGroqApiKeys(process.env));
+console.log(`[groq] loaded ${groqPool.size} API key(s) for rotation`);
 
-function extractText(response) {
-    const parts = response?.candidates?.[0]?.content?.parts || [];
-    return parts
-        .filter((p) => typeof p.text === 'string')
-        .map((p) => p.text)
-        .join('\n')
-        .trim();
-}
-
-function extractFunctionCalls(response) {
-    const parts = response?.candidates?.[0]?.content?.parts || [];
-    return parts
-        .filter((p) => p.functionCall)
-        .map((p) => p.functionCall);
+function parseToolArgs(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return {};
+    }
 }
 
 export async function runAgentChat({ user, messages, auth }) {
-    const model = agentEnv.GEMINI_MODEL;
-    let keyIndex = geminiPool.nextStartIndex();
+    const model = agentEnv.GROQ_MODEL;
+    let keyIndex = groqPool.nextStartIndex();
 
-    const contents = messages.map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: String(m.content || '') }],
-    }));
+    const chatMessages = [
+        { role: 'system', content: SYSTEM_INSTRUCTION },
+        ...messages.map((m) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: String(m.content || ''),
+        })),
+    ];
 
-    if (!contents.length) {
-        contents.push({ role: 'user', parts: [{ text: 'Hi' }] });
+    if (chatMessages.length === 1) {
+        chatMessages.push({ role: 'user', content: 'Hi' });
     }
 
     const toolsUsed = [];
     const maxRounds = 10;
 
     for (let round = 0; round < maxRounds; round++) {
-        const { response, keyIndex: usedKey } = await geminiPool.generateContent(
+        const { response, keyIndex: usedKey } = await groqPool.chatCompletions(
             {
                 model,
-                contents,
-                config: {
-                    systemInstruction: SYSTEM_INSTRUCTION,
-                    tools: [{ functionDeclarations: toolDeclarations }],
-                    temperature: 0.25,
-                },
+                messages: chatMessages,
+                tools: groqTools,
+                tool_choice: 'auto',
+                temperature: 0.25,
             },
             { startIndex: keyIndex }
         );
         keyIndex = usedKey;
 
-        const calls = extractFunctionCalls(response);
-        if (!calls.length) {
-            const text = extractText(response) || 'How can I help with your DeployHub projects?';
+        const msg = response?.choices?.[0]?.message;
+        if (!msg) {
+            return { reply: 'How can I help with your DeployHub projects?', toolsUsed };
+        }
+
+        const toolCalls = msg.tool_calls || [];
+        if (!toolCalls.length) {
+            const text = (msg.content || '').trim() || 'How can I help with your DeployHub projects?';
             return { reply: text, toolsUsed };
         }
 
-        const modelContent = response.candidates[0].content;
-        contents.push(modelContent);
+        chatMessages.push({
+            role: 'assistant',
+            content: msg.content || null,
+            tool_calls: toolCalls,
+        });
 
-        const functionResponseParts = [];
-        for (const call of calls) {
-            const name = call.name;
-            const args = call.args || {};
+        for (const call of toolCalls) {
+            const name = call.function?.name;
+            const args = parseToolArgs(call.function?.arguments);
             const result = await executeTool(name, args, user, auth);
             toolsUsed.push({ name, args: { ...args, confirmed: args.confirmed === true } });
-            functionResponseParts.push({
-                functionResponse: {
-                    name,
-                    response: result,
-                },
+            chatMessages.push({
+                role: 'tool',
+                tool_call_id: call.id,
+                content: JSON.stringify(result),
             });
         }
-
-        contents.push({
-            role: 'user',
-            parts: functionResponseParts,
-        });
     }
 
     return {

@@ -211,9 +211,9 @@ export function getSecretsForService(serviceName) {
       BUILD_SERVICE_URL: env.BUILD_SERVICE_URL,
       DEPLOY_SERVICE_URL: env.DEPLOY_SERVICE_URL,
       ANALYTICS_SERVICE_URL: env.ANALYTICS_SERVICE_URL,
-      GEMINI_API_KEY: env.GEMINI_API_KEY,
-      ...(env.GEMINI_API_KEYS ? { GEMINI_API_KEYS: env.GEMINI_API_KEYS } : {}),
-      GEMINI_MODEL: env.GEMINI_MODEL,
+      GROQ_API_KEY: env.GROQ_API_KEY,
+      ...(env.GROQ_API_KEYS ? { GROQ_API_KEYS: env.GROQ_API_KEYS } : {}),
+      GROQ_MODEL: env.GROQ_MODEL,
     },
   };
 

@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 
 function uniqueKeys(list) {
     const seen = new Set();
@@ -12,55 +12,59 @@ function uniqueKeys(list) {
     return out;
 }
 
-
-export function loadGeminiApiKeys(env = process.env) {
-    const fromList = String(env.GEMINI_API_KEYS || '')
+/**
+ * Collect up to 5 Groq API keys from:
+ * - GROQ_API_KEYS (comma/newline separated)
+ * - GROQ_API_KEY, GROQ_API_KEY_2 … GROQ_API_KEY_5
+ */
+export function loadGroqApiKeys(env = process.env) {
+    const fromList = String(env.GROQ_API_KEYS || '')
         .split(/[\n,]+/)
         .map((s) => s.trim())
         .filter(Boolean);
 
     const numbered = [
-        env.GEMINI_API_KEY,
-        env.GEMINI_API_KEY_2,
-        env.GEMINI_API_KEY_3,
-        env.GEMINI_API_KEY_4,
-        env.GEMINI_API_KEY_5,
+        env.GROQ_API_KEY,
+        env.GROQ_API_KEY_2,
+        env.GROQ_API_KEY_3,
+        env.GROQ_API_KEY_4,
+        env.GROQ_API_KEY_5,
     ].filter(Boolean);
 
     const keys = uniqueKeys([...numbered, ...fromList]).slice(0, 5);
     if (!keys.length) {
-        throw new Error('No Gemini API keys configured (set GEMINI_API_KEY or GEMINI_API_KEYS)');
+        throw new Error('No Groq API keys configured (set GROQ_API_KEY or GROQ_API_KEYS)');
     }
     return keys;
 }
 
 function isQuotaOrRateLimitError(error) {
-    const status = error?.status || error?.error?.code || error?.code;
+    const status = error?.status || error?.error?.code || error?.code || error?.statusCode;
     const message = String(
         error?.error?.message || error?.message || error?.statusText || ''
     ).toLowerCase();
 
     if (status === 429 || status === 403) return true;
-    if (String(status).toUpperCase() === 'RESOURCE_EXHAUSTED') return true;
     return (
         message.includes('quota') ||
         message.includes('rate limit') ||
         message.includes('rate_limit') ||
-        message.includes('resource_exhausted') ||
         message.includes('too many requests') ||
-        message.includes('exceeded')
+        message.includes('exceeded') ||
+        message.includes('tpm') ||
+        message.includes('rpm')
     );
 }
 
 let rrIndex = 0;
 
-export function createGeminiKeyPool(keys) {
+export function createGroqKeyPool(keys) {
     const apiKeys = uniqueKeys(keys);
     if (!apiKeys.length) {
-        throw new Error('Gemini key pool is empty');
+        throw new Error('Groq key pool is empty');
     }
 
-    const clients = apiKeys.map((apiKey) => new GoogleGenAI({ apiKey }));
+    const clients = apiKeys.map((apiKey) => new Groq({ apiKey }));
 
     return {
         size: apiKeys.length,
@@ -71,24 +75,21 @@ export function createGeminiKeyPool(keys) {
             return start;
         },
 
-        
-        async generateContent(request, { startIndex = this.nextStartIndex() } = {}) {
+        async chatCompletions(request, { startIndex = this.nextStartIndex() } = {}) {
             let lastError;
             for (let attempt = 0; attempt < clients.length; attempt++) {
                 const idx = (startIndex + attempt) % clients.length;
-                const ai = clients[idx];
+                const client = clients[idx];
                 try {
-                    const response = await ai.models.generateContent(request);
+                    const response = await client.chat.completions.create(request);
                     if (attempt > 0) {
-                        console.warn(`[gemini] succeeded on key #${idx + 1} after failover`);
+                        console.warn(`[groq] succeeded on key #${idx + 1} after failover`);
                     }
                     return { response, keyIndex: idx };
                 } catch (error) {
                     lastError = error;
                     if (isQuotaOrRateLimitError(error) && attempt < clients.length - 1) {
-                        console.warn(
-                            `[gemini] key #${idx + 1} limited/exhausted — trying next key`
-                        );
+                        console.warn(`[groq] key #${idx + 1} limited/exhausted — trying next key`);
                         continue;
                     }
                     throw error;
