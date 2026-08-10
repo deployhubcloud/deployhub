@@ -2,6 +2,7 @@ import { Deployment } from '../model/deployment.model.js';
 import { AppError } from '../../../../shared/errors/AppError.js';
 import { assertUserOwnsProject } from '../../../../shared/utils/assertUserOwnsProject.js';
 import { DEPLOY_SERVICE_ENV } from '../lib/env.js';
+import axios from 'axios';
 
 export const listDeploymentsForUser = async (userId, projectId, { limit = 20 } = {}) => {
     await assertUserOwnsProject({
@@ -40,6 +41,7 @@ export const getLatestDeploymentForUser = async (userId, projectId) => {
         talkingSecret: DEPLOY_SERVICE_ENV.INTERNAL_SERVICE_TALKING_SECRET,
         projectId,
         userId,
+        axiosInstance: axios
     });
 
     const d = await Deployment.findOne({ project: projectId })

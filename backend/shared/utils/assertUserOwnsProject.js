@@ -1,17 +1,13 @@
-import axios from 'axios';
 import { AppError } from '../errors/AppError.js';
 
-/**
- * Verify project belongs to userId via project-service internal API.
- * Requires both gateway internal secret + microservice talking secret.
- */
+
 export async function assertUserOwnsProject({
     projectServiceUrl,
     internalSecret,
     talkingSecret,
     projectId,
     userId,
-    axiosInstance = axios,
+    axiosInstance
 }) {
     if (!projectId || !userId) {
         throw new AppError('Project not found', 404);

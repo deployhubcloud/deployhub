@@ -2,6 +2,7 @@ import { assertUserOwnsProject } from '../../../../shared/utils/assertUserOwnsPr
 import Uptime from '../models/uptime.model.js';
 import { getRedis } from '../core/redis/client.js';
 import { env } from '../lib/env.js';
+import axios from 'axios';
 
 export const getUptimeForUser = async (userId, projectId) => {
     await assertUserOwnsProject({
@@ -10,6 +11,7 @@ export const getUptimeForUser = async (userId, projectId) => {
         talkingSecret: env.INTERNAL_SERVICE_TALKING_SECRET,
         projectId,
         userId,
+        axiosInstance: axios
     });
 
     const redis = getRedis();
