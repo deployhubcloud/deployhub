@@ -363,85 +363,85 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
             }));
         }
 
-        if (firstTime && !projectData.isMicroservice) {
+        // if (firstTime && !projectData.isMicroservice) {
 
-            const isProduction = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? true : false
+        //     const isProduction = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? true : false
 
-            const localNginxSubdomainDir = path.join(process.cwd(), 'nginx/subdomains')
-            if (!fs.existsSync(localNginxSubdomainDir)) {
-                fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
-            }
+        //     const localNginxSubdomainDir = path.join(process.cwd(), 'nginx/subdomains')
+        //     if (!fs.existsSync(localNginxSubdomainDir)) {
+        //         fs.mkdirSync(localNginxSubdomainDir, { recursive: true })
+        //     }
 
-            const nginxSubdomainDir = isProduction
-                ? '/home/rahul/docker/nginx/subdomains'
-                : localNginxSubdomainDir;
+        //     const nginxSubdomainDir = isProduction
+        //         ? '/home/rahul/docker/nginx/subdomains'
+        //         : localNginxSubdomainDir;
 
-            fs.mkdirSync(nginxSubdomainDir, { recursive: true });
+        //     fs.mkdirSync(nginxSubdomainDir, { recursive: true });
 
-            let nginxConfig;
-            if (projectData.type === 'static') {
-                nginxConfig = writeNginxConfig({
-                    type: 'static',
-                    staticPath: `/data/static/${projectId}`,
-                    domain: `${projectData.subdomain}.deployhub.online`,
-                    sslDomain: 'deployhub.cloud',
-                    outputPath: null
-                });
-            } else {
-                nginxConfig = writeNginxConfig({
-                    type: 'backend',
-                    domain: `${projectData.subdomain}.deployhub.online`,
-                    sslDomain: 'deployhub.cloud',
-                    target: `http://host.docker.internal:8081`,
-                    outputPath: null
-                });
-            }
+        //     let nginxConfig;
+        //     if (projectData.type === 'static') {
+        //         nginxConfig = writeNginxConfig({
+        //             type: 'static',
+        //             staticPath: `/data/static/${projectId}`,
+        //             domain: `${projectData.subdomain}.deployhub.online`,
+        //             sslDomain: 'deployhub.cloud',
+        //             outputPath: null
+        //         });
+        //     } else {
+        //         nginxConfig = writeNginxConfig({
+        //             type: 'backend',
+        //             domain: `${projectData.subdomain}.deployhub.online`,
+        //             sslDomain: 'deployhub.cloud',
+        //             target: `http://host.docker.internal:8081`,
+        //             outputPath: null
+        //         });
+        //     }
 
-            // helper container banao sirf nginx conf dir mount karke
-            await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`);
+        //     // helper container banao sirf nginx conf dir mount karke
+        //     await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`);
 
-            let nginxContainer = null;
-            try {
-                nginxContainer = await docker.createContainer({
-                    Image: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
-                    name: `deployhub-nginx-helper-${projectId}`,
-                    HostConfig: {
-                        Binds: [`${nginxSubdomainDir}:/data/nginx/subdomains`],
-                        AutoRemove: false,
-                    },
-                });
-                await nginxContainer.start();
+        //     let nginxContainer = null;
+        //     try {
+        //         nginxContainer = await docker.createContainer({
+        //             Image: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
+        //             name: `deployhub-nginx-helper-${projectId}`,
+        //             HostConfig: {
+        //                 Binds: [`${nginxSubdomainDir}:/data/nginx/subdomains`],
+        //                 AutoRemove: false,
+        //             },
+        //         });
+        //         await nginxContainer.start();
 
-                // container ke through host pe likho
-                await writeNginxFileToHost(
-                    nginxContainer,
-                    nginxConfig,
-                    '/data/nginx/subdomains',
-                    `${projectData.subdomain}.conf`
-                );
+        //         // container ke through host pe likho
+        //         await writeNginxFileToHost(
+        //             nginxContainer,
+        //             nginxConfig,
+        //             '/data/nginx/subdomains',
+        //             `${projectData.subdomain}.conf`
+        //         );
 
-            } finally {
-                if (nginxContainer) {
+        //     } finally {
+        //         if (nginxContainer) {
 
-                    try {
-                        const info = await nginxContainer.inspect();
-                        if (info.State.Running) await nginxContainer.stop({ t: 5 });
-                    } catch (e) {
-                        console.warn(`[nginx-helper] stop failed: ${e.message}`);
-                    }
+        //             try {
+        //                 const info = await nginxContainer.inspect();
+        //                 if (info.State.Running) await nginxContainer.stop({ t: 5 });
+        //             } catch (e) {
+        //                 console.warn(`[nginx-helper] stop failed: ${e.message}`);
+        //             }
 
-                    try {
-                        await nginxContainer.remove({ force: true });
-                    } catch (e) {
-                        console.warn(`[nginx-helper] remove failed: ${e.message}`);
-                    }
-                }
-            }
+        //             try {
+        //                 await nginxContainer.remove({ force: true });
+        //             } catch (e) {
+        //                 console.warn(`[nginx-helper] remove failed: ${e.message}`);
+        //             }
+        //         }
+        //     }
 
-            if (isProduction) await reloadNginx(docker);
-        }
+        //     if (isProduction) await reloadNginx(docker);
+        // }
 
-        if (firstTime) {
+
             if (userPlan.uptime_monitoring) {
 
                 const healthPath = projectData.monitor.healthPath.startsWith("/") ? projectData.monitor.healthPath : `/${projectData.monitor.healthPath}`;
@@ -461,7 +461,6 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 }
 
             }
-        }
 
         await deleteCacheBuildData(projectId);
 
@@ -503,7 +502,7 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
 deployWorker.on("completed", async (job, results) => {
     const { firstTime, projectId } = job.data;
 
-    if (firstTime && results.usergithubToken && results.userPlan.github_Ci_Cd) {
+    if (results.usergithubToken && results.userPlan.github_Ci_Cd) {
         const repoLinkWithoutGit = results.repoLink.endsWith(".git")
             ? results.repoLink.slice(0, -4)
             : results.repoLink;

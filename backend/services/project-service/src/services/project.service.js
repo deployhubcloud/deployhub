@@ -9,7 +9,7 @@ import { getRedis } from '../core/redis/client.js';
 import { Project } from '../models/project.model.js';
 import { PendingOrder } from '../models/PendingOrder.js';
 import { CompletedOrder } from '../models/completedOrder.model.js';
-import { buildQueue } from '../utils/queues.js';
+import { buildQueue, subdomainChangeQueue } from '../utils/queues.js';
 import { v4 as uuidv4 } from 'uuid';
 import { QUEUE_NAMES } from '../../../../shared/queues/queueNames.js';
 import { randomUUID } from "crypto";
@@ -201,7 +201,7 @@ const verifyRazorpaySignature = ({ orderId, paymentId, signature }) => {
         Buffer.from(signature)
     );
 };
- 
+
 const planAmountInPaise = (planName, months) => {
     const amount = Number(plans[planName]?.price || 0) * months * 100;
     return Math.round(amount);
@@ -294,7 +294,15 @@ export const createProjectForPlan = async (userId, body, {
     }
 
     await queueProjectBuild(project);
-    await publishProjectStatus(redisclient, { projectId: project._id, status: 'queued' })
+    await publishProjectStatus(redisclient, { projectId: project._id, status: 'queued' });
+    await subdomainChangeQueue.add('subdomain-change', {
+        projectId: project._id,
+        userId: project.userId,
+        oldSubdomain: null,
+        newSubdomain: project.subdomain,
+        projectType: project.type,
+        assignedPort: project.assignedPort,
+    });
 
     return { project };
 };
