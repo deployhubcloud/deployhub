@@ -14,7 +14,7 @@ export const getProjectBillingController = async (req, res) => {
 
         const projectId = req.params.projectId;
 
-        const billingdata = await getProjectBilling(projectId);
+        const billingdata = await getProjectBilling(projectId, req.user._id);
 
         return res.status(200).json({
             data: billingdata

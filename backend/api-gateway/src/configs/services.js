@@ -25,6 +25,18 @@ export const services = {
         lastChecked: null,
         lastError: null
     },
+    Deploy: {
+        url: ENV.SERVICES_URL.DEPLOY,
+        isHealthy: false,
+        lastChecked: null,
+        lastError: null
+    },
+    Monitoring: {
+        url: ENV.SERVICES_URL.MONITORING,
+        isHealthy: false,
+        lastChecked: null,
+        lastError: null
+    },
     Admin: {
         url: ENV.SERVICES_URL.ADMIN,
         isHealthy: false,

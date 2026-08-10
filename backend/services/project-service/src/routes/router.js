@@ -17,6 +17,15 @@ import { getLatestPlans } from '../controllers/getPlans.controller.js';
 import rateLimitMiddleware from '../../../../shared/middlewares/rateLimit.js';
 import { getRedis } from '../core/redis/client.js';
 import { deleteProjectController } from '../controllers/deleteProject.js';
+import {
+    getEnvKeysController,
+    getProjectLiveStatusController,
+    mergeEnvSettingsController,
+} from '../controllers/projectExtras.controller.js';
+import {
+    mergeEnvValidators,
+    projectIdParamValidator,
+} from '../validators/projectExtras.validators.js';
 
 const projectRouter = express.Router();
 
@@ -28,14 +37,17 @@ projectRouter.get('/for-other-service/:projectId', internalApiCallMiddleware({ s
 projectRouter.post('/redeploy/:projectId', reDeployController);
 projectRouter.get('/:projectId/meta', getProjectMetaController);
 projectRouter.get('/overview/:projectId', getProjectDataByIdConroller);
+projectRouter.get('/status/:projectId', projectIdParamValidator, getProjectLiveStatusController);
 
 
 // setttings
 projectRouter.get('/settings/:projectId', projectSettingValidators, projectSettingsController);
+projectRouter.get('/settings/:projectId/env-keys', projectIdParamValidator, getEnvKeysController);
 projectRouter.get('/settings/domain/:projectId', getDomainSettingsValidators, getDomainSettingsController);
 projectRouter.patch('/settings/build-and-start/:projectId', updateBuildandStartSettingsValidators, updateBuildandStartSettingsController);
 projectRouter.patch('/settings/notification/:projectId', updateHealthMonitoringAndNotificationValidator, updateHealthMonitoringAndNotificationController);
 projectRouter.patch('/settings/env/:projectId', updateEnvSettingsValidators, updateEnvSettingsController);
+projectRouter.patch('/settings/env/:projectId/merge', mergeEnvValidators, mergeEnvSettingsController);
 
 
 // domain
@@ -50,7 +62,8 @@ projectRouter.get("/billing/:projectId", getProjectBillingValidators, getProject
 
 // plans
 projectRouter.get('/plans', getLatestPlans)
-export default projectRouter;
 
 // delete project
 projectRouter.delete('/project/:projectId', deleteProjectController)
+
+export default projectRouter;

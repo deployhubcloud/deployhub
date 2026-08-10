@@ -341,6 +341,254 @@ export const toolDeclarations = [
             required: ['confirmed'],
         },
     },
+
+    // ── advanced / newly wired APIs ──────────────────────────
+    {
+        name: 'get_project_meta',
+        description: 'Get lightweight project meta (name, plan, type).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'list_projects_filtered',
+        description: 'List projects filtered by status, type, and/or plan.',
+        parameters: {
+            type: 'object',
+            properties: {
+                status: { type: 'string' },
+                type: { type: 'string', description: 'static|node|python|go|java' },
+                plan: { type: 'string', description: 'free|starter|pro' },
+            },
+        },
+    },
+    {
+        name: 'get_build_details',
+        description: 'Get a single build record by buildId (status, commit, timings, logUrl).',
+        parameters: {
+            type: 'object',
+            properties: {
+                buildId: { type: 'string' },
+                projectId: { type: 'string', description: 'Optional ownership check' },
+            },
+            required: ['buildId'],
+        },
+    },
+    {
+        name: 'get_latest_build_id',
+        description: 'Get the latest build id for a project.',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_monitoring_status',
+        description: 'Get uptime-monitoring schedule from Redis (ping URL, interval, next ping).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_notification_settings',
+        description: 'Get notification channel config for a project (secrets partially redacted).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'check_fleet_health',
+        description: 'Check live status for ALL user projects in one shot. Best for "are any projects down?".',
+        parameters: { type: 'object', properties: {} },
+    },
+    {
+        name: 'compare_projects',
+        description: 'Compare two owned projects (type, plan, status, builds, live status).',
+        parameters: {
+            type: 'object',
+            properties: {
+                projectIdA: { type: 'string' },
+                projectIdB: { type: 'string' },
+            },
+            required: ['projectIdA', 'projectIdB'],
+        },
+    },
+    {
+        name: 'analyze_build_failure',
+        description:
+            'Fetch the latest failed build logs for a project and extract error/warning lines for diagnosis.',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'explain_plan',
+        description: 'Explain what a DeployHub plan includes (price, types, domains, monitoring). Pass plan name or omit for all.',
+        parameters: {
+            type: 'object',
+            properties: {
+                plan: { type: 'string', description: 'free|starter|pro' },
+            },
+        },
+    },
+    {
+        name: 'upsert_env_vars',
+        description:
+            'DESTRUCTIVE. Merge/update specific env keys (does not wipe unrelated keys). Pass patchJson as JSON object string. confirmed=true after yes.',
+        parameters: {
+            type: 'object',
+            properties: {
+                projectId: { type: 'string' },
+                ...confirmed,
+                patchJson: { type: 'string', description: 'JSON object of keys to set/overwrite' },
+                removeKeysJson: {
+                    type: 'string',
+                    description: 'Optional JSON array of env keys to remove',
+                },
+            },
+            required: ['projectId', 'patchJson', 'confirmed'],
+        },
+    },
+    {
+        name: 'create_free_project',
+        description:
+            'DESTRUCTIVE. Create a FREE static project only (paid plans need dashboard payment). Ask confirmation first. Required: projectName, version (22|24), repoUrl, branch, buildCommand, publishDir.',
+        parameters: {
+            type: 'object',
+            properties: {
+                ...confirmed,
+                projectName: { type: 'string' },
+                version: { type: 'string', description: '22 or 24' },
+                repoUrl: { type: 'string' },
+                branch: { type: 'string' },
+                rootDirectory: { type: 'string' },
+                buildCommand: { type: 'string' },
+                publishDir: { type: 'string' },
+                subdomain: { type: 'string' },
+                envJson: { type: 'string', description: 'Optional env JSON object string' },
+            },
+            required: [
+                'confirmed',
+                'projectName',
+                'version',
+                'repoUrl',
+                'branch',
+                'buildCommand',
+                'publishDir',
+            ],
+        },
+    },
+    {
+        name: 'update_display_name',
+        description: 'DESTRUCTIVE. Update the logged-in user display/full name. confirmed=true after yes.',
+        parameters: {
+            type: 'object',
+            properties: {
+                ...confirmed,
+                fullname: { type: 'string' },
+            },
+            required: ['fullname', 'confirmed'],
+        },
+    },
+    {
+        name: 'get_build_stats',
+        description: 'Get success/failed/pending build counts for a project (user-owned only).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_latest_build',
+        description: 'Get the latest build object for a project (status, commit, logsUrl).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_project_live_status_api',
+        description: 'Get live + DB status via project-service secured /status API.',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_env_keys',
+        description: 'List environment variable KEY names only (values never returned).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'merge_env_vars',
+        description:
+            'DESTRUCTIVE. Secure merge endpoint: patch/remove env keys without wiping others. Pass patchJson object string. confirmed=true after yes.',
+        parameters: {
+            type: 'object',
+            properties: {
+                projectId: { type: 'string' },
+                ...confirmed,
+                patchJson: { type: 'string' },
+                removeKeysJson: { type: 'string', description: 'Optional JSON array of keys to remove' },
+            },
+            required: ['projectId', 'patchJson', 'confirmed'],
+        },
+    },
+    {
+        name: 'list_deployments',
+        description: 'List recent deployments for a project (status, buildId, deployedAt).',
+        parameters: {
+            type: 'object',
+            properties: {
+                projectId: { type: 'string' },
+                limit: { type: 'number' },
+            },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_latest_deployment',
+        description: 'Get the latest deployment for a project.',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_uptime_status',
+        description: 'Get monitoring/uptime schedule + lastDownAt for a project (ownership verified).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
+    {
+        name: 'get_analytics_health_score',
+        description: 'Get traffic health score/grade from analytics (errors vs requests).',
+        parameters: {
+            type: 'object',
+            properties: { projectId: { type: 'string' } },
+            required: ['projectId'],
+        },
+    },
 ];
 
 export const groqTools = toolDeclarations.map((t) => ({

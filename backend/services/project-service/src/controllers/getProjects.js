@@ -42,7 +42,7 @@ export const getProjectDataByIdConroller = async (req, res) => {
 
         const { projectId } = req.params;
 
-        const data = await getProjectDataByIdService(projectId);
+        const data = await getProjectDataByIdService(projectId, req.user._id);
 
         return res.status(200).json({
             data

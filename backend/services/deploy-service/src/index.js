@@ -38,6 +38,12 @@ app.use(createInternalAUthMiddleware({
 import adminDeploymentsRouter from "./routes/admin.routes.js";
 app.use('/admin', adminDeploymentsRouter);
 
+import userContext from "../../../shared/middlewares/userContext.js";
+app.use(userContext);
+
+import userDeploymentsRouter from "./routes/user.routes.js";
+app.use('/', userDeploymentsRouter);
+
 
 export default async function startApp(port, service_name) {
     await connectDb();

@@ -34,6 +34,12 @@ app.use(createInternalAUthMiddleware({
     header: "x-internal-secret",
 }));
 
+import userContext from "../../../shared/middlewares/userContext.js";
+app.use(userContext);
+
+import userRoutes from "./routes/user.routes.js";
+app.use('/', userRoutes);
+
 
 export default async function startApp() {
     await monitoringDbConnect();

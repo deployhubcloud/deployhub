@@ -14,7 +14,7 @@ export const projectSettingsController = async (req, res) => {
         const projectId = req.params.projectId;
 
 
-        const settings = await projectSettings(projectId);
+        const settings = await projectSettings(projectId, req.user._id);
 
         return res.status(200).json({
             settings

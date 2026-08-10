@@ -92,8 +92,10 @@ export const changeSubdomain = async (projectId, oldsubDomain, userId, newSubdom
 }
 
 
-export const getDomainSettings = async (projectId) => {
-    const domainSettings = await Project.findById(projectId).select("subdomain customDomains internalUrl isMicroservice plan").lean();
+export const getDomainSettings = async (projectId, userId) => {
+    const filter = { _id: projectId };
+    if (userId) filter.userId = userId;
+    const domainSettings = await Project.findOne(filter).select("subdomain customDomains internalUrl isMicroservice plan").lean();
 
     if (!domainSettings) {
         throw new AppError("Invalid Project id or Project not Found", 404)

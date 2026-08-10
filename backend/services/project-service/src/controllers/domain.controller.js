@@ -40,7 +40,7 @@ export const getDomainSettingsController = async (req, res) => {
 
         const projectId = req.params.projectId;
 
-        const domainSettings = await getDomainSettings(projectId);
+        const domainSettings = await getDomainSettings(projectId, req.user._id);
 
         return res.status(200).json({
             domainSettings

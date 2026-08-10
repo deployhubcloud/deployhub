@@ -8,6 +8,12 @@ export function createUserClient(user, auth = {}) {
         'Content-Type': 'application/json',
     };
 
+    const talkingHeaders = {
+        'x-internal-secret': agentEnv.INTERNAL_SECRET,
+        'x-microservice-secret': agentEnv.INTERNAL_SERVICE_TALKING_SECRET,
+        'Content-Type': 'application/json',
+    };
+
     const clients = {
         project: axios.create({
             baseURL: agentEnv.PROJECT_SERVICE_URL,
@@ -19,11 +25,37 @@ export function createUserClient(user, auth = {}) {
             headers,
             timeout: 30000,
         }),
+        projectInternal: axios.create({
+            baseURL: agentEnv.PROJECT_SERVICE_URL,
+            headers: talkingHeaders,
+            timeout: 30000,
+        }),
+        buildInternal: axios.create({
+            baseURL: agentEnv.BUILD_SERVICE_URL,
+            headers: talkingHeaders,
+            timeout: 30000,
+        }),
     };
 
     if (agentEnv.ANALYTICS_SERVICE_URL) {
         clients.analytics = axios.create({
             baseURL: agentEnv.ANALYTICS_SERVICE_URL,
+            headers,
+            timeout: 15000,
+        });
+    }
+
+    if (agentEnv.MONITORING_SERVICE_URL) {
+        clients.monitoring = axios.create({
+            baseURL: agentEnv.MONITORING_SERVICE_URL,
+            headers,
+            timeout: 15000,
+        });
+    }
+
+    if (agentEnv.DEPLOY_SERVICE_URL) {
+        clients.deploy = axios.create({
+            baseURL: agentEnv.DEPLOY_SERVICE_URL,
             headers,
             timeout: 15000,
         });

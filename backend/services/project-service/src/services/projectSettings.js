@@ -3,9 +3,12 @@ import { getRedis } from "../core/redis/client.js";
 import { Project } from "../models/project.model.js"
 import { deleteProjectQueue, startStopHealthCheck } from "../utils/queues.js";
 
-export const projectSettings = async (projectId) => {
+export const projectSettings = async (projectId, userId) => {
 
-    const projectSettings = await Project.findById(projectId).select("name plan type version repoUrl branch rootDirectory buildCommand publishDir startCommand port subdomain env monitor notifications").lean();
+    const filter = { _id: projectId };
+    if (userId) filter.userId = userId;
+
+    const projectSettings = await Project.findOne(filter).select("name plan type version repoUrl branch rootDirectory buildCommand publishDir startCommand port subdomain env monitor notifications").lean();
     if (!projectSettings) {
         throw new AppError('Invalid Proejct or Prject not Found', 404)
     }

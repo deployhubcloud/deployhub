@@ -3,13 +3,16 @@ import { AppError } from "../../../../shared/errors/AppError.js";
 import { CompletedOrder } from "../models/completedOrder.model.js";
 import { Project } from "../models/project.model.js";
 
-export const getProjectBilling = async (projectId) => {
+export const getProjectBilling = async (projectId, userId) => {
 
     if (!projectId) {
         throw new AppError("ProjectId Required")
     }
 
-    const billingDetails = await Project.findById(projectId).select("paymentId endDate startDate paymentStatus plan").lean();
+    const filter = { _id: projectId };
+    if (userId) filter.userId = userId;
+
+    const billingDetails = await Project.findOne(filter).select("paymentId endDate startDate paymentStatus plan").lean();
     if (!billingDetails) {
         throw new AppError("Proejct not Found", 404);
     }

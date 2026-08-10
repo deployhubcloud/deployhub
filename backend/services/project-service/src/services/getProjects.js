@@ -68,20 +68,27 @@ export const getProjectMetaService = async (projectId) => {
     }
 }
 
-export const getProjectDataByIdService = async (projectId) => {
+export const getProjectDataByIdService = async (projectId, userId) => {
 
     const redis = getRedis()
 
     const cacheData = await getCacheProjectData(projectId, redis);
     if (!cacheData) {
 
-        const projectData = await Project.findOne({
+        const filter = {
             _id: projectId,
-            $ne: { status: 'deleted' }
-        }).select('name type version status isMicroservice repoUrl branch buildCommand startCommand internalUrl subdomain customDomains monitor notifications buildId totalBuilds').lean();
+            status: { $ne: 'deleted' },
+        };
+        if (userId) filter.userId = userId;
+
+        const projectData = await Project.findOne(filter).select('name type version status isMicroservice repoUrl branch buildCommand startCommand internalUrl subdomain customDomains monitor notifications buildId totalBuilds userId').lean();
 
 
         if (!projectData) {
+            throw new AppError("Invalid ProjectId", 404)
+        }
+
+        if (userId && String(projectData.userId) !== String(userId)) {
             throw new AppError("Invalid ProjectId", 404)
         }
 

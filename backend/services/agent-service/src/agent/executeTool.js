@@ -1,8 +1,8 @@
 import { createUserClient, summarizeAxiosError } from '../services/httpClients.js';
 import { fetchRuntimeLogs, fetchUrlText } from '../services/logs.js';
-import { getDeployCacheInfo, getLiveProjectStatus } from '../services/status.js';
+import { getDeployCacheInfo, getLiveProjectStatus, getMonitoringRedisStatus } from '../services/status.js';
 
-
+/** Write/delete tools that must not run without explicit user confirmation. */
 export const DESTRUCTIVE_TOOLS = new Set([
     'redeploy_project',
     'update_build_and_start_settings',
@@ -14,6 +14,10 @@ export const DESTRUCTIVE_TOOLS = new Set([
     'delete_project',
     'revoke_session',
     'revoke_all_sessions',
+    'upsert_env_vars',
+    'create_free_project',
+    'update_display_name',
+    'merge_env_vars',
 ]);
 
 function requireConfirmed(name, args) {
@@ -73,6 +77,32 @@ function mapProject(p) {
 function isFailedStatus(s = '') {
     const v = String(s).toLowerCase();
     return v === 'failed' || v === 'failure' || v === 'error';
+}
+
+function redactSecrets(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    const clone = JSON.parse(JSON.stringify(obj));
+    const walk = (node) => {
+        if (!node || typeof node !== 'object') return;
+        for (const [k, v] of Object.entries(node)) {
+            const key = k.toLowerCase();
+            if (typeof v === 'string' && /(token|secret|password|webhook|pass)/i.test(key) && v) {
+                node[k] = v.length > 8 ? `${v.slice(0, 4)}…${v.slice(-2)}` : '***';
+            } else if (v && typeof v === 'object') {
+                walk(v);
+            }
+        }
+    };
+    walk(clone);
+    return clone;
+}
+
+function extractErrorLines(text, max = 40) {
+    const lines = String(text || '').split(/\r?\n/);
+    const hits = lines.filter((l) =>
+        /error|failed|exception|fatal|enoent|eacces|cannot|not found|module not found|syntaxerror/i.test(l)
+    );
+    return (hits.length ? hits : lines.slice(-25)).slice(-max);
 }
 
 export async function executeTool(name, args, user, auth = {}) {
@@ -453,6 +483,316 @@ export async function executeTool(name, args, user, auth = {}) {
                 if (missing) return missing;
                 const { data } = await clients.identity.delete('/sessions');
                 return { ok: true, ...data };
+            }
+
+            case 'get_project_meta': {
+                await assertOwnsProject(clients, projectId);
+                const { data } = await clients.project.get(`/${projectId}/meta`);
+                return { ok: true, projectData: data?.projectData || data };
+            }
+
+            case 'list_projects_filtered': {
+                const projects = await listOwnedProjects(clients);
+                const status = args.status ? String(args.status).toLowerCase() : null;
+                const type = args.type ? String(args.type).toLowerCase() : null;
+                const plan = args.plan ? String(args.plan).toLowerCase() : null;
+                const filtered = projects.filter((p) => {
+                    if (status && String(p.status || '').toLowerCase() !== status) return false;
+                    if (type && String(p.type || '').toLowerCase() !== type) return false;
+                    if (plan && String(p.plan || '').toLowerCase() !== plan) return false;
+                    return true;
+                });
+                return {
+                    ok: true,
+                    count: filtered.length,
+                    filters: { status, type, plan },
+                    projects: filtered.map(mapProject),
+                };
+            }
+
+            case 'get_build_details': {
+                if (!args.buildId) return { ok: false, message: 'buildId is required' };
+                const { data } = await clients.build.get(`/builds/detail/${args.buildId}`);
+                return { ok: true, build: data?.build || data };
+            }
+
+            case 'get_latest_build_id': {
+                await assertOwnsProject(clients, projectId);
+                const { data } = await clients.build.get(`/builds/${projectId}/latest`);
+                return { ok: true, buildId: data?.build?._id || data?.build?.id, build: data?.build };
+            }
+
+            case 'get_monitoring_status': {
+                await assertOwnsProject(clients, projectId);
+                if (clients.monitoring) {
+                    try {
+                        const { data } = await clients.monitoring.get(`/uptime/${projectId}`);
+                        return { ok: true, ...data };
+                    } catch {
+                        // fall through to redis helper
+                    }
+                }
+                return getMonitoringRedisStatus(projectId);
+            }
+
+            case 'get_notification_settings': {
+                await assertOwnsProject(clients, projectId);
+                if (!clients.projectInternal) {
+                    return { ok: false, message: 'Internal project client unavailable' };
+                }
+                const { data } = await clients.projectInternal.get(
+                    `/for-other-service/${projectId}/notification-settings`
+                );
+                return { ok: true, notifications: redactSecrets(data) };
+            }
+
+            case 'check_fleet_health': {
+                const projects = await listOwnedProjects(clients);
+                const results = await Promise.all(
+                    projects.map(async (p) => {
+                        const live = await getLiveProjectStatus(p._id);
+                        return {
+                            ...mapProject(p),
+                            liveStatus: live.status,
+                            liveTimestamp: live.timestamp || null,
+                        };
+                    })
+                );
+                const unhealthy = results.filter((r) =>
+                    /fail|error|stopped|crash/i.test(String(r.liveStatus || ''))
+                );
+                return {
+                    ok: true,
+                    count: results.length,
+                    unhealthyCount: unhealthy.length,
+                    unhealthy,
+                    projects: results,
+                };
+            }
+
+            case 'compare_projects': {
+                const a = await assertOwnsProject(clients, args.projectIdA);
+                const b = await assertOwnsProject(clients, args.projectIdB);
+                const [liveA, liveB, ovA, ovB] = await Promise.all([
+                    getLiveProjectStatus(args.projectIdA),
+                    getLiveProjectStatus(args.projectIdB),
+                    clients.project.get(`/overview/${args.projectIdA}`).catch(() => null),
+                    clients.project.get(`/overview/${args.projectIdB}`).catch(() => null),
+                ]);
+                return {
+                    ok: true,
+                    a: {
+                        ...mapProject(a),
+                        liveStatus: liveA.status,
+                        overview: ovA?.data?.data || null,
+                    },
+                    b: {
+                        ...mapProject(b),
+                        liveStatus: liveB.status,
+                        overview: ovB?.data?.data || null,
+                    },
+                };
+            }
+
+            case 'analyze_build_failure': {
+                await assertOwnsProject(clients, projectId);
+                const { data } = await clients.build.get(`/builds/${projectId}`);
+                const builds = data?.data || [];
+                const failed = builds.find((b) => isFailedStatus(b.status));
+                if (!failed) {
+                    return { ok: true, hasFailure: false, message: 'No failed builds found for this project.' };
+                }
+                if (!failed.logsUrl) {
+                    return {
+                        ok: true,
+                        hasFailure: true,
+                        build: failed,
+                        message: 'Failed build found but no logsUrl available.',
+                    };
+                }
+                const logs = await fetchUrlText(failed.logsUrl, { maxChars: 16000 });
+                const errorLines = extractErrorLines(logs);
+                return {
+                    ok: true,
+                    hasFailure: true,
+                    build: failed,
+                    errorLines,
+                    logTail: logs.slice(-3000),
+                };
+            }
+
+            case 'explain_plan': {
+                const { data } = await clients.project.get('/plans');
+                const plans = data?.plans || data;
+                if (args.plan) {
+                    const key = String(args.plan).toLowerCase();
+                    return { ok: true, plan: key, details: plans?.[key] || null };
+                }
+                return { ok: true, plans };
+            }
+
+            case 'upsert_env_vars': {
+                await assertOwnsProject(clients, projectId);
+                let patch = {};
+                try {
+                    patch = JSON.parse(args.patchJson);
+                } catch {
+                    return { ok: false, message: 'patchJson must be valid JSON object' };
+                }
+                if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+                    return { ok: false, message: 'patchJson must be an object' };
+                }
+                let removeKeys = [];
+                if (args.removeKeysJson) {
+                    try {
+                        removeKeys = JSON.parse(args.removeKeysJson);
+                    } catch {
+                        return { ok: false, message: 'removeKeysJson must be a JSON array' };
+                    }
+                    if (!Array.isArray(removeKeys)) {
+                        return { ok: false, message: 'removeKeysJson must be an array' };
+                    }
+                }
+                const { data: settingsRes } = await clients.project.get(`/settings/${projectId}`);
+                const currentEnv = { ...(settingsRes?.settings?.env || {}) };
+                for (const [k, v] of Object.entries(patch)) {
+                    currentEnv[k] = String(v);
+                }
+                for (const k of removeKeys) {
+                    delete currentEnv[k];
+                }
+                const { data } = await clients.project.patch(`/settings/env/${projectId}`, {
+                    env: currentEnv,
+                });
+                return {
+                    ok: true,
+                    ...data,
+                    envKeys: Object.keys(currentEnv),
+                    updatedKeys: Object.keys(patch),
+                    removedKeys: removeKeys,
+                };
+            }
+
+            case 'create_free_project': {
+                let env;
+                if (args.envJson) {
+                    try {
+                        env = JSON.parse(args.envJson);
+                    } catch {
+                        return { ok: false, message: 'envJson must be valid JSON' };
+                    }
+                }
+                const body = {
+                    plan: 'free',
+                    projectName: args.projectName,
+                    projectType: 'static',
+                    version: String(args.version),
+                    repoUrl: args.repoUrl,
+                    branch: args.branch,
+                    rootDirectory: args.rootDirectory || '.',
+                    buildCommand: args.buildCommand,
+                    publishDir: args.publishDir,
+                    ...(args.subdomain ? { subdomain: args.subdomain } : {}),
+                    ...(env ? { env } : {}),
+                };
+                const { data } = await clients.project.post('/projects', body);
+                return {
+                    ok: true,
+                    ...data,
+                    note: 'Free plan only supports static sites. Paid plans require dashboard payment flow.',
+                };
+            }
+
+            case 'update_display_name': {
+                const missing = needIdentity(clients);
+                if (missing) return missing;
+                const { data } = await clients.identity.put('/user/fullname', {
+                    fullname: args.fullname,
+                });
+                return { ok: true, ...data };
+            }
+
+            case 'get_build_stats': {
+                await assertOwnsProject(clients, projectId);
+                const { data } = await clients.build.get(`/builds/${projectId}/stats`);
+                return { ok: true, stats: data?.stats || data };
+            }
+
+            case 'get_latest_build': {
+                await assertOwnsProject(clients, projectId);
+                const { data } = await clients.build.get(`/builds/${projectId}/latest`);
+                return { ok: true, build: data?.build || data };
+            }
+
+            case 'get_project_live_status_api': {
+                const { data } = await clients.project.get(`/status/${projectId}`);
+                return { ok: true, data: data?.data || data };
+            }
+
+            case 'get_env_keys': {
+                const { data } = await clients.project.get(`/settings/${projectId}/env-keys`);
+                return { ok: true, ...data };
+            }
+
+            case 'merge_env_vars': {
+                await assertOwnsProject(clients, projectId);
+                let patch = {};
+                try {
+                    patch = JSON.parse(args.patchJson);
+                } catch {
+                    return { ok: false, message: 'patchJson must be valid JSON object' };
+                }
+                let removeKeys = [];
+                if (args.removeKeysJson) {
+                    try {
+                        removeKeys = JSON.parse(args.removeKeysJson);
+                    } catch {
+                        return { ok: false, message: 'removeKeysJson must be a JSON array' };
+                    }
+                }
+                const { data } = await clients.project.patch(
+                    `/settings/env/${projectId}/merge`,
+                    { patch, removeKeys }
+                );
+                return { ok: true, ...data };
+            }
+
+            case 'list_deployments': {
+                if (!clients.deploy) {
+                    return { ok: false, message: 'Deploy service URL not configured' };
+                }
+                const limit = args.limit ? `?limit=${Number(args.limit)}` : '';
+                const { data } = await clients.deploy.get(
+                    `/deployments/project/${projectId}${limit}`
+                );
+                return { ok: true, ...data };
+            }
+
+            case 'get_latest_deployment': {
+                if (!clients.deploy) {
+                    return { ok: false, message: 'Deploy service URL not configured' };
+                }
+                const { data } = await clients.deploy.get(
+                    `/deployments/project/${projectId}/latest`
+                );
+                return { ok: true, deployment: data?.deployment || data };
+            }
+
+            case 'get_uptime_status': {
+                if (!clients.monitoring) {
+                    await assertOwnsProject(clients, projectId);
+                    return getMonitoringRedisStatus(projectId);
+                }
+                const { data } = await clients.monitoring.get(`/uptime/${projectId}`);
+                return { ok: true, ...(data?.data ? { data: data.data } : data) };
+            }
+
+            case 'get_analytics_health_score': {
+                if (!clients.analytics) {
+                    return { ok: false, message: 'Analytics service URL not configured' };
+                }
+                const { data } = await clients.analytics.get(`/health-score/${projectId}`);
+                return { ok: true, data: data?.data || data };
             }
 
             default:

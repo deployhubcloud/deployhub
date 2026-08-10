@@ -43,3 +43,42 @@ export async function getDeployCacheInfo(projectId) {
         },
     };
 }
+
+export async function getMonitoringRedisStatus(projectId) {
+    const redis = getRedis();
+    const key = `deployhub:user:project:${projectId}:monitoring`;
+    const data = await redis.hgetall(key);
+    if (!data || !Object.keys(data).length) {
+        return {
+            ok: true,
+            projectId,
+            enabled: false,
+            message: 'No active monitoring schedule found for this project.',
+        };
+    }
+
+    let nextPingAt = null;
+    try {
+        const score = await redis.zscore('deployhub:monitoring:schedule', String(projectId));
+        nextPingAt = score != null ? Number(score) : null;
+    } catch {
+        nextPingAt = null;
+    }
+
+    return {
+        ok: true,
+        projectId,
+        enabled: true,
+        monitoring: {
+            projectName: data.projectName || null,
+            pingUrl: data.pingUrl || null,
+            intervalSeconds: data.monitorIntervalSeconds
+                ? Number(data.monitorIntervalSeconds)
+                : null,
+            failedTries: data.monitorfailedTries ? Number(data.monitorfailedTries) : null,
+            nextPingAt,
+            nextPingInSeconds:
+                nextPingAt != null ? Math.max(0, Math.round((nextPingAt - Date.now()) / 1000)) : null,
+        },
+    };
+}

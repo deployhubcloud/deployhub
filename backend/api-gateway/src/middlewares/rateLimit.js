@@ -17,6 +17,14 @@ const limits = {
         time: 60,
         limit: 200
     },
+    deploy: {
+        time: 60,
+        limit: 100
+    },
+    monitoring: {
+        time: 60,
+        limit: 100
+    },
     agent: {
         time: 60,
         limit: 40
