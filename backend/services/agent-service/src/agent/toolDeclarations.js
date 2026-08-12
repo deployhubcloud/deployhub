@@ -9,7 +9,8 @@ const confirmed = {
 export const toolDeclarations = [
     {
         name: 'list_projects',
-        description: 'List all projects owned by the current user (id, name, type, status, plan, domain, builds).',
+        description:
+            'List all projects owned by the current user (id, name, type, status, plan, domain, builds). Use only when the user asks about their projects, wants a list, or you need to discover projects for a real task — never for greetings/small talk.',
         parameters: { type: 'object', properties: {} },
     },
     {
@@ -156,7 +157,7 @@ export const toolDeclarations = [
     {
         name: 'account_summary',
         description:
-            'High-level account snapshot: project count by status/type/plan, recent failed builds count, and profile basics if auth is available.',
+            'High-level account snapshot: project count by status/type/plan, recent failed builds count, and profile basics if auth is available. Use only when the user asks for an overview/summary — not for greetings.',
         parameters: { type: 'object', properties: {} },
     },
     {
@@ -409,7 +410,7 @@ export const toolDeclarations = [
     {
         name: 'check_fleet_health',
         description:
-            'Check live status for ALL user projects in one shot. Best for "are any projects down?" / fleet overview. Prefer over looping get_project_live_status.',
+            'Check live status for ALL user projects in one shot. Only when the user asks if projects are down / fleet health / status of everything — never on greetings.',
         parameters: { type: 'object', properties: {} },
     },
     {
