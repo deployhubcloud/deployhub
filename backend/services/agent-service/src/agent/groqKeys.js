@@ -1,4 +1,10 @@
 import Groq from 'groq-sdk';
+import { getRedis } from '../core/redis/client.js';
+
+const RR_KEY = 'deployhub:agent:groq:rr';
+const CURRENT_KEY = 'deployhub:agent:groq:current';
+const COOLDOWN_PREFIX = 'deployhub:agent:groq:cooldown:';
+const COOLDOWN_SECONDS = Number(process.env.GROQ_KEY_COOLDOWN_SECONDS || 60);
 
 function uniqueKeys(list) {
     const seen = new Set();
@@ -12,11 +18,7 @@ function uniqueKeys(list) {
     return out;
 }
 
-/**
- * Collect up to 5 Groq API keys from:
- * - GROQ_API_KEYS (comma/newline separated)
- * - GROQ_API_KEY, GROQ_API_KEY_2 … GROQ_API_KEY_5
- */
+
 export function loadGroqApiKeys(env = process.env) {
     const fromList = String(env.GROQ_API_KEYS || '')
         .split(/[\n,]+/)
@@ -24,11 +26,7 @@ export function loadGroqApiKeys(env = process.env) {
         .filter(Boolean);
 
     const numbered = [
-        env.GROQ_API_KEY,
-        env.GROQ_API_KEY_2,
-        env.GROQ_API_KEY_3,
-        env.GROQ_API_KEY_4,
-        env.GROQ_API_KEY_5,
+        env.GROQ_API_KEY
     ].filter(Boolean);
 
     const keys = uniqueKeys([...numbered, ...fromList]).slice(0, 5);
@@ -56,7 +54,9 @@ function isQuotaOrRateLimitError(error) {
     );
 }
 
-let rrIndex = 0;
+function cooldownKey(idx) {
+    return `${COOLDOWN_PREFIX}${idx}`;
+}
 
 export function createGroqKeyPool(keys) {
     const apiKeys = uniqueKeys(keys);
@@ -65,36 +65,110 @@ export function createGroqKeyPool(keys) {
     }
 
     const clients = apiKeys.map((apiKey) => new Groq({ apiKey }));
+    const n = clients.length;
+
+    async function setCurrent(idx) {
+        try {
+            const redis = getRedis();
+            await redis.set(CURRENT_KEY, String(idx));
+        } catch {
+        }
+    }
+
+    async function markCooldown(idx) {
+        try {
+            const redis = getRedis();
+            await redis.set(cooldownKey(idx), '1', 'EX', COOLDOWN_SECONDS);
+            console.warn(
+                `[groq] key #${idx + 1} on cooldown for ${COOLDOWN_SECONDS}s after rate limit`
+            );
+        } catch (error) {
+            console.warn('[groq] failed to set cooldown in redis:', error.message);
+        }
+    }
+
+    async function isCooling(idx) {
+        try {
+            const redis = getRedis();
+            const v = await redis.get(cooldownKey(idx));
+            return Boolean(v);
+        } catch {
+            return false;
+        }
+    }
+
+
+    async function acquireStartIndex() {
+        try {
+            const redis = getRedis();
+            for (let attempt = 0; attempt < n; attempt++) {
+                const raw = await redis.incr(RR_KEY);
+                const idx = (Number(raw) - 1) % n;
+                if (!(await isCooling(idx))) {
+                    await setCurrent(idx);
+                    return idx;
+                }
+            }
+            const raw = await redis.incr(RR_KEY);
+            const idx = (Number(raw) - 1) % n;
+            await setCurrent(idx);
+            return idx;
+        } catch (error) {
+            console.warn('[groq] redis rotate failed, using local fallback:', error.message);
+            const raw = Date.now();
+            return raw % n;
+        }
+    }
 
     return {
-        size: apiKeys.length,
+        size: n,
 
-        nextStartIndex() {
-            const start = rrIndex % clients.length;
-            rrIndex = (rrIndex + 1) % clients.length;
-            return start;
-        },
+        acquireStartIndex,
 
-        async chatCompletions(request, { startIndex = this.nextStartIndex() } = {}) {
+        async chatCompletions(request, { startIndex } = {}) {
+            let idx =
+                typeof startIndex === 'number' && Number.isInteger(startIndex)
+                    ? ((startIndex % n) + n) % n
+                    : await acquireStartIndex();
+
             let lastError;
-            for (let attempt = 0; attempt < clients.length; attempt++) {
-                const idx = (startIndex + attempt) % clients.length;
-                const client = clients[idx];
+
+            for (let attempt = 0; attempt < n; attempt++) {
+                const useIdx = (idx + attempt) % n;
+
+                if (attempt < n - 1 && (await isCooling(useIdx))) {
+                    continue;
+                }
+
+                const client = clients[useIdx];
                 try {
                     const response = await client.chat.completions.create(request);
+                    await setCurrent(useIdx);
                     if (attempt > 0) {
-                        console.warn(`[groq] succeeded on key #${idx + 1} after failover`);
+                        console.warn(`[groq] succeeded on key #${useIdx + 1} after failover`);
                     }
-                    return { response, keyIndex: idx };
+                    return { response, keyIndex: useIdx };
                 } catch (error) {
                     lastError = error;
-                    if (isQuotaOrRateLimitError(error) && attempt < clients.length - 1) {
-                        console.warn(`[groq] key #${idx + 1} limited/exhausted — trying next key`);
-                        continue;
+                    if (isQuotaOrRateLimitError(error)) {
+                        await markCooldown(useIdx);
+                        try {
+                            const redis = getRedis();
+                            await redis.set(RR_KEY, String(useIdx + 1));
+                            await setCurrent((useIdx + 1) % n);
+                        } catch {
+                        }
+                        if (attempt < n - 1) {
+                            console.warn(
+                                `[groq] key #${useIdx + 1} limited — rotating to next key`
+                            );
+                            continue;
+                        }
                     }
                     throw error;
                 }
             }
+
             throw lastError;
         },
     };
