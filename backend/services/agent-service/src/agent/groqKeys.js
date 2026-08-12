@@ -18,20 +18,20 @@ function uniqueKeys(list) {
     return out;
 }
 
-
+/**
+ * Load keys only from GROQ_API_KEYS (comma / newline separated).
+ * Example: GROQ_API_KEYS=key1,key2,key3
+ */
 export function loadGroqApiKeys(env = process.env) {
-    const fromList = String(env.GROQ_API_KEYS || '')
-        .split(/[\n,]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+    const keys = uniqueKeys(
+        String(env.GROQ_API_KEYS || '')
+            .split(/[\n,]+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+    );
 
-    const numbered = [
-        env.GROQ_API_KEY
-    ].filter(Boolean);
-
-    const keys = uniqueKeys([...numbered, ...fromList]).slice(0, 5);
     if (!keys.length) {
-        throw new Error('No Groq API keys configured (set GROQ_API_KEY or GROQ_API_KEYS)');
+        throw new Error('No Groq API keys configured — set GROQ_API_KEYS=key1,key2,...');
     }
     return keys;
 }
@@ -58,6 +58,9 @@ function cooldownKey(idx) {
     return `${COOLDOWN_PREFIX}${idx}`;
 }
 
+/**
+ * Redis-backed round-robin + cooldown pool over GROQ_API_KEYS list.
+ */
 export function createGroqKeyPool(keys) {
     const apiKeys = uniqueKeys(keys);
     if (!apiKeys.length) {
@@ -72,6 +75,7 @@ export function createGroqKeyPool(keys) {
             const redis = getRedis();
             await redis.set(CURRENT_KEY, String(idx));
         } catch {
+            /* ignore */
         }
     }
 
@@ -80,7 +84,7 @@ export function createGroqKeyPool(keys) {
             const redis = getRedis();
             await redis.set(cooldownKey(idx), '1', 'EX', COOLDOWN_SECONDS);
             console.warn(
-                `[groq] key #${idx + 1} on cooldown for ${COOLDOWN_SECONDS}s after rate limit`
+                `[groq] key #${idx + 1}/${n} on cooldown for ${COOLDOWN_SECONDS}s after rate limit`
             );
         } catch (error) {
             console.warn('[groq] failed to set cooldown in redis:', error.message);
@@ -96,7 +100,6 @@ export function createGroqKeyPool(keys) {
             return false;
         }
     }
-
 
     async function acquireStartIndex() {
         try {
@@ -115,8 +118,7 @@ export function createGroqKeyPool(keys) {
             return idx;
         } catch (error) {
             console.warn('[groq] redis rotate failed, using local fallback:', error.message);
-            const raw = Date.now();
-            return raw % n;
+            return Date.now() % n;
         }
     }
 
@@ -145,7 +147,7 @@ export function createGroqKeyPool(keys) {
                     const response = await client.chat.completions.create(request);
                     await setCurrent(useIdx);
                     if (attempt > 0) {
-                        console.warn(`[groq] succeeded on key #${useIdx + 1} after failover`);
+                        console.warn(`[groq] succeeded on key #${useIdx + 1}/${n} after failover`);
                     }
                     return { response, keyIndex: useIdx };
                 } catch (error) {
@@ -157,10 +159,11 @@ export function createGroqKeyPool(keys) {
                             await redis.set(RR_KEY, String(useIdx + 1));
                             await setCurrent((useIdx + 1) % n);
                         } catch {
+                            /* ignore */
                         }
                         if (attempt < n - 1) {
                             console.warn(
-                                `[groq] key #${useIdx + 1} limited — rotating to next key`
+                                `[groq] key #${useIdx + 1}/${n} limited — rotating to next key`
                             );
                             continue;
                         }

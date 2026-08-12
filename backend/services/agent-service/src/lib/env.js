@@ -11,13 +11,8 @@ for (const key of required) {
     }
 }
 
-const hasGroqKey =
-    process.env.GROQ_API_KEY ||
-    process.env.GROQ_API_KEYS ||
-    process.env.GROQ_API_KEY_2;
-
-if (!hasGroqKey) {
-    throw new Error('Missing Env: GROQ_API_KEY (or GROQ_API_KEYS / GROQ_API_KEY_2…)');
+if (!String(process.env.GROQ_API_KEYS || '').trim()) {
+    throw new Error('Missing Env: GROQ_API_KEYS (comma-separated keys, e.g. key1,key2,key3)');
 }
 
 export const agentEnv = {
@@ -35,6 +30,6 @@ export const agentEnv = {
     DEPLOY_SERVICE_URL: process.env.DEPLOY_SERVICE_URL,
     MONITORING_SERVICE_URL: process.env.MONITORING_SERVICE_URL,
     ANALYTICS_SERVICE_URL: process.env.ANALYTICS_SERVICE_URL,
-    GROQ_API_KEY: process.env.GROQ_API_KEY,
+    GROQ_API_KEYS: process.env.GROQ_API_KEYS,
     GROQ_MODEL: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
 };

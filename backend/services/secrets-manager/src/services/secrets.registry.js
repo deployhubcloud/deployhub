@@ -216,9 +216,11 @@ export function getSecretsForService(serviceName) {
       DEPLOY_SERVICE_URL: env.DEPLOY_SERVICE_URL,
       MONITORING_SERVICE_URL: env.MONITORING_SERVICE_URL,
       ANALYTICS_SERVICE_URL: env.ANALYTICS_SERVICE_URL,
-      GROQ_API_KEY: env.GROQ_API_KEY,
-      ...(env.GROQ_API_KEYS ? { GROQ_API_KEYS: env.GROQ_API_KEYS } : {}),
+      GROQ_API_KEYS: env.GROQ_API_KEYS,
       GROQ_MODEL: env.GROQ_MODEL,
+      ...(env.GROQ_KEY_COOLDOWN_SECONDS != null
+        ? { GROQ_KEY_COOLDOWN_SECONDS: String(env.GROQ_KEY_COOLDOWN_SECONDS) }
+        : {}),
     },
   };
 

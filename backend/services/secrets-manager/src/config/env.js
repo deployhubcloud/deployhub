@@ -82,10 +82,10 @@ const schema = z.object({
   ADMIN_SERVICE_URL: z.string().default('http://localhost:4010'),
   AGENT_SERVICE_URL: z.string().default('http://localhost:4011'),
 
-  // Groq for dashboard AI agent
-  GROQ_API_KEY: z.string().min(20),
-  GROQ_API_KEYS: z.string().optional(),
+  // Groq for dashboard AI agent — comma-separated keys (any count)
+  GROQ_API_KEYS: z.string().min(20),
   GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
+  GROQ_KEY_COOLDOWN_SECONDS: z.coerce.number().default(60).optional(),
 
   // admin panel credentials (single admin)
   ADMIN_ID: z.string().min(3),
