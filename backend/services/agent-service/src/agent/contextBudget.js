@@ -49,7 +49,7 @@ export function buildLlmMessages({ systemInstruction, memory, recent, message })
             role: 'system',
             content:
                 'Compressed prior conversation memory (facts only; may be incomplete). ' +
-                'Use tools to verify current state.\n' +
+                'Use tools to verify current state. Prefer parallel tool calls when gathering multiple facts.\n' +
                 clip(mem, MEMORY_MAX_CHARS),
         });
     }

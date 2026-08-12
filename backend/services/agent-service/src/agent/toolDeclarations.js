@@ -14,7 +14,8 @@ export const toolDeclarations = [
     },
     {
         name: 'find_project',
-        description: 'Find a project by name (case-insensitive partial match). Use when the user mentions a project by name instead of id.',
+        description:
+            'Resolve project name → id (case-insensitive partial match). Call this first when the user names a project; then call other tools in parallel with the returned projectId.',
         parameters: {
             type: 'object',
             properties: {
@@ -43,7 +44,8 @@ export const toolDeclarations = [
     },
     {
         name: 'get_project_live_status',
-        description: 'Get live deploy/runtime status from Redis (queued, building, deploying, running, failed, etc.).',
+        description:
+            'Get live deploy/runtime status from Redis (queued, building, deploying, running, failed, etc.). Safe to call in parallel with analytics/uptime/builds when projectId is known.',
         parameters: {
             type: 'object',
             properties: { projectId: { type: 'string' } },
@@ -75,7 +77,8 @@ export const toolDeclarations = [
     },
     {
         name: 'get_analytics_summary',
-        description: 'Traffic analytics for a project: requests (5m/1h/24h), 4xx/5xx errors, unique visitors, top countries and endpoints.',
+        description:
+            'Traffic analytics for a project: requests (5m/1h/24h), 4xx/5xx errors, unique visitors, top countries and endpoints. Can run in parallel with status/uptime tools.',
         parameters: {
             type: 'object',
             properties: { projectId: { type: 'string' } },
@@ -143,7 +146,7 @@ export const toolDeclarations = [
     {
         name: 'diagnose_project',
         description:
-            'One-shot health check: live status, overview snapshot, recent builds, analytics errors, and a short runtime/build log sample if available. Prefer this when the user asks why a project is down, broken, or failing.',
+            'Preferred one-shot health check when a project is down/broken/failing: live status, overview, recent builds, analytics errors, and a short log sample. Prefer this over calling many status/log tools separately.',
         parameters: {
             type: 'object',
             properties: { projectId: { type: 'string' } },
@@ -405,12 +408,14 @@ export const toolDeclarations = [
     },
     {
         name: 'check_fleet_health',
-        description: 'Check live status for ALL user projects in one shot. Best for "are any projects down?".',
+        description:
+            'Check live status for ALL user projects in one shot. Best for "are any projects down?" / fleet overview. Prefer over looping get_project_live_status.',
         parameters: { type: 'object', properties: {} },
     },
     {
         name: 'compare_projects',
-        description: 'Compare two owned projects (type, plan, status, builds, live status).',
+        description:
+            'Compare two owned projects (type, plan, status, builds, live status). Resolve both names with find_project first if needed, then call this once.',
         parameters: {
             type: 'object',
             properties: {
