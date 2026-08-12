@@ -3,6 +3,9 @@ import { api } from '../../api/apiclient'
 
 const WELCOME = 'Hi — how can I help with your DeployHub projects?\n\nI can check fleet health, diagnose failures, analytics, domains, billing, create a free static project, redeploy, and more.'
 
+/** How many prior UI messages (excluding welcome + current user) to send as recent context */
+const RECENT_WINDOW = 4
+
 function MessageBubble({ role, content }) {
   const isUser = role === 'user'
   return (
@@ -20,11 +23,30 @@ function MessageBubble({ role, content }) {
   )
 }
 
+function buildApiPayload(uiMessages, latestUserText, memory) {
+  const withoutWelcome = uiMessages.filter(
+    (m) => !(m.role === 'assistant' && m.content === WELCOME)
+  )
+  // Drop the latest user message — it goes in `message`
+  const prior = withoutWelcome.slice(0, -1)
+  const recent = prior.slice(-RECENT_WINDOW).map(({ role, content }) => ({
+    role,
+    content: String(content).slice(0, 600),
+  }))
+
+  return {
+    message: latestUserText,
+    memory: memory || undefined,
+    recent,
+  }
+}
+
 export default function AgentChat() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [messages, setMessages] = useState([])
+  const [memory, setMemory] = useState('')
   const [error, setError] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -42,6 +64,12 @@ export default function AgentChat() {
     }
   }, [open, messages, sending])
 
+  const clearChat = () => {
+    setMessages([{ role: 'assistant', content: WELCOME }])
+    setMemory('')
+    setError(null)
+  }
+
   const send = async (e) => {
     e?.preventDefault()
     const text = input.trim()
@@ -54,11 +82,12 @@ export default function AgentChat() {
     setSending(true)
 
     try {
-      const history = next
-        .filter((m) => !(m.role === 'assistant' && m.content === WELCOME))
-        .map(({ role, content }) => ({ role, content }))
+      const payload = buildApiPayload(next, text, memory)
+      const { data } = await api.post('/agent/chat', payload)
 
-      const { data } = await api.post('/agent/chat', { messages: history })
+      if (typeof data?.memory === 'string') {
+        setMemory(data.memory)
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -104,10 +133,7 @@ export default function AgentChat() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                setMessages([{ role: 'assistant', content: WELCOME }])
-                setError(null)
-              }}
+              onClick={clearChat}
               className="text-xs text-neutral-500 hover:text-neutral-300"
             >
               Clear
