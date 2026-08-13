@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../api/client'
+import { useAuth } from '../context/AuthContext'
 import { EmptyState, PageHeader, StatusBadge } from '../components/ui'
 
 export default function UsersPage() {
+  const { can } = useAuth()
+  const canWrite = can('users:write')
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('')
   const [data, setData] = useState({ users: [] })
@@ -28,7 +31,11 @@ export default function UsersPage() {
     <div>
       <PageHeader
         title="Users"
-        subtitle="Search accounts, inspect sessions, suspend or permanently delete."
+        subtitle={
+          canWrite
+            ? 'Search accounts, inspect sessions, suspend or permanently delete.'
+            : 'Browse user accounts and details (read-only).'
+        }
         actions={
           <form
             className="flex flex-wrap gap-2"

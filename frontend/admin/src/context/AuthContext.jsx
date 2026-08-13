@@ -22,8 +22,8 @@ export function AuthProvider({ children }) {
     refreshMe().finally(() => setLoading(false))
   }, [])
 
-  const login = async (adminId, password) => {
-    const { data } = await api.post('/auth/login', { adminId, password })
+  const login = async (username, password) => {
+    const { data } = await api.post('/auth/login', { username, password })
     return data
   }
 
@@ -37,13 +37,20 @@ export function AuthProvider({ children }) {
     try {
       await api.post('/auth/logout')
     } catch {
-      // ignore
     }
     setAdmin(null)
   }
 
+  const isSuper = admin?.role === 'super_admin'
+
+  const can = (permission) => {
+    if (!admin) return false
+    if (admin.role === 'super_admin') return true
+    return Array.isArray(admin.permissions) && admin.permissions.includes(permission)
+  }
+
   const value = useMemo(
-    () => ({ admin, loading, login, verifyOtp, logout, refreshMe }),
+    () => ({ admin, loading, login, verifyOtp, logout, refreshMe, can, isSuper }),
     [admin, loading]
   )
 

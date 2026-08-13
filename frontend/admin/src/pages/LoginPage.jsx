@@ -8,7 +8,7 @@ export default function LoginPage() {
   const { login, verifyOtp } = useAuth()
   const navigate = useNavigate()
   const [step, setStep] = useState('credentials')
-  const [adminId, setAdminId] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loginId, setLoginId] = useState('')
   const [otp, setOtp] = useState('')
@@ -18,10 +18,10 @@ export default function LoginPage() {
     e.preventDefault()
     setBusy(true)
     try {
-      const data = await login(adminId, password)
+      const data = await login(username, password)
       setLoginId(data.loginId)
       setStep('otp')
-      toast.success('OTP sent to admin email')
+      toast.success('OTP sent to your email')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed')
     } finally {
@@ -58,21 +58,36 @@ export default function LoginPage() {
 
         <p className="text-sm text-[var(--muted)] mb-6">
           {step === 'credentials'
-            ? 'Authenticate with admin credentials. A one-time code will be emailed.'
-            : 'Enter the OTP sent to the registered admin mailbox.'}
+            ? 'Sign in with username and password. A one-time code will be emailed.'
+            : 'Enter the OTP sent to your registered email.'}
         </p>
 
         {step === 'credentials' ? (
           <form onSubmit={onCredentials} className="space-y-4">
             <label className="block text-sm">
-              <span className="text-[var(--muted)]">Admin ID</span>
-              <input className="input mt-1" value={adminId} onChange={(e) => setAdminId(e.target.value)} required autoComplete="username" />
+              <span className="text-[var(--muted)]">Username</span>
+              <input
+                className="input mt-1"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+              />
             </label>
             <label className="block text-sm">
               <span className="text-[var(--muted)]">Password</span>
-              <input type="password" className="input mt-1" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+              <input
+                type="password"
+                className="input mt-1"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
             </label>
-            <button disabled={busy} className="btn btn-primary w-full">{busy ? 'Sending OTP…' : 'Continue'}</button>
+            <button disabled={busy} className="btn btn-primary w-full">
+              {busy ? 'Sending OTP…' : 'Continue'}
+            </button>
           </form>
         ) : (
           <form onSubmit={onOtp} className="space-y-4">
@@ -86,8 +101,12 @@ export default function LoginPage() {
                 required
               />
             </label>
-            <button disabled={busy} className="btn btn-primary w-full">{busy ? 'Verifying…' : 'Verify & enter'}</button>
-            <button type="button" className="btn btn-ghost w-full" onClick={() => setStep('credentials')}>Back</button>
+            <button disabled={busy} className="btn btn-primary w-full">
+              {busy ? 'Verifying…' : 'Verify & enter'}
+            </button>
+            <button type="button" className="btn btn-ghost w-full" onClick={() => setStep('credentials')}>
+              Back
+            </button>
           </form>
         )}
 

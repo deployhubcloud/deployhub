@@ -2,16 +2,23 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { api } from '../api/client'
+import { useAuth } from '../context/AuthContext'
 import { ConfirmButton, EmptyState, PageHeader, StatusBadge } from '../components/ui'
 
 export default function UserDetailPage() {
   const { userId } = useParams()
   const navigate = useNavigate()
+  const { can } = useAuth()
+  const canWrite = can('users:write')
   const [data, setData] = useState(null)
   const [tab, setTab] = useState('overview')
   const [status, setStatus] = useState('active')
   const [fullName, setFullName] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const tabs = canWrite
+    ? ['overview', 'projects', 'sessions', 'danger']
+    : ['overview', 'projects', 'sessions']
 
   const load = async () => {
     try {
@@ -24,7 +31,9 @@ export default function UserDetailPage() {
     }
   }
 
-  useEffect(() => { load() }, [userId])
+  useEffect(() => {
+    load()
+  }, [userId])
 
   const save = async () => {
     setBusy(true)
@@ -88,8 +97,11 @@ export default function UserDetailPage() {
         subtitle={user.email}
         actions={
           <>
-            <Link to="/users" className="btn btn-ghost">Back</Link>
+            <Link to="/users" className="btn btn-ghost">
+              Back
+            </Link>
             <StatusBadge value={user.status} />
+            {!canWrite && <span className="badge badge-blue">read only</span>}
           </>
         }
       />
@@ -102,7 +114,7 @@ export default function UserDetailPage() {
       </div>
 
       <div className="tabs">
-        {['overview', 'projects', 'sessions', 'danger'].map((t) => (
+        {tabs.map((t) => (
           <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {t}
           </button>
@@ -114,32 +126,50 @@ export default function UserDetailPage() {
           <div className="card p-5">
             <div className="font-medium mb-4">Profile</div>
             <dl className="kv">
-              <dt>User ID</dt><dd className="mono text-xs">{user._id}</dd>
-              <dt>GitHub</dt><dd>{user.githubUsername || '—'}</dd>
-              <dt>GitHub ID</dt><dd className="mono text-xs">{user.githubId || '—'}</dd>
-              <dt>Network</dt><dd className="mono text-xs">{user.networkName}</dd>
-              <dt>Created</dt><dd>{new Date(user.createdAt).toLocaleString()}</dd>
-              <dt>Updated</dt><dd>{new Date(user.updatedAt).toLocaleString()}</dd>
-              <dt>Locked until</dt><dd>{user.lockUntil ? new Date(user.lockUntil).toLocaleString() : '—'}</dd>
+              <dt>User ID</dt>
+              <dd className="mono text-xs">{user._id}</dd>
+              <dt>GitHub</dt>
+              <dd>{user.githubUsername || '—'}</dd>
+              <dt>GitHub ID</dt>
+              <dd className="mono text-xs">{user.githubId || '—'}</dd>
+              <dt>Network</dt>
+              <dd className="mono text-xs">{user.networkName}</dd>
+              <dt>Created</dt>
+              <dd>{new Date(user.createdAt).toLocaleString()}</dd>
+              <dt>Updated</dt>
+              <dd>{new Date(user.updatedAt).toLocaleString()}</dd>
+              <dt>Locked until</dt>
+              <dd>{user.lockUntil ? new Date(user.lockUntil).toLocaleString() : '—'}</dd>
             </dl>
           </div>
 
-          <div className="card p-5 space-y-3">
-            <div className="font-medium">Edit user</div>
-            <label className="block text-sm">
-              <span className="text-[var(--muted)]">Full name</span>
-              <input className="input mt-1" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            </label>
-            <label className="block text-sm">
-              <span className="text-[var(--muted)]">Status</span>
-              <select className="select mt-1" value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="pending">pending</option>
-                <option value="active">active</option>
-                <option value="suspend">suspend</option>
-              </select>
-            </label>
-            <button className="btn btn-primary" disabled={busy} onClick={save}>Save changes</button>
-          </div>
+          {canWrite ? (
+            <div className="card p-5 space-y-3">
+              <div className="font-medium">Edit user</div>
+              <label className="block text-sm">
+                <span className="text-[var(--muted)]">Full name</span>
+                <input className="input mt-1" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              </label>
+              <label className="block text-sm">
+                <span className="text-[var(--muted)]">Status</span>
+                <select className="select mt-1" value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="pending">pending</option>
+                  <option value="active">active</option>
+                  <option value="suspend">suspend</option>
+                </select>
+              </label>
+              <button className="btn btn-primary" disabled={busy} onClick={save}>
+                Save changes
+              </button>
+            </div>
+          ) : (
+            <div className="card p-5">
+              <div className="font-medium mb-2">Access</div>
+              <p className="text-sm text-[var(--muted)]">
+                You have read-only access. Editing, session revoke, and deletes require a super admin.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -148,19 +178,41 @@ export default function UserDetailPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Name</th><th>Type</th><th>Status</th><th>Plan</th><th>Subdomain</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Plan</th>
+                <th>Subdomain</th>
               </tr>
             </thead>
             <tbody>
-              {projects.length ? projects.map((p) => (
-                <tr key={p._id}>
-                  <td><Link className="text-[#7ddeb0] hover:underline" to={`/projects/${p._id}`}>{p.name}</Link></td>
-                  <td>{p.type}</td>
-                  <td><StatusBadge value={p.status} /></td>
-                  <td>{p.plan}</td>
-                  <td className="mono text-xs">{p.subdomain || '—'}</td>
+              {projects.length ? (
+                projects.map((p) => (
+                  <tr key={p._id}>
+                    <td>
+                      {can('projects:read') ? (
+                        <Link className="text-[#7ddeb0] hover:underline" to={`/projects/${p._id}`}>
+                          {p.name}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{p.name}</span>
+                      )}
+                    </td>
+                    <td>{p.type}</td>
+                    <td>
+                      <StatusBadge value={p.status} />
+                    </td>
+                    <td>{p.plan}</td>
+                    <td className="mono text-xs">{p.subdomain || '—'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5}>
+                    <EmptyState title="No projects" />
+                  </td>
                 </tr>
-              )) : <tr><td colSpan={5}><EmptyState title="No projects" /></td></tr>}
+              )}
             </tbody>
           </table>
         </div>
@@ -168,36 +220,53 @@ export default function UserDetailPage() {
 
       {tab === 'sessions' && (
         <div className="space-y-3">
-          <div className="flex justify-end">
-            <ConfirmButton
-              disabled={busy}
-              label="Revoke all sessions"
-              confirmText="Force logout this user everywhere?"
-              onConfirm={revokeSessions}
-              className="btn btn-warn"
-            />
-          </div>
+          {canWrite && (
+            <div className="flex justify-end">
+              <ConfirmButton
+                disabled={busy}
+                label="Revoke all sessions"
+                confirmText="Force logout this user everywhere?"
+                onConfirm={revokeSessions}
+                className="btn btn-warn"
+              />
+            </div>
+          )}
           <div className="table-wrap card !shadow-none">
             <table className="table">
               <thead>
-                <tr><th>Device</th><th>IP</th><th>Token</th><th>Created</th></tr>
+                <tr>
+                  <th>Device</th>
+                  <th>IP</th>
+                  <th>Token</th>
+                  <th>Created</th>
+                </tr>
               </thead>
               <tbody>
-                {sessions.length ? sessions.map((s) => (
-                  <tr key={s.key}>
-                    <td>{s.device || '—'}</td>
-                    <td className="mono text-xs">{s.ip || '—'}</td>
-                    <td className="mono text-xs text-[var(--muted)]">{s.tokenId}</td>
-                    <td className="text-xs text-[var(--muted)]">{s.createdAt ? new Date(s.createdAt).toLocaleString() : '—'}</td>
+                {sessions.length ? (
+                  sessions.map((s) => (
+                    <tr key={s.key}>
+                      <td>{s.device || '—'}</td>
+                      <td className="mono text-xs">{s.ip || '—'}</td>
+                      <td className="mono text-xs text-[var(--muted)]">{s.tokenId}</td>
+                      <td className="text-xs text-[var(--muted)]">
+                        {s.createdAt ? new Date(s.createdAt).toLocaleString() : '—'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4}>
+                      <EmptyState title="No active sessions" />
+                    </td>
                   </tr>
-                )) : <tr><td colSpan={4}><EmptyState title="No active sessions" /></td></tr>}
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {tab === 'danger' && (
+      {tab === 'danger' && canWrite && (
         <div className="card p-5 border-[rgba(212,84,84,.35)] space-y-4">
           <div>
             <div className="font-medium text-[#f0a0a0]">Danger zone</div>
