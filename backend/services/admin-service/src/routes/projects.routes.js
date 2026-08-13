@@ -10,19 +10,49 @@ import {
     purgeProjectCacheController,
     updateProjectController,
 } from '../controllers/projects.controller.js';
-import { requireAdminSession } from '../middleware/adminSession.js';
+import { requirePermission } from '../middleware/adminSession.js';
+import { PERMISSIONS } from '../constants/roles.js';
 
 const router = Router();
 
-router.use(requireAdminSession);
+router.use(requirePermission(PERMISSIONS.PROJECTS_READ));
+
 router.get('/', listProjectsController);
-router.delete('/builds/:buildId', deleteBuildController);
-router.delete('/deployments/:deploymentId', deleteDeploymentController);
+router.delete(
+    '/builds/:buildId',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    deleteBuildController
+);
+router.delete(
+    '/deployments/:deploymentId',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    deleteDeploymentController
+);
 router.get('/:projectId', getProjectController);
-router.patch('/:projectId', updateProjectController);
-router.delete('/:projectId', deleteProjectController);
-router.post('/:projectId/purge-cache', purgeProjectCacheController);
-router.delete('/:projectId/builds', deleteProjectBuildsController);
-router.delete('/:projectId/deployments', deleteProjectDeploymentsController);
+router.patch(
+    '/:projectId',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    updateProjectController
+);
+router.delete(
+    '/:projectId',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    deleteProjectController
+);
+router.post(
+    '/:projectId/purge-cache',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    purgeProjectCacheController
+);
+router.delete(
+    '/:projectId/builds',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    deleteProjectBuildsController
+);
+router.delete(
+    '/:projectId/deployments',
+    requirePermission(PERMISSIONS.PROJECTS_WRITE),
+    deleteProjectDeploymentsController
+);
 
 export default router;

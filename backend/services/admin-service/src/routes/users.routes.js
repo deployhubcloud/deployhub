@@ -7,16 +7,24 @@ import {
     revokeSessionsController,
     updateUserController,
 } from '../controllers/users.controller.js';
-import { requireAdminSession } from '../middleware/adminSession.js';
+import { requirePermission } from '../middleware/adminSession.js';
+import { PERMISSIONS } from '../constants/roles.js';
 
 const router = Router();
 
-router.use(requireAdminSession);
-router.get('/', listUsersController);
-router.get('/:userId', getUserController);
-router.patch('/:userId', updateUserController);
-router.delete('/:userId', deleteUserController);
-router.post('/:userId/revoke-sessions', revokeSessionsController);
-router.delete('/:userId/projects', deleteUserProjectsController);
+router.get('/', requirePermission(PERMISSIONS.USERS_READ), listUsersController);
+router.get('/:userId', requirePermission(PERMISSIONS.USERS_READ), getUserController);
+router.patch('/:userId', requirePermission(PERMISSIONS.USERS_WRITE), updateUserController);
+router.delete('/:userId', requirePermission(PERMISSIONS.USERS_WRITE), deleteUserController);
+router.post(
+    '/:userId/revoke-sessions',
+    requirePermission(PERMISSIONS.USERS_WRITE),
+    revokeSessionsController
+);
+router.delete(
+    '/:userId/projects',
+    requirePermission(PERMISSIONS.USERS_WRITE),
+    deleteUserProjectsController
+);
 
 export default router;

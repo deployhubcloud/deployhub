@@ -3,6 +3,7 @@ import {
     getAdminSession,
     getAdminSessionCookieName,
 } from '../services/auth.service.js';
+import { roleHasPermission } from '../constants/roles.js';
 
 export const requireAdminSession = async (req, res, next) => {
     try {
@@ -21,4 +22,12 @@ export const requireAdminSession = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+export const requirePermission = (permission) => (req, res, next) => {
+    const role = req.adminSession?.role;
+    if (!roleHasPermission(role, permission)) {
+        return res.status(403).json({ message: 'Forbidden: insufficient admin permissions' });
+    }
+    next();
 };

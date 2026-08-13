@@ -1,13 +1,22 @@
-import { destroyAdminSession, getAdminSessionCookieName, getClearSessionCookieOptions, getSessionCookieOptions, initAdminLogin, verifyAdminOtp, } from '../services/auth.service.js';
+import {
+    destroyAdminSession,
+    getAdminSessionCookieName,
+    getClearSessionCookieOptions,
+    getSessionCookieOptions,
+    initAdminLogin,
+    publicAdminFromSession,
+    verifyAdminOtp,
+} from '../services/auth.service.js';
 
 export const loginInitController = async (req, res) => {
     try {
-        const { adminId, password } = req.body || {};
-        if (!adminId || !password) {
-            return res.status(400).json({ message: 'adminId and password are required' });
+        const username = req.body?.username || req.body?.adminId;
+        const password = req.body?.password;
+        if (!username || !password) {
+            return res.status(400).json({ message: 'username and password are required' });
         }
 
-        const result = await initAdminLogin({ adminId, password, req });
+        const result = await initAdminLogin({ username, password, req });
         return res.status(200).json(result);
     } catch (error) {
         return res.status(error.status || 500).json({
@@ -28,11 +37,7 @@ export const loginVerifyController = async (req, res) => {
 
         return res.status(200).json({
             message: 'Admin logged in',
-            admin: {
-                adminId: session.adminId,
-                email: session.email,
-                role: session.role,
-            },
+            admin: publicAdminFromSession(session),
         });
     } catch (error) {
         return res.status(error.status || 500).json({
@@ -53,10 +58,6 @@ export const logoutController = async (req, res) => {
 
 export const meController = async (req, res) => {
     return res.status(200).json({
-        admin: {
-            adminId: req.adminSession.adminId,
-            email: req.adminSession.email,
-            role: req.adminSession.role,
-        },
+        admin: publicAdminFromSession(req.adminSession),
     });
 };

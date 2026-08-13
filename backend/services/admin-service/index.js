@@ -5,6 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { adminEnv } from './src/lib/env.js';
 import { connectRedis } from './src/core/redis/client.js';
+import { closeDb, connectDb } from './src/core/db/mongo.js';
 import { createShutdownHandler } from '../../shared/utils/gracefulShutdown.js';
 import { createInternalAUthMiddleware } from '../../shared/middlewares/internalAuth.js';
 import adminRouter from './src/routes/index.js';
@@ -30,7 +31,6 @@ app.get('/health', (_req, res) => {
     res.status(200).json({ success: true, message: 'Healthy', service: 'admin-service' });
 });
 
-// Gateway injects x-internal-secret;
 app.use(createInternalAUthMiddleware({
     secret: adminEnv.INTERNAL_SECRET,
     logger: console,
@@ -40,6 +40,7 @@ app.use(createInternalAUthMiddleware({
 app.use('/', adminRouter);
 
 export default async function startApp(port, serviceName) {
+    await connectDb();
     await connectRedis();
 
     const server = app.listen(port, () => {
@@ -49,7 +50,7 @@ export default async function startApp(port, serviceName) {
     const shutdown = createShutdownHandler({
         server,
         logger: console,
-        closeResources: [],
+        closeResources: [closeDb],
     });
 
     process.on('SIGINT', shutdown);

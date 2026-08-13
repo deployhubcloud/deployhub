@@ -5,6 +5,7 @@ const required = [
     'IDENTITY_SERVICE_URL', 'PROJECT_SERVICE_URL',
     'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS',
     'ADMIN_ID', 'ADMIN_PASSWORD', 'ADMIN_EMAIL', 'ADMIN_SESSION_SECRET',
+    'MONGODB_URI',
 ];
 
 for (const key of required) {
@@ -35,4 +36,6 @@ export const adminEnv = {
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET,
     ADMIN_FRONTEND_URL: process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174',
+    MONGODB_URI: process.env.MONGODB_URI,
+    BCRYPT_ROUNDS: Number(process.env.BCRYPT_ROUNDS || 10),
 };

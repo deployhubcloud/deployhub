@@ -57,6 +57,7 @@ const schema = z.object({
   PROJECT_SERVICE_MONGODB_URI: z.string().min(1),
   MONITORING_MONGODB_URI: z.string().min(1),
   NOTIFICATION_MONGODB_URI: z.string().min(1),
+  ADMIN_SERVICE_MONGODB_URI: z.string().min(1),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
@@ -82,12 +83,11 @@ const schema = z.object({
   ADMIN_SERVICE_URL: z.string().default('http://localhost:4010'),
   AGENT_SERVICE_URL: z.string().default('http://localhost:4011'),
 
-  // Groq for dashboard AI agent — comma-separated keys (any count)
+  // Groq for dashboard AI agent — comma-separated keys
   GROQ_API_KEYS: z.string().min(20),
   GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
   GROQ_KEY_COOLDOWN_SECONDS: z.coerce.number().default(60).optional(),
 
-  // admin panel credentials (single admin)
   ADMIN_ID: z.string().min(3),
   ADMIN_PASSWORD: z.string().min(8),
   ADMIN_EMAIL: z.string().email(),

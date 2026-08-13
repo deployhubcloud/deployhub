@@ -199,6 +199,8 @@ export function getSecretsForService(serviceName) {
       ADMIN_EMAIL: env.ADMIN_EMAIL,
       ADMIN_SESSION_SECRET: env.ADMIN_SESSION_SECRET,
       ADMIN_FRONTEND_URL: env.ADMIN_FRONTEND_URL,
+      MONGODB_URI: env.ADMIN_SERVICE_MONGODB_URI,
+      BCRYPT_ROUNDS: String(env.BCRYPT_ROUNDS ?? 10),
     },
 
     'agent-service': {
