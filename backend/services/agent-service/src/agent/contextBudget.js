@@ -1,7 +1,7 @@
 export const MEMORY_MAX_CHARS = 1200;
 export const RECENT_MSG_MAX = 4;
 export const MSG_CONTENT_MAX = 600;
-export const TOOL_RESULT_MAX = 1800;
+export const TOOL_RESULT_MAX = 2200;
 
 export function clip(text, max) {
     const s = String(text ?? '');
@@ -78,7 +78,7 @@ export function compactToolResult(result) {
 
         if (result && typeof result === 'object') {
             const slim = { ...result };
-            for (const key of ['logs', 'logSample', 'logTail', 'errorLines', 'builds', 'repositories', 'projects']) {
+            for (const key of ['logs', 'logSample', 'logTail', 'errorLines', 'builds', 'repositories', 'projects', 'bodySnippet', 'results', 'dependencies', 'recentWorkflowRuns', 'openPullRequests', 'latestCommits']) {
                 if (slim[key] == null) continue;
                 if (typeof slim[key] === 'string') {
                     slim[key] = clip(slim[key], 400);

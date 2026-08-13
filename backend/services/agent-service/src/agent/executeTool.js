@@ -1,8 +1,21 @@
 import { createUserClient, summarizeAxiosError } from '../services/httpClients.js';
 import { fetchRuntimeLogs, fetchUrlText } from '../services/logs.js';
 import { getDeployCacheInfo, getLiveProjectStatus, getMonitoringRedisStatus } from '../services/status.js';
+import {
+    checkDns,
+    checkSsl,
+    fetchPublicPage,
+    getGithubRepoInsights,
+    lookupDomainWhois,
+    lookupNpmPackage,
+    lookupPypiPackage,
+    probeUrl,
+    searchWeb,
+} from '../services/externalTools.js';
+import { agentEnv } from '../lib/env.js';
+import axios from 'axios';
 
-/** Write/delete tools that must not run without explicit user confirmation. */
+
 export const DESTRUCTIVE_TOOLS = new Set([
     'redeploy_project',
     'update_build_and_start_settings',
@@ -77,6 +90,27 @@ function mapProject(p) {
 function isFailedStatus(s = '') {
     const v = String(s).toLowerCase();
     return v === 'failed' || v === 'failure' || v === 'error';
+}
+
+async function fetchUserGithubToken(userId) {
+    if (!agentEnv.IDENTITY_SERVICE_URL || !agentEnv.INTERNAL_SERVICE_TALKING_SECRET) {
+        return null;
+    }
+    try {
+        const { data } = await axios.get(
+            `${agentEnv.IDENTITY_SERVICE_URL}/users/${userId}/github-access-token`,
+            {
+                headers: {
+                    'x-internal-secret': agentEnv.INTERNAL_SECRET,
+                    'x-microservice-secret': agentEnv.INTERNAL_SERVICE_TALKING_SECRET,
+                },
+                timeout: 10000,
+            }
+        );
+        return data?.accessToken || null;
+    } catch {
+        return null;
+    }
 }
 
 function redactSecrets(obj) {
@@ -529,7 +563,6 @@ export async function executeTool(name, args, user, auth = {}) {
                         const { data } = await clients.monitoring.get(`/uptime/${projectId}`);
                         return { ok: true, ...data };
                     } catch {
-                        // fall through to redis helper
                     }
                 }
                 return getMonitoringRedisStatus(projectId);
@@ -793,6 +826,69 @@ export async function executeTool(name, args, user, auth = {}) {
                 }
                 const { data } = await clients.analytics.get(`/health-score/${projectId}`);
                 return { ok: true, data: data?.data || data };
+            }
+
+            case 'probe_url': {
+                const url = args.url || args.href;
+                if (!url) return { ok: false, message: 'url is required' };
+                return probeUrl(url, { method: args.method || 'GET' });
+            }
+
+            case 'check_dns': {
+                const host = args.hostname || args.domain || args.url;
+                if (!host) return { ok: false, message: 'hostname/domain is required' };
+                return checkDns(host);
+            }
+
+            case 'check_ssl': {
+                const host = args.hostname || args.domain || args.url;
+                if (!host) return { ok: false, message: 'hostname/domain is required' };
+                return checkSsl(host, { port: args.port });
+            }
+
+            case 'search_error_docs': {
+                const query = args.query || args.error;
+                if (!query) return { ok: false, message: 'query/error text is required' };
+                return searchWeb(query, { maxResults: args.maxResults });
+            }
+
+            case 'lookup_npm_package': {
+                if (!args.name && !args.package) {
+                    return { ok: false, message: 'name is required' };
+                }
+                return lookupNpmPackage(args.name || args.package, { version: args.version });
+            }
+
+            case 'lookup_pypi_package': {
+                if (!args.name && !args.package) {
+                    return { ok: false, message: 'name is required' };
+                }
+                return lookupPypiPackage(args.name || args.package);
+            }
+
+            case 'lookup_domain_whois': {
+                const domain = args.domain || args.hostname || args.url;
+                if (!domain) return { ok: false, message: 'domain is required' };
+                return lookupDomainWhois(domain);
+            }
+
+            case 'fetch_public_page': {
+                if (!args.url) return { ok: false, message: 'url is required' };
+                return fetchPublicPage(args.url, { maxChars: args.maxChars });
+            }
+
+            case 'get_github_repo_insights': {
+                const repo = args.repo || args.fullName || args.repository;
+                if (!repo) return { ok: false, message: 'repo (owner/name) is required' };
+                const token = await fetchUserGithubToken(user._id);
+                if (!token) {
+                    return {
+                        ok: false,
+                        message:
+                            'GitHub token unavailable — user must be logged in with GitHub linked.',
+                    };
+                }
+                return getGithubRepoInsights(token, repo, { branch: args.branch });
             }
 
             default:

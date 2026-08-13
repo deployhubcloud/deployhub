@@ -5,7 +5,7 @@ const confirmed = {
     },
 };
 
-/** OpenAI/Groq function tool definitions */
+
 export const toolDeclarations = [
     {
         name: 'list_projects',
@@ -346,7 +346,7 @@ export const toolDeclarations = [
         },
     },
 
-    // ── advanced / newly wired APIs ──────────────────────────
+
     {
         name: 'get_project_meta',
         description: 'Get lightweight project meta (name, plan, type).',
@@ -593,6 +593,119 @@ export const toolDeclarations = [
             type: 'object',
             properties: { projectId: { type: 'string' } },
             required: ['projectId'],
+        },
+    },
+
+    {
+        name: 'probe_url',
+        description:
+            'HTTP probe a public URL from outside (status, latency, redirect, body snippet). Use with diagnose/live status when a site seems down — compares internal "running" vs external reachability. SSRF-safe (public hosts only).',
+        parameters: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'Full http(s) URL to probe' },
+                method: { type: 'string', description: 'GET (default) or HEAD' },
+            },
+            required: ['url'],
+        },
+    },
+    {
+        name: 'check_dns',
+        description:
+            'Resolve DNS for a hostname (A/AAAA/CNAME/MX/TXT/NS). Use for custom domain / subdomain issues.',
+        parameters: {
+            type: 'object',
+            properties: {
+                hostname: { type: 'string', description: 'Hostname or URL' },
+            },
+            required: ['hostname'],
+        },
+    },
+    {
+        name: 'check_ssl',
+        description:
+            'Check TLS certificate for a hostname (issuer, validity, days remaining, auth errors). Use for HTTPS/cert problems.',
+        parameters: {
+            type: 'object',
+            properties: {
+                hostname: { type: 'string' },
+                port: { type: 'number', description: 'Default 443' },
+            },
+            required: ['hostname'],
+        },
+    },
+    {
+        name: 'search_error_docs',
+        description:
+            'Web search for an error message / build failure to find docs and fix hints. Pass a short error line from logs. Mix with analyze_build_failure results.',
+        parameters: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'Error text or search query' },
+                maxResults: { type: 'number' },
+            },
+            required: ['query'],
+        },
+    },
+    {
+        name: 'lookup_npm_package',
+        description: 'Look up an npm package (latest version, deprecated, license, deps).',
+        parameters: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Package name, e.g. express or @scope/pkg' },
+                version: { type: 'string', description: 'Optional exact version' },
+            },
+            required: ['name'],
+        },
+    },
+    {
+        name: 'lookup_pypi_package',
+        description: 'Look up a PyPI package (version, summary, requires-python).',
+        parameters: {
+            type: 'object',
+            properties: {
+                name: { type: 'string' },
+            },
+            required: ['name'],
+        },
+    },
+    {
+        name: 'lookup_domain_whois',
+        description:
+            'RDAP/WHOIS-style domain registration info (expiry, nameservers, status). Use for custom domain ownership/expiry questions.',
+        parameters: {
+            type: 'object',
+            properties: {
+                domain: { type: 'string', description: 'example.com' },
+            },
+            required: ['domain'],
+        },
+    },
+    {
+        name: 'fetch_public_page',
+        description:
+            'Fetch a public docs/status/changelog page snippet (http/https only, SSRF-safe).',
+        parameters: {
+            type: 'object',
+            properties: {
+                url: { type: 'string' },
+                maxChars: { type: 'number' },
+            },
+            required: ['url'],
+        },
+    },
+    {
+        name: 'get_github_repo_insights',
+        description:
+            'GitHub insights for owner/repo: latest commits, open PRs, recent Actions runs. Requires user GitHub login. Mix with DeployHub build status to see if code pushed vs deploy failed.',
+        parameters: {
+            type: 'object',
+            properties: {
+                repo: { type: 'string', description: 'owner/name' },
+                branch: { type: 'string', description: 'Optional branch (default: repo default)' },
+            },
+            required: ['repo'],
         },
     },
 ];

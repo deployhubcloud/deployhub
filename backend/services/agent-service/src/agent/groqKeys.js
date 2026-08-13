@@ -18,10 +18,7 @@ function uniqueKeys(list) {
     return out;
 }
 
-/**
- * Load keys only from GROQ_API_KEYS (comma / newline separated).
- * Example: GROQ_API_KEYS=key1,key2,key3
- */
+
 export function loadGroqApiKeys(env = process.env) {
     const keys = uniqueKeys(
         String(env.GROQ_API_KEYS || '')
@@ -58,9 +55,6 @@ function cooldownKey(idx) {
     return `${COOLDOWN_PREFIX}${idx}`;
 }
 
-/**
- * Redis-backed round-robin + cooldown pool over GROQ_API_KEYS list.
- */
 export function createGroqKeyPool(keys) {
     const apiKeys = uniqueKeys(keys);
     if (!apiKeys.length) {
@@ -75,7 +69,6 @@ export function createGroqKeyPool(keys) {
             const redis = getRedis();
             await redis.set(CURRENT_KEY, String(idx));
         } catch {
-            /* ignore */
         }
     }
 
@@ -159,7 +152,6 @@ export function createGroqKeyPool(keys) {
                             await redis.set(RR_KEY, String(useIdx + 1));
                             await setCurrent((useIdx + 1) % n);
                         } catch {
-                            /* ignore */
                         }
                         if (attempt < n - 1) {
                             console.warn(

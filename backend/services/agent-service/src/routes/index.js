@@ -28,7 +28,6 @@ router.post('/chat', async (req, res) => {
         let memory = typeof body.memory === 'string' ? body.memory : '';
         let recent = normalizeRecentMessages(body.recent);
 
-        // Backward compat: old clients sending full messages[]
         if (!message && Array.isArray(body.messages) && body.messages.length) {
             const cleaned = body.messages
                 .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && m.content)

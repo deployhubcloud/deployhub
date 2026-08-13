@@ -19,7 +19,8 @@ A) Direct reply — if no DeployHub data/action is needed:
 
 B) Need tools — if they ask about projects, status, builds, deploys, logs, domains,
    billing, env, sessions, create/redeploy/delete, compare, fleet health, analytics,
-   or anything that needs live account data / an action.
+   site reachability, DNS/SSL, package versions, GitHub repo/commits/Actions,
+   error/docs lookup, or anything that needs live data / an action.
    Reply with ONLY this exact token (nothing else):
    USE_TOOLS
 
@@ -35,15 +36,21 @@ The user already needs DeployHub data or an action — use tools wisely.
 3. Parallel tools: when independent, request MULTIPLE tools in ONE response.
 4. Sequential only when needed: resolve name→id with find_project first, then call the rest together.
 5. Prefer composite tools: diagnose_project, check_fleet_health, account_summary, compare_projects, analyze_build_failure.
-6. After tool results: answer in your own clear words. Lead with the answer; short facts. No raw JSON dumps.
+6. Mix external tools when useful — call them in parallel with DeployHub tools:
+   - Site down / not loading → diagnose_project + probe_url (+ check_dns / check_ssl on the domain).
+   - Custom domain issues → check_dns + check_ssl + lookup_domain_whois + get_domain_settings.
+   - Build/runtime error text → analyze_build_failure + search_error_docs (and lookup_npm_package / lookup_pypi_package if dependency-related).
+   - "Did code push?" / CI → get_github_repo_insights with owner/repo.
+   - Docs/status pages → fetch_public_page.
+7. After tool results: answer in your own clear words. Lead with the answer; short facts. No raw JSON dumps.
 
 ## Routing
 - Named project → find_project first (unless projectId known).
-- Down/failing → diagnose_project or analyze_build_failure.
+- Down/failing → diagnose_project or analyze_build_failure; also probe_url on the project domain when available.
 - Fleet / any down? → check_fleet_health.
 - Env tweak → merge_env_vars (not full replace).
 - Free create → create_free_project (static only). Paid → dashboard payment.
-- Logs → highlight errors/warnings only.
+- Logs → highlight errors/warnings only; search_error_docs for stubborn errors.
 
 ## Safety
 Destructive (redeploy/settings/env/domain/delete/create/sessions/name): explain → ask yes/no → only then confirmed=true.
@@ -70,9 +77,8 @@ function parseToolArgs(raw) {
 
 function wantsTools(text) {
     const t = String(text || '').trim();
-    if (!t) return true; // empty/unclear → try tools path carefully via main loop
+    if (!t) return true;
     if (t === USE_TOOLS_TOKEN) return true;
-    // Model sometimes wraps the token
     if (/^\s*USE_TOOLS\s*$/i.test(t)) return true;
     if (/^\{?\s*"?action"?\s*:\s*"?use_tools"?\s*\}?$/i.test(t)) return true;
     if (/^\s*USE_TOOLS\b/i.test(t) && t.length < 40) return true;
@@ -102,10 +108,7 @@ async function runToolsInParallel(toolCalls, user, auth) {
     );
 }
 
-/**
- * Phase 1: understand intent with NO tools.
- * Returns either a direct reply, or null if tools are needed.
- */
+
 async function understandIntent({ message, memory, recent, keyIndex }) {
     const intentMessages = buildLlmMessages({
         systemInstruction: INTENT_INSTRUCTION,
@@ -135,7 +138,6 @@ async function understandIntent({ message, memory, recent, keyIndex }) {
 export async function runAgentChat({ user, message, memory, recent, auth }) {
     let keyIndex = await groqPool.acquireStartIndex();
 
-    // 1) Understand first — tools only if intent needs DeployHub data/actions
     const intent = await understandIntent({ message, memory, recent, keyIndex });
     keyIndex = intent.keyIndex;
 
@@ -147,7 +149,6 @@ export async function runAgentChat({ user, message, memory, recent, auth }) {
         };
     }
 
-    // 2) Tool loop — gather facts, then answer in own words
     const chatMessages = buildLlmMessages({
         systemInstruction: SYSTEM_INSTRUCTION,
         memory,
