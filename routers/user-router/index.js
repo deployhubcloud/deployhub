@@ -8,7 +8,8 @@ import path from "path";
 import { Queue } from "bullmq";
 import { redisclient, redisConnect } from "./src/configs/redis.js";
 import { RateLimiterRedis } from "rate-limiter-flexible";
-import { lookup } from "geoip-lite";
+import geoip from "geoip-lite";
+const { lookup } = geoip;
 
 
 dotenv.config();
