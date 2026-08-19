@@ -4,7 +4,7 @@ import { getRedis } from '../core/redis/client.js';
 import { clearCacheProjectData } from '../../../../shared/utils/cacheProjectData.js';
 import { subdomainChangeQueue } from '../utils/queues.js';
 import { isBlockedDomain } from '../utils/blockedDomains.js';
-import { writeNginxConfig } from '../../../../shared/nginx/writeNginx.js';
+import { writeAcmeHttpOnlyNginxConfig, writeNginxConfig } from '../../../../shared/nginx/writeNginx.js';
 import { execInContainer } from '../utils/execInContainer.js';
 import { project_env } from '../lib/env.js';
 import path from 'path';
@@ -229,13 +229,41 @@ export const addCustomDomainService = async (domain, projectId, userId) => {
         throw new AppError('CERTBOT_EMAIL is not configured', 500);
     }
 
-    const ssl = await issueOrReuseCertificate({
-        domain: normalizedDomain,
-        userId: project.userId,
-        projectId,
-        email: process.env.CERTBOT_EMAIL,
-        networkMode: NETWORK_MODE,
+    const acmeConfig = writeAcmeHttpOnlyNginxConfig({ domain: normalizedDomain });
+    await withNginxHelper(projectId, async (nginxContainer) => {
+        await writeNginxFileToHost(
+            nginxContainer,
+            acmeConfig,
+            '/data/nginx/custom-domains',
+            `${normalizedDomain}.conf`
+        );
     });
+    if (isProduction()) await reloadNginx(docker);
+
+    let ssl;
+    try {
+        ssl = await issueOrReuseCertificate({
+            domain: normalizedDomain,
+            userId: project.userId,
+            projectId,
+            email: process.env.CERTBOT_EMAIL,
+            networkMode: NETWORK_MODE,
+        });
+    } catch (error) {
+        try {
+            await withNginxHelper(projectId, async (nginxContainer) => {
+                await execInContainer(nginxContainer, [
+                    'rm',
+                    '-f',
+                    `/data/nginx/custom-domains/${normalizedDomain}.conf`,
+                ]);
+            });
+            if (isProduction()) await reloadNginx(docker);
+        } catch (cleanupError) {
+            console.warn(`[custom-domain] acme cleanup failed: ${cleanupError.message}`);
+        }
+        throw error;
+    }
 
     const nginxConfig = writeNginxConfig({
         type: project.type === 'static' ? 'static' : 'backend',
