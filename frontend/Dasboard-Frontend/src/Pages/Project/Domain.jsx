@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../../api/apiclient";
 import PageHeader from "../../components/PageHeader";
@@ -7,7 +7,7 @@ import Skeleton from "../../components/ui/Skeleton";
 function DomainSkeleton() {
   return (
     <div className="space-y-5">
-      {[1, 2].map(i => (
+      {[1, 2].map((i) => (
         <div key={i} className="bg-[#111114] border border-white/[0.06] rounded-xl p-5 space-y-4">
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-10 w-full" />
@@ -15,6 +15,19 @@ function DomainSkeleton() {
       ))}
     </div>
   );
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleString();
+}
+
+function sslStatusTone(status) {
+  if (status === "active") return "text-green-400";
+  if (status === "failed") return "text-red-400";
+  return "text-amber-400";
 }
 
 export function Domain() {
@@ -27,23 +40,32 @@ export function Domain() {
   const [originalSubdomain, setOriginalSubdomain] = useState("");
   const [newSubdomain, setNewSubdomain] = useState("");
   const [customDomains, setCustomDomains] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [dns, setDns] = useState({ aRecord: null, cnameTarget: "cname.deployhub.online" });
   const [newCustomDomain, setNewCustomDomain] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [customDomainSaving, setCustomDomainSaving] = useState(false);
   const [customDomainRemoving, setCustomDomainRemoving] = useState(null);
+  const [customDomainRenewing, setCustomDomainRenewing] = useState(null);
   const [customDomainError, setCustomDomainError] = useState(null);
   const [cooldown, setCooldown] = useState(false);
+
+  const loadDomain = async () => {
+    const response = await api.get(`/project/settings/domain/${projectId}`);
+    const ds = response.data.domainSettings;
+    setDomainSettings(ds);
+    setOriginalSubdomain(ds.subdomain || "");
+    setNewSubdomain(ds.subdomain || "");
+    setCustomDomains(ds.customDomains || []);
+    setCertificates(ds.certificates || []);
+    setDns(ds.dns || { aRecord: null, cnameTarget: "cname.deployhub.online" });
+  };
 
   useEffect(() => {
     const fetchDomain = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/project/settings/domain/${projectId}`);
-        const ds = response.data.domainSettings;
-        setDomainSettings(ds);
-        setOriginalSubdomain(ds.subdomain || "");
-        setNewSubdomain(ds.subdomain || "");
-        setCustomDomains(ds.customDomains || []);
+        await loadDomain();
       } catch {
         setError("Failed to load domain settings.");
       } finally {
@@ -52,6 +74,12 @@ export function Domain() {
     };
     fetchDomain();
   }, [projectId]);
+
+  const certByDomain = useMemo(() => {
+    const map = {};
+    for (const c of certificates) map[c.domain] = c;
+    return map;
+  }, [certificates]);
 
   const handleSubdomainSave = async () => {
     if (!newSubdomain.trim() || newSubdomain === originalSubdomain) return;
@@ -81,11 +109,11 @@ export function Domain() {
     setCustomDomainSaving(true);
     try {
       await api.post(`/project/custom-domain/${projectId}`, { domain });
-      setCustomDomains(prev => [...prev, domain]);
       setNewCustomDomain("");
       setShowAddForm(false);
       setSuccessMessage(`Domain ${domain} added successfully.`);
       setTimeout(() => setSuccessMessage(""), 3000);
+      await loadDomain();
     } catch (err) {
       setCustomDomainError(err.response?.data?.message || "Failed to add custom domain.");
     } finally {
@@ -98,13 +126,28 @@ export function Domain() {
     setCustomDomainRemoving(domain);
     try {
       await api.delete(`/project/custom-domain/${projectId}`, { data: { domain } });
-      setCustomDomains(prev => prev.filter(d => d !== domain));
       setSuccessMessage(`Domain ${domain} removed successfully.`);
       setTimeout(() => setSuccessMessage(""), 3000);
+      await loadDomain();
     } catch (err) {
       setCustomDomainError(err.response?.data?.message || "Failed to remove custom domain.");
     } finally {
       setCustomDomainRemoving(null);
+    }
+  };
+
+  const renewCustomDomain = async (domain) => {
+    setCustomDomainError(null);
+    setCustomDomainRenewing(domain);
+    try {
+      await api.post(`/project/custom-domain/${projectId}/renew`, { domain });
+      setSuccessMessage(`SSL certificate renewed for ${domain}.`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+      await loadDomain();
+    } catch (err) {
+      setCustomDomainError(err.response?.data?.message || "Failed to renew certificate.");
+    } finally {
+      setCustomDomainRenewing(null);
     }
   };
 
@@ -132,8 +175,10 @@ export function Domain() {
   const canManageCustom = !isFree && !isMicro;
 
   const DNS_RECORDS = [
-    { type: 'CNAME', name: '@', value: 'cname.deployhub.online', status: 'pending' },
-    { type: 'CNAME', name: 'www', value: 'cname.deployhub.online', status: 'pending' },
+    ...(dns.aRecord
+      ? [{ type: "A", name: "@ / host", value: dns.aRecord }]
+      : []),
+    { type: "CNAME", name: "www / subdomain", value: dns.cnameTarget || "cname.deployhub.online" },
   ];
 
   return (
@@ -215,21 +260,46 @@ export function Domain() {
           {customDomains.length === 0 && !showAddForm && (
             <p className="text-sm text-neutral-500">No custom domains configured.</p>
           )}
-          {customDomains.map((domain) => (
-            <div key={domain} className="flex items-center justify-between py-3 border-b border-white/[0.06] last:border-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                <span className="font-mono text-sm text-white truncate">{domain}</span>
-                <span className="text-xs text-green-400">Active</span>
+          {customDomains.map((domain) => {
+            const cert = certByDomain[domain];
+            return (
+              <div key={domain} className="py-3 border-b border-white/[0.06] last:border-0 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cert?.status === "failed" ? "bg-red-500" : "bg-green-500"}`} />
+                    <span className="font-mono text-sm text-white truncate">{domain}</span>
+                    <span className={`text-xs ${sslStatusTone(cert?.status || "active")}`}>
+                      {cert?.status || "active"}
+                    </span>
+                  </div>
+                  {canManageCustom && (
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <button
+                        onClick={() => renewCustomDomain(domain)}
+                        disabled={customDomainRenewing === domain}
+                        className="text-xs text-neutral-500 hover:text-amber-400 transition disabled:opacity-50"
+                      >
+                        {customDomainRenewing === domain ? "Renewing…" : "Renew SSL"}
+                      </button>
+                      <button
+                        onClick={() => removeCustomDomain(domain)}
+                        disabled={customDomainRemoving === domain}
+                        className="text-xs text-neutral-500 hover:text-red-400 transition disabled:opacity-50"
+                      >
+                        {customDomainRemoving === domain ? "Removing…" : "Remove"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {cert && (
+                  <div className="text-[11px] text-neutral-500 font-mono pl-5">
+                    Expires {formatDate(cert.expiresAt)} · Next renew {formatDate(cert.nextRenewAt)}
+                    {cert.lastError ? ` · Last error: ${cert.lastError}` : ""}
+                  </div>
+                )}
               </div>
-              {canManageCustom && (
-                <button onClick={() => removeCustomDomain(domain)} disabled={customDomainRemoving === domain}
-                  className="text-xs text-neutral-500 hover:text-red-400 transition disabled:opacity-50">
-                  {customDomainRemoving === domain ? "Removing…" : "Remove"}
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {canManageCustom && (
             <>
@@ -243,6 +313,9 @@ export function Domain() {
                     disabled={customDomainSaving}
                     className="w-full bg-[#0a0a0b] border border-white/10 rounded-lg px-3 py-2 font-mono text-sm text-white focus:border-amber-500/50 outline-none disabled:opacity-50"
                   />
+                  <p className="text-[11px] text-neutral-500">
+                    Point DNS first: A → {dns.aRecord || "your server IP"} or CNAME → {dns.cnameTarget || "cname.deployhub.online"}
+                  </p>
                   <div className="flex gap-2">
                     <button onClick={addCustomDomain} disabled={!newCustomDomain.trim() || customDomainSaving}
                       className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold disabled:opacity-50">
@@ -264,16 +337,18 @@ export function Domain() {
           )}
 
           {isFree && !isMicro && (
-            <p className="text-xs text-neutral-500 pt-2">Custom domains are available on the Pro plan.</p>
+            <p className="text-xs text-neutral-500 pt-2">Custom domains are available on paid plans.</p>
           )}
         </div>
       </section>
 
-      {customDomains.length > 0 && canManageCustom && (
+      {canManageCustom && (
         <section className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/[0.06]">
             <h2 className="text-sm font-medium text-white">DNS Records</h2>
-            <p className="text-xs text-neutral-500 mt-1">Configure these records at your domain provider</p>
+            <p className="text-xs text-neutral-500 mt-1">
+              Use either A record or CNAME before adding the domain. SSL is issued automatically.
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm font-mono">
@@ -282,7 +357,6 @@ export function Domain() {
                   <th className="py-3 px-5 font-medium">Type</th>
                   <th className="py-3 px-5 font-medium">Name</th>
                   <th className="py-3 px-5 font-medium">Value</th>
-                  <th className="py-3 px-5 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -291,12 +365,6 @@ export function Domain() {
                     <td className="py-3 px-5 text-neutral-300">{rec.type}</td>
                     <td className="py-3 px-5 text-neutral-400">{rec.name}</td>
                     <td className="py-3 px-5 text-neutral-300">{rec.value}</td>
-                    <td className="py-3 px-5">
-                      <span className="inline-flex items-center gap-1.5 text-xs">
-                        <span className={`w-1.5 h-1.5 rounded-full ${rec.status === 'active' ? 'bg-green-500' : rec.status === 'failed' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                        <span className="text-neutral-400 capitalize">{rec.status}</span>
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>

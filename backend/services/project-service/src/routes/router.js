@@ -7,8 +7,8 @@ import { project_env } from '../lib/env.js';
 import { getProjectByIdController } from '../controllers/forOtherService.js';
 import { reDeployController } from '../controllers/reDeploy.js';
 import { getProjectDataByIdConroller, getProjectMetaController, getProjectsController } from '../controllers/getProjects.js';
-import { addCustomDomainValidator, getDomainSettingsValidators, validateChangeSubDomain, deleteCustomDomainValidator } from '../validators/domain.js';
-import { changeSubdomainController, getDomainSettingsController, addCustomDomainCOntroller, deleteCustomDomainController } from '../controllers/domain.controller.js';
+import { addCustomDomainValidator, getDomainSettingsValidators, validateChangeSubDomain, deleteCustomDomainValidator, renewCustomDomainValidator } from '../validators/domain.js';
+import { changeSubdomainController, getDomainSettingsController, addCustomDomainCOntroller, deleteCustomDomainController, renewCustomDomainController } from '../controllers/domain.controller.js';
 import { projectSettingValidators, updateBuildandStartSettingsValidators, updateHealthMonitoringAndNotificationValidator, updateEnvSettingsValidators } from '../validators/projectSettings.js';
 import { projectSettingsController, updateBuildandStartSettingsController, updateEnvSettingsController, updateHealthMonitoringAndNotificationController } from '../controllers/projectSettings.controller.js';
 import { getProjectBillingValidators } from '../validators/billing.validators.js';
@@ -52,8 +52,9 @@ projectRouter.patch('/settings/env/:projectId/merge', mergeEnvValidators, mergeE
 
 // domain
 projectRouter.put('/subdomain/:projectId', validateChangeSubDomain, changeSubdomainController);
-projectRouter.post('/custom-domain/:projectId', addCustomDomainValidator, addCustomDomainCOntroller)
-projectRouter.delete('/custom-domain/:projectId', deleteCustomDomainValidator, deleteCustomDomainController)
+projectRouter.post('/custom-domain/:projectId', addCustomDomainValidator, addCustomDomainCOntroller);
+projectRouter.delete('/custom-domain/:projectId', deleteCustomDomainValidator, deleteCustomDomainController);
+projectRouter.post('/custom-domain/:projectId/renew', renewCustomDomainValidator, renewCustomDomainController);
 
 
 // project billing
