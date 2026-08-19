@@ -3,6 +3,8 @@ import http from "http";
 import httpProxy from "http-proxy";
 import compression from "compression";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 import { Queue } from "bullmq";
 import { redisclient, redisConnect } from "./src/configs/redis.js";
 import { RateLimiterRedis } from "rate-limiter-flexible";
@@ -17,6 +19,35 @@ const server = http.createServer(app);
 
 app.set("trust proxy", true);
 app.use(compression());
+
+const ACME_ROOT = process.env.NGINX_HTML_HOST_DIR || "/home/rahul/docker/nginx/html";
+
+app.get("/.well-known/acme-challenge/:token", (req, res) => {
+    try {
+        const token = String(req.params.token || "");
+        if (!/^[\w-]+$/.test(token)) {
+            return res.status(400).send("Invalid token");
+        }
+
+        const challengeDir = path.join(ACME_ROOT, ".well-known", "acme-challenge");
+        const filePath = path.join(challengeDir, token);
+        const resolved = path.resolve(filePath);
+        if (!resolved.startsWith(path.resolve(challengeDir) + path.sep)) {
+            return res.status(400).send("Invalid path");
+        }
+
+        if (!fs.existsSync(resolved)) {
+            console.warn(`[acme] challenge missing: ${resolved}`);
+            return res.status(404).send("Not found");
+        }
+
+        res.setHeader("Content-Type", "text/plain");
+        return fs.createReadStream(resolved).pipe(res);
+    } catch (err) {
+        console.error("[acme] serve failed:", err.message);
+        return res.status(500).send("ACME error");
+    }
+});
 
 app.get("/user-router-health", (_req, res) => {
     res.status(200).json({ status: "ok", router: "User-router" });

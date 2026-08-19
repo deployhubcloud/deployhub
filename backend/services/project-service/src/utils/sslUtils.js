@@ -6,7 +6,7 @@ import { docker } from './docker.js';
 import { SslCertificate } from '../models/sslCertificate.js';
 import { project_env } from '../lib/env.js';
 
-const ACME_WEBROOT = '/usr/share/nginx/html';
+const ACME_WEBROOT = '/var/www/html';
 
 function isProduction() {
     return project_env.NODE_ENV === 'production';
@@ -65,7 +65,7 @@ function summarizeCertbotLogs(logs = '') {
 async function runCertbot(cmd, networkMode) {
     await checkAndPullImage(docker, 'certbot/certbot');
 
-    const letsencryptBind = `${letsencryptHostDir()}:${'/etc/letsencrypt'}`;
+    const letsencryptBind = `${letsencryptHostDir()}:/etc/letsencrypt`;
     const htmlBind = `${nginxHtmlHostDir()}:${ACME_WEBROOT}`;
 
     if (!fs.existsSync(letsencryptHostDir())) {
