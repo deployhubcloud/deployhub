@@ -6,6 +6,7 @@ import { adminEnv } from '../lib/env.js';
 import { getRedis } from '../core/redis/client.js';
 import { transporter } from '../utils/transporter.js';
 import { AdminAccount } from '../models/adminAccount.model.js';
+import { AdminAuditLog } from '../models/adminAuditLog.model.js';
 import { ROLES, permissionsForRole, normalizeRole } from '../constants/roles.js';
 
 const COOKIE_NAME = 'admin_session';
@@ -194,4 +195,53 @@ export function publicAdminFromSession(session) {
         role,
         permissions: permissionsForRole(role),
     };
+}
+
+export async function changeOwnPassword({ session, currentPassword, newPassword, req }) {
+    const role = normalizeRole(session?.role);
+    if (role !== ROLES.NORMAL_ADMIN || !session?.accountId) {
+        throw new AppError('Only a normal admin can change password from the panel', 403);
+    }
+
+    const current = String(currentPassword || '');
+    const next = String(newPassword || '');
+    if (!current || !next) {
+        throw new AppError('currentPassword and newPassword are required', 400);
+    }
+    if (next.length < 8) {
+        throw new AppError('new password must be at least 8 characters', 400);
+    }
+    if (current === next) {
+        throw new AppError('new password must be different from current password', 400);
+    }
+
+    const account = await AdminAccount.findById(session.accountId).select('+passwordHash');
+    if (!account || account.status !== 'active') {
+        throw new AppError('Admin not found', 404);
+    }
+
+    const ok = await bcrypt.compare(current, account.passwordHash);
+    if (!ok) {
+        throw new AppError('Current password is incorrect', 400);
+    }
+
+    account.passwordHash = await bcrypt.hash(next, adminEnv.BCRYPT_ROUNDS);
+    await account.save();
+
+    AdminAuditLog.create({
+        actorUsername: account.username,
+        actorRole: ROLES.NORMAL_ADMIN,
+        actorAccountId: String(account._id),
+        action: 'PATCH /auth/password',
+        method: 'PATCH',
+        path: '/auth/password',
+        statusCode: 200,
+        targetType: 'admin',
+        targetId: String(account._id),
+        meta: { kind: 'password_change' },
+        ip: req?.ip || '',
+        userAgent: req?.headers?.['user-agent'] || '',
+    }).catch(() => {});
+
+    return { message: 'Password updated' };
 }

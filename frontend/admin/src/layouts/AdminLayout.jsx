@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Boxes, LogOut, Shield, UserCog, ScrollText } from 'lucide-react'
+import { LayoutDashboard, Users, Boxes, LogOut, Shield, UserCog, ScrollText, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -57,6 +57,11 @@ export default function AdminLayout() {
           {can('audit:read') && (
             <NavLink to="/audit-logs" className={linkClass}>
               <ScrollText size={16} /> Audit Logs
+            </NavLink>
+          )}
+          {!isSuper && (
+            <NavLink to="/password" className={linkClass}>
+              <KeyRound size={16} /> Password
             </NavLink>
           )}
         </nav>

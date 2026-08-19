@@ -9,6 +9,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage'
 import OverviewPage from './pages/OverviewPage'
 import AdminsPage from './pages/AdminsPage'
 import AuditLogsPage from './pages/AuditLogsPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 
 function PrivateRoute({ children }) {
   const { admin, loading } = useAuth()
@@ -34,6 +35,13 @@ function RequirePerm({ permission, children }) {
   const { can, loading } = useAuth()
   if (loading) return null
   if (!can(permission)) return <Navigate to="/users" replace />
+  return children
+}
+
+function RequireNormalAdmin({ children }) {
+  const { isSuper, loading } = useAuth()
+  if (loading) return null
+  if (isSuper) return <Navigate to="/" replace />
   return children
 }
 
@@ -109,6 +117,14 @@ export default function App() {
             <RequirePerm permission="audit:read">
               <AuditLogsPage />
             </RequirePerm>
+          }
+        />
+        <Route
+          path="password"
+          element={
+            <RequireNormalAdmin>
+              <ChangePasswordPage />
+            </RequireNormalAdmin>
           }
         />
       </Route>

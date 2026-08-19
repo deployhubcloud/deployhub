@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+    changePasswordController,
     loginInitController,
     loginVerifyController,
     logoutController,
@@ -13,5 +14,6 @@ router.post('/login', loginInitController);
 router.post('/verify-otp', loginVerifyController);
 router.post('/logout', requireAdminSession, logoutController);
 router.get('/me', requireAdminSession, meController);
+router.patch('/password', requireAdminSession, changePasswordController);
 
 export default router;

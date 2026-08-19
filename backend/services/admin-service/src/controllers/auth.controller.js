@@ -1,4 +1,5 @@
 import {
+    changeOwnPassword,
     destroyAdminSession,
     getAdminSessionCookieName,
     getClearSessionCookieOptions,
@@ -60,4 +61,20 @@ export const meController = async (req, res) => {
     return res.status(200).json({
         admin: publicAdminFromSession(req.adminSession),
     });
+};
+
+export const changePasswordController = async (req, res) => {
+    try {
+        const data = await changeOwnPassword({
+            session: req.adminSession,
+            currentPassword: req.body?.currentPassword,
+            newPassword: req.body?.newPassword,
+            req,
+        });
+        return res.status(200).json(data);
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            message: error.msg || error.message || 'Failed to change password',
+        });
+    }
 };
