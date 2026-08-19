@@ -6,6 +6,14 @@ import { docker } from './docker.js';
 import { SslCertificate } from '../models/sslCertificate.js';
 import { project_env } from '../lib/env.js';
 
+// Docker daemon bind sources (host filesystem)
+const LETSENCRYPT_HOST_DIR = '/home/rahul/docker/letsencrypt';
+const NGINX_HTML_HOST_DIR = '/home/rahul/docker/nginx/html';
+
+// Where project-service mounts letsencrypt inside its own container
+// (see backend.yml: -v /home/rahul/docker/letsencrypt:/etc/letsencrypt)
+const LETSENCRYPT_IN_CONTAINER = '/etc/letsencrypt';
+
 const ACME_WEBROOT = '/var/www/html';
 
 function isProduction() {
@@ -13,24 +21,20 @@ function isProduction() {
 }
 
 export function letsencryptHostDir() {
-    if (process.env.LETSENCRYPT_HOST_DIR) return process.env.LETSENCRYPT_HOST_DIR;
-    if (isProduction()) return '/home/rahul/docker/letsencrypt';
-    return path.join(process.cwd(), 'letsencrypt');
+    return LETSENCRYPT_HOST_DIR;
 }
 
 export function nginxHtmlHostDir() {
-    if (process.env.NGINX_HTML_HOST_DIR) return process.env.NGINX_HTML_HOST_DIR;
-    if (isProduction()) return '/home/rahul/docker/nginx/html';
-    return path.join(process.cwd(), 'nginx/html');
+    return NGINX_HTML_HOST_DIR;
 }
 
-function certHostPath(domain) {
-    return path.join(letsencryptHostDir(), 'live', domain, 'fullchain.pem');
+function certPath(domain) {
+    return path.join(LETSENCRYPT_IN_CONTAINER, 'live', domain, 'fullchain.pem');
 }
 
 function certExists(domain) {
     try {
-        return fs.existsSync(certHostPath(domain));
+        return fs.existsSync(certPath(domain));
     } catch {
         return false;
     }
@@ -65,16 +69,9 @@ function summarizeCertbotLogs(logs = '') {
 async function runCertbot(cmd, networkMode) {
     await checkAndPullImage(docker, 'certbot/certbot');
 
-    const letsencryptBind = `${letsencryptHostDir()}:/etc/letsencrypt`;
-    const htmlBind = `${nginxHtmlHostDir()}:${ACME_WEBROOT}`;
-
-    if (!fs.existsSync(letsencryptHostDir())) {
-        fs.mkdirSync(letsencryptHostDir(), { recursive: true });
-    }
-    if (!fs.existsSync(nginxHtmlHostDir())) {
-        fs.mkdirSync(nginxHtmlHostDir(), { recursive: true });
-    }
-    fs.mkdirSync(path.join(nginxHtmlHostDir(), '.well-known', 'acme-challenge'), { recursive: true });
+    // Binds always use HOST paths (docker daemon resolves them on the host)
+    const letsencryptBind = `${LETSENCRYPT_HOST_DIR}:/etc/letsencrypt`;
+    const htmlBind = `${NGINX_HTML_HOST_DIR}:${ACME_WEBROOT}`;
 
     const container = await docker.createContainer({
         Image: 'certbot/certbot',
@@ -208,7 +205,7 @@ export async function issueOrReuseCertificate({
 
     if (!certExists(domain)) {
         throw new AppError(
-            'Certbot finished but certificate files were not found on disk. Check LETSENCRYPT_HOST_DIR mount.',
+            `Certbot finished but certificate files were not found at ${certPath(domain)}. Ensure project-service has /etc/letsencrypt mounted.`,
             502
         );
     }

@@ -21,7 +21,7 @@ const server = http.createServer(app);
 app.set("trust proxy", true);
 app.use(compression());
 
-const ACME_ROOT = process.env.NGINX_HTML_HOST_DIR || "/home/rahul/docker/nginx/html";
+const ACME_ROOT = "/home/rahul/docker/nginx/html";
 
 app.get("/.well-known/acme-challenge/:token", (req, res) => {
     try {

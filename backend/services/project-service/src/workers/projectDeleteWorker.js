@@ -21,7 +21,8 @@ import {
 import { docker } from "../utils/docker.js";
 import { execInContainer } from "../utils/execInContainer.js";
 
-const LETSENCRYPT_HOST_DIR = "/home/rahul/docker/letsencrypt";
+// Inside project-service container (host dir is bind-mounted here)
+const LETSENCRYPT_HOST_DIR = "/etc/letsencrypt";
 const JOB_NAME = "delete-project";
 
 async function clearProjectRedisData(redis, projectId, projectData, port) {
