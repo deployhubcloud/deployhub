@@ -9,7 +9,7 @@ const BUCKET = DEPLOY_SERVICE_ENV.MINIO_BUCKET;
 
 
 const client = new Minio.Client({
-  endPoint: DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? 'storage.cloudcoderhub.in' : "localhost",
+  endPoint: DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? 'storage.domaindrop.cloud' : "localhost",
   port: DEPLOY_SERVICE_ENV.NODE_ENV === "production" ? 443 : 9000,
   useSSL: DEPLOY_SERVICE_ENV.NODE_ENV === "production",
   region: "auto",
