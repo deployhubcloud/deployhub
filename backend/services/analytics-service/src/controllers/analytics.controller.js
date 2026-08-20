@@ -3,7 +3,7 @@ import { summaryService } from "../services/summaryService.js";
 import { assertUserOwnsProject } from "../../../../shared/utils/assertUserOwnsProject.js";
 import { env } from "../lib/env.js";
 import axios from 'axios';
-
+ 
 async function requireOwnership(req) {
     await assertUserOwnsProject({
         projectServiceUrl: env.PROJECT_SERVICE_URL,

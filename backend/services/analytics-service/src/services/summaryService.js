@@ -2,7 +2,7 @@ import { AppError } from "../../../../shared/errors/AppError.js";
 import { getRedis } from "../redis/client.js";
 
 export const summaryService = async (projectId) => {
-
+ 
     const redis = getRedis()
     const base = `deployhub:user:analytics:${projectId}`;
 

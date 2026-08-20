@@ -258,37 +258,38 @@ async function flushAnalytics() {
     if (analyticsBuffer.size === 0) return;
 
     const pipeline = redisclient.pipeline();
+    const now = Date.now();
+    const bucket5m = Math.floor(now / (5 * 60 * 1000));
+    const bucket1h = Math.floor(now / (60 * 60 * 1000));
+    const bucket24h = Math.floor(now / (24 * 60 * 60 * 1000));
 
     for (const [projectId, data] of analyticsBuffer.entries()) {
         const base = `deployhub:user:analytics:${projectId}`;
 
-        // existing
-        pipeline.incrby(`${base}:5m:req`, data.requests);
-        pipeline.expire(`${base}:5m:req`, 300);
+        pipeline.incrby(`${base}:5m:${bucket5m}:req`, data.requests);
+        pipeline.expire(`${base}:5m:${bucket5m}:req`, 300);
 
-        pipeline.incrby(`${base}:1h:req`, data.requests);
-        pipeline.expire(`${base}:1h:req`, 3600);
+        pipeline.incrby(`${base}:1h:${bucket1h}:req`, data.requests);
+        pipeline.expire(`${base}:1h:${bucket1h}:req`, 3600);
 
-        pipeline.incrby(`${base}:24h:req`, data.requests);
-        pipeline.expire(`${base}:24h:req`, 86400);
+        pipeline.incrby(`${base}:24h:${bucket24h}:req`, data.requests);
+        pipeline.expire(`${base}:24h:${bucket24h}:req`, 86400);
 
-        pipeline.incrby(`${base}:5m:err4xx`, data.errors4xx);
-        pipeline.expire(`${base}:5m:err4xx`, 300);
+        pipeline.incrby(`${base}:5m:${bucket5m}:err4xx`, data.errors4xx);
+        pipeline.expire(`${base}:5m:${bucket5m}:err4xx`, 300);
 
-        pipeline.incrby(`${base}:5m:err5xx`, data.errors5xx);
-        pipeline.expire(`${base}:5m:err5xx`, 300);
+        pipeline.incrby(`${base}:5m:${bucket5m}:err5xx`, data.errors5xx);
+        pipeline.expire(`${base}:5m:${bucket5m}:err5xx`, 300);
 
-        // 3. geographic — hash mein store
         for (const [country, count] of Object.entries(data.countries)) {
-            pipeline.hincrby(`${base}:24h:geo`, country, count);
+            pipeline.hincrby(`${base}:24h:${bucket24h}:geo`, country, count);
         }
-        pipeline.expire(`${base}:24h:geo`, 86400);
+        pipeline.expire(`${base}:24h:${bucket24h}:geo`, 86400);
 
-        // 4. top endpoints — hash mein store
         for (const [endpoint, count] of Object.entries(data.endpoints)) {
-            pipeline.hincrby(`${base}:24h:endpoints`, endpoint, count);
+            pipeline.hincrby(`${base}:24h:${bucket24h}:endpoints`, endpoint, count);
         }
-        pipeline.expire(`${base}:24h:endpoints`, 86400);
+        pipeline.expire(`${base}:24h:${bucket24h}:endpoints`, 86400);
     }
 
     await pipeline.exec();
@@ -298,7 +299,7 @@ async function flushAnalytics() {
 setInterval(async () => {
     await checkSpikes();
     await flushAnalytics();
-}, 5 * 60 * 1000);
+}, 60 * 1000);
 
 
 app.use(async (req, res) => {
