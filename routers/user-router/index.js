@@ -18,10 +18,23 @@ await redisConnect();
 const app = express();
 const server = http.createServer(app);
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 app.use(compression());
 
 const ACME_ROOT = "/home/rahul/docker/nginx/html";
+
+function clientIp(req) {
+    let ip =
+        req.ip ||
+        req.headers["x-real-ip"] ||
+        req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+        req.socket?.remoteAddress ||
+        "unknown";
+    ip = String(ip).trim();
+    if (ip.startsWith("::ffff:")) ip = ip.slice(7);
+    if (ip === "::1") ip = "127.0.0.1";
+    return ip;
+}
 
 app.get("/.well-known/acme-challenge/:token", (req, res) => {
     try {
@@ -317,10 +330,8 @@ app.use(async (req, res) => {
 
         trackRequest(resolved.projectId);
 
-        // 2. unique visitors — HyperLogLog
-        const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim()
-            || req.socket.remoteAddress
-            || "unknown";
+        // 2. unique visitors — HyperLogLog (real client IP behind nginx)
+        const ip = clientIp(req);
 
         await redisclient.pfadd(
             `deployhub:user:analytics:${resolved.projectId}:24h:uv`,

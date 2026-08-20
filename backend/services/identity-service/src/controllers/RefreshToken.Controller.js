@@ -1,5 +1,6 @@
 import { refreshTokenService } from "../services/refreshToken.service.js";
 import { getAccessTokenOptions, getRefreshTokenOptions } from "../utils/cookieOption.js";
+import { clientIp } from "../../../../shared/utils/clientIp.js";
 
 
 
@@ -9,7 +10,7 @@ export const refreshTokenController = async (req, res) => {
 
         const result = await refreshTokenService({
             refreshToken,
-            ip: req.ip,
+            ip: clientIp(req),
             userAgent: req.headers['user-agent']
         });
 

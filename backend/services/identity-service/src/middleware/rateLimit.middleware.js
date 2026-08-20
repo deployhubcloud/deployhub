@@ -1,4 +1,5 @@
 import { getRedis } from "../core/redis/client.js";
+import { clientIp } from "../../../../shared/utils/clientIp.js";
 
 const limit = {
     fullName: {
@@ -21,7 +22,7 @@ const limit = {
 const rateLimit = async (req, res, apiType) => {
 
     const redis = await getRedis();
-    const requester = req.user._id || req.ip;
+    const requester = req.user._id || clientIp(req);
 
     const limitConfig = limit[apiType];
     if (!limitConfig) {

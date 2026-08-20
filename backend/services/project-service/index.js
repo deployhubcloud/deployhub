@@ -1,25 +1,28 @@
 import express from 'express';
+import hpp from 'hpp';
+import helmet from 'helmet';
 import { createInternalAUthMiddleware } from '../../shared/middlewares/internalAuth.js';
 import { createShutdownHandler } from '../../shared/utils/gracefulShutdown.js';
 import { project_env } from './src/lib/env.js';
 import { closeDb, connectDb } from './src/core/db/mongodb.js';
 import { connectRedis } from './src/core/redis/client.js';
 import { closeRabbitMQ, initRabbitMQ } from './src/core/messageBroker/rabbitMq.js';
+import git_webHookRoutes from './src/routes/github-webhook.routes.js'
 
 
 // express app
 const app = express();
 
 
+app.set('trust proxy', 1);
+
+
 // security middleware
-import hpp from 'hpp';
-import helmet from 'helmet';
 app.use(hpp());
 app.use(helmet());
 
 
 // github webhhok trigger
-import git_webHookRoutes from './src/routes/github-webhook.routes.js'
 app.use('/trigger', git_webHookRoutes)
 
 // parsing

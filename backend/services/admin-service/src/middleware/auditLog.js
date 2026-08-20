@@ -1,5 +1,6 @@
 import { AdminAuditLog } from '../models/adminAuditLog.model.js';
 import { ROLES } from '../constants/roles.js';
+import { clientIp } from '../../../../shared/utils/clientIp.js';
 
 function inferTarget(path = '') {
     const userMatch = path.match(/\/users\/([^/]+)/);
@@ -36,7 +37,7 @@ export function auditNormalAdminMiddleware(req, res, next) {
                 durationMs: Date.now() - started,
                 query: req.query || {},
             },
-            ip: req.ip || '',
+            ip: clientIp(req),
             userAgent: req.headers?.['user-agent'] || '',
         }).catch((err) => {
             console.warn('[admin-audit] failed to write log:', err.message);

@@ -17,7 +17,14 @@ export default (target, serviceName) =>
                     proxyReq.setHeader("x-user-context", JSON.stringify(req.user));
                 }
 
-                // req log
+                const ip = req.ip || req.socket?.remoteAddress || '';
+                if (ip) {
+                    proxyReq.setHeader('X-Forwarded-For', ip);
+                    proxyReq.setHeader('X-Real-IP', ip);
+                }
+                const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+                proxyReq.setHeader('X-Forwarded-Proto', proto);
+
                 logger.info({
                     service: serviceName,
                     method: req.method,
@@ -29,7 +36,7 @@ export default (target, serviceName) =>
             proxyRes(proxyRes, req, res) {
                 const latency = Date.now() - proxyRes.req.startTime;
 
-                // SSE ke liye buffering off
+                
                 if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
                     res.setHeader('X-Accel-Buffering', 'no')
                     res.flushHeaders()
@@ -46,7 +53,6 @@ export default (target, serviceName) =>
             },
 
             error(err, req) {
-                // Error log
                 logger.error({
                     service: serviceName,
                     method: req.method,

@@ -1,13 +1,14 @@
 import crypto from 'crypto';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { clientIp } from '../../../../shared/utils/clientIp.js';
 
 export function authenticate(req, res, next) {
   const token = req.headers['x-bootstrap-token'];
 
   if (!token) {
     logger.warn('Secret fetch rejected — no bootstrap token', {
-      ip: req.ip,
+      ip: clientIp(req),
       path: req.path,
     });
     return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -22,7 +23,7 @@ export function authenticate(req, res, next) {
 
   if (!isValid) {
     logger.warn('Secret fetch rejected — invalid bootstrap token', {
-      ip: req.ip,
+      ip: clientIp(req),
       serviceName: req.params.serviceName,
     });
     return res.status(401).json({ success: false, message: 'Unauthorized' });

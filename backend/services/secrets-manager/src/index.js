@@ -2,17 +2,18 @@ import express from 'express';
 import helmet from 'helmet';
 import secretsRouter from './routes/secrets.routes.js';
 import { logger } from './config/logger.js';
+import { clientIp } from '../../../shared/utils/clientIp.js';
 
 const app = express();
 
-
+app.set('trust proxy', 1);
 app.use(helmet());
 app.disable('x-powered-by');
 app.use(express.json({ limit: '10kb' }));
 
 
 app.use((req, _res, next) => {
-    logger.debug(`${req.method} ${req.path}`, { ip: req.ip });
+    logger.debug(`${req.method} ${req.path}`, { ip: clientIp(req) });
     next();
 });
 
