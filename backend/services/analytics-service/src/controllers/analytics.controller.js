@@ -2,6 +2,7 @@ import { validationResult } from "express-validator";
 import { summaryService } from "../services/summaryService.js";
 import { assertUserOwnsProject } from "../../../../shared/utils/assertUserOwnsProject.js";
 import { env } from "../lib/env.js";
+import axios from 'axios';
 
 async function requireOwnership(req) {
     await assertUserOwnsProject({
@@ -10,6 +11,7 @@ async function requireOwnership(req) {
         talkingSecret: env.INTERNAL_SERVICE_TALKING_SECRET,
         projectId: req.params.projectId,
         userId: req.user._id,
+        axiosInstance: axios
     });
 }
 

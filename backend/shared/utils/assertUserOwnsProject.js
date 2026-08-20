@@ -18,6 +18,7 @@ export async function assertUserOwnsProject({
             `${projectServiceUrl}/for-other-service/${projectId}`,
             {
                 headers: {
+                    "Content-Type": "application/json",
                     'x-internal-secret': internalSecret,
                     'x-microservice-secret': talkingSecret,
                 },
@@ -39,6 +40,7 @@ export async function assertUserOwnsProject({
         if (error.response?.status === 404) {
             throw new AppError('Project not found', 404);
         }
+        console.log(error)
         throw new AppError('Failed to verify project ownership', 502);
     }
 }
