@@ -18,22 +18,49 @@ await redisConnect();
 const app = express();
 const server = http.createServer(app);
 
-app.set("trust proxy", 1);
+function isPrivateIp(ip = "") {
+    const v = String(ip).replace(/^::ffff:/i, "").trim();
+    if (!v || v === "::1" || v === "127.0.0.1") return true;
+    if (v.startsWith("10.")) return true;
+    if (v.startsWith("192.168.")) return true;
+    if (v.startsWith("169.254.")) return true;
+    const m = v.match(/^172\.(\d+)\./);
+    if (m) {
+        const n = Number(m[1]);
+        if (n >= 16 && n <= 31) return true;
+    }
+    return false;
+}
+
+// trust docker/nginx private hops; pick real public client IP
+app.set("trust proxy", (ip) => isPrivateIp(ip));
 app.use(compression());
 
 const ACME_ROOT = "/home/rahul/docker/nginx/html";
 
 function clientIp(req) {
-    let ip =
-        req.ip ||
-        req.headers["x-real-ip"] ||
-        req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
-        req.socket?.remoteAddress ||
-        "unknown";
-    ip = String(ip).trim();
-    if (ip.startsWith("::ffff:")) ip = ip.slice(7);
-    if (ip === "::1") ip = "127.0.0.1";
-    return ip;
+    const candidates = [];
+
+    const xff = req.headers["x-forwarded-for"];
+    if (typeof xff === "string") {
+        for (const part of xff.split(",")) {
+            const p = part.trim();
+            if (p) candidates.push(p);
+        }
+    }
+    if (req.headers["x-real-ip"]) candidates.push(String(req.headers["x-real-ip"]).trim());
+    if (req.ip) candidates.push(String(req.ip).trim());
+    if (req.socket?.remoteAddress) candidates.push(String(req.socket.remoteAddress).trim());
+
+    const normalized = candidates.map((ip) => {
+        let v = String(ip).trim();
+        if (v.startsWith("::ffff:")) v = v.slice(7);
+        if (v === "::1") v = "127.0.0.1";
+        return v;
+    }).filter(Boolean);
+
+    const publicIp = normalized.find((ip) => !isPrivateIp(ip));
+    return publicIp || normalized[0] || "unknown";
 }
 
 app.get("/.well-known/acme-challenge/:token", (req, res) => {
@@ -70,12 +97,30 @@ app.get("/user-router-health", (_req, res) => {
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 1000 });
 
 const httpProxyServer = httpProxy.createProxyServer({
-    changeOrigin: true, xfwd: true, agent: httpAgent,
+    // xfwd:false — hum khud standard headers set karte hain (warna docker IP append ho jati hai)
+    changeOrigin: true, xfwd: false, agent: httpAgent,
 });
 
 const wsProxyServer = httpProxy.createProxyServer({
-    changeOrigin: true, ws: true, xfwd: true,
+    changeOrigin: true, ws: true, xfwd: false,
 });
+
+// Internet → nginx → user-router → docker
+// Only forward the real PUBLIC client IP (never docker 172.x / 10.x)
+function forwardRealIp(proxyReq, req) {
+    const ip = clientIp(req);
+    const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.headers.host || "";
+
+    proxyReq.setHeader("X-Forwarded-For", ip);
+    proxyReq.setHeader("X-Real-IP", ip);
+    proxyReq.setHeader("X-Forwarded-Proto", proto);
+    proxyReq.setHeader("X-Forwarded-Host", host);
+    proxyReq.setHeader("Forwarded", `for=${ip};proto=${proto};host=${host}`);
+}
+
+httpProxyServer.on("proxyReq", forwardRealIp);
+wsProxyServer.on("proxyReqWs", forwardRealIp);
 
 
 const domainCache = new Map();
