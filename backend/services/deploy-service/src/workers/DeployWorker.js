@@ -442,25 +442,25 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
         // }
 
 
-            if (userPlan.uptime_monitoring) {
+        if (userPlan.uptime_monitoring) {
 
-                const healthPath = projectData.monitor.healthPath.startsWith("/") ? projectData.monitor.healthPath : `/${projectData.monitor.healthPath}`;
+            const healthPath = projectData.monitor.healthPath.startsWith("/") ? projectData.monitor.healthPath : `/${projectData.monitor.healthPath}`;
 
-                let pingUrl = `http://localhost:${projectData.assignedPort}${healthPath}`;
+            let pingUrl = `http://localhost:${projectData.assignedPort}${healthPath}`;
 
-                const monitoringQueueData = {
-                    projectId: projectData._id,
-                    projectName: projectData.name,
-                    pingUrl,
-                    monitorIntervalSeconds: projectData.monitor.intervalSeconds,
-                    monitorfailedTries: projectData.monitor.failedTries
-                };
+            const monitoringQueueData = {
+                projectId: projectData._id,
+                projectName: projectData.name,
+                pingUrl,
+                monitorIntervalSeconds: projectData.monitor.intervalSeconds,
+                monitorfailedTries: projectData.monitor.failedTries
+            };
 
-                if (projectData.monitor.enabled) {
-                    await monitoringQueue.add('monitoring', monitoringQueueData);
-                }
-
+            if (projectData.monitor.enabled) {
+                await monitoringQueue.add('monitoring', monitoringQueueData);
             }
+
+        }
 
         await deleteCacheBuildData(projectId);
 
@@ -497,7 +497,12 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
         throw error;
     }
 
-}, { connection, concurrency: 1 });
+}, {
+    connection,
+    concurrency: 2,
+    lockDuration: 120000,
+    maxStalledCount: 2,
+});
 
 deployWorker.on("completed", async (job, results) => {
     const { firstTime, projectId } = job.data;

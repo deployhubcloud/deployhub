@@ -440,7 +440,9 @@ export const buildWorker = new Worker(QUEUE_NAMES.BUILD, async (job) => {
     }
 }, {
     connection: connection,
-    concurrency: 1
+    concurrency: 2,
+    lockDuration: 120000,
+    maxStalledCount: 2,
 })
 
 buildWorker.on("completed", async (job, result) => {
