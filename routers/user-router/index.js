@@ -32,7 +32,7 @@ function isPrivateIp(ip = "") {
     return false;
 }
 
-// trust docker/nginx private hops; pick real public client IP
+
 app.set("trust proxy", (ip) => isPrivateIp(ip));
 app.use(compression());
 
@@ -97,7 +97,6 @@ app.get("/user-router-health", (_req, res) => {
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 1000 });
 
 const httpProxyServer = httpProxy.createProxyServer({
-    // xfwd:false — hum khud standard headers set karte hain (warna docker IP append ho jati hai)
     changeOrigin: true, xfwd: false, agent: httpAgent,
 });
 
@@ -105,8 +104,7 @@ const wsProxyServer = httpProxy.createProxyServer({
     changeOrigin: true, ws: true, xfwd: false,
 });
 
-// Internet → nginx → user-router → docker
-// Only forward the real PUBLIC client IP (never docker 172.x / 10.x)
+
 function forwardRealIp(proxyReq, req) {
     const ip = clientIp(req);
     const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
@@ -374,8 +372,6 @@ app.use(async (req, res) => {
         await burstLimiters[plan].consume(resolved.projectId);
 
         trackRequest(resolved.projectId);
-
-        // 2. unique visitors — HyperLogLog (real client IP behind nginx)
         const ip = clientIp(req);
 
         await redisclient.pfadd(
@@ -387,7 +383,7 @@ app.use(async (req, res) => {
             86400
         );
 
-        // endpoint normalize — query string hata do
+        
         const endpoint = req.path || "/";
 
         res.on("finish", () => {
