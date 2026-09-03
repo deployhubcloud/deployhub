@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Boxes, LogOut, Shield, UserCog, ScrollText, KeyRound } from 'lucide-react'
+import { LayoutDashboard, Users, Boxes, LogOut, Shield, UserCog, ScrollText, KeyRound, Server } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -9,6 +9,17 @@ const linkClass = ({ isActive }) =>
       ? 'bg-[var(--accent-soft)] text-[var(--text)] border border-[rgba(47,158,108,.25)]'
       : 'text-[var(--muted)] hover:bg-[var(--panel-2)] hover:text-[var(--text)] border border-transparent'
   }`
+
+function NavSection({ title, children }) {
+  const items = Array.isArray(children) ? children.filter(Boolean) : children ? [children] : []
+  if (!items.length) return null
+  return (
+    <div className="mb-5">
+      <div className="px-3 mb-1.5 text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">{title}</div>
+      <div className="flex flex-col gap-1">{items}</div>
+    </div>
+  )
+}
 
 export default function AdminLayout() {
   const { admin, logout, isSuper, can } = useAuth()
@@ -33,36 +44,49 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <nav className="flex flex-col gap-1.5">
-          {can('dashboard:read') && (
-            <NavLink to="/" end className={linkClass}>
-              <LayoutDashboard size={16} /> Overview
-            </NavLink>
-          )}
-          {can('users:read') && (
-            <NavLink to="/users" className={linkClass}>
-              <Users size={16} /> Users
-            </NavLink>
-          )}
-          {can('projects:read') && (
-            <NavLink to="/projects" className={linkClass}>
-              <Boxes size={16} /> Projects
-            </NavLink>
-          )}
-          {can('admins:manage') && (
-            <NavLink to="/admins" className={linkClass}>
-              <UserCog size={16} /> Admins
-            </NavLink>
-          )}
-          {can('audit:read') && (
-            <NavLink to="/audit-logs" className={linkClass}>
-              <ScrollText size={16} /> Audit Logs
-            </NavLink>
-          )}
+        <nav className="flex-1 overflow-auto">
+          <NavSection title="System">
+            {can('system:manage') && (
+              <NavLink to="/system" className={linkClass}>
+                <Server size={16} /> Infrastructure
+              </NavLink>
+            )}
+            {can('dashboard:read') && (
+              <NavLink to="/" end className={linkClass}>
+                <LayoutDashboard size={16} /> Overview
+              </NavLink>
+            )}
+            {can('admins:manage') && (
+              <NavLink to="/admins" className={linkClass}>
+                <UserCog size={16} /> Admins
+              </NavLink>
+            )}
+            {can('audit:read') && (
+              <NavLink to="/audit-logs" className={linkClass}>
+                <ScrollText size={16} /> Audit Logs
+              </NavLink>
+            )}
+          </NavSection>
+
+          <NavSection title="Platform">
+            {can('users:read') && (
+              <NavLink to="/users" className={linkClass}>
+                <Users size={16} /> Users
+              </NavLink>
+            )}
+            {can('projects:read') && (
+              <NavLink to="/projects" className={linkClass}>
+                <Boxes size={16} /> Projects
+              </NavLink>
+            )}
+          </NavSection>
+
           {!isSuper && (
-            <NavLink to="/password" className={linkClass}>
-              <KeyRound size={16} /> Password
-            </NavLink>
+            <NavSection title="Account">
+              <NavLink to="/password" className={linkClass}>
+                <KeyRound size={16} /> Password
+              </NavLink>
+            </NavSection>
           )}
         </nav>
 

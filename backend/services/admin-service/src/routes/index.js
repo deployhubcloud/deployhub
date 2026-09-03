@@ -4,6 +4,7 @@ import usersRoutes from './users.routes.js';
 import projectsRoutes from './projects.routes.js';
 import adminsRoutes from './admins.routes.js';
 import auditRoutes from './audit.routes.js';
+import systemRoutes from './system.routes.js';
 import { dashboardController } from '../controllers/dashboard.controller.js';
 import { requireAdminSession, requirePermission } from '../middleware/adminSession.js';
 import { auditNormalAdminMiddleware } from '../middleware/auditLog.js';
@@ -17,6 +18,7 @@ router.use(requireAdminSession);
 router.use(auditNormalAdminMiddleware);
 
 router.get('/dashboard', requirePermission(PERMISSIONS.DASHBOARD_READ), dashboardController);
+router.use('/system', systemRoutes);
 router.use('/users', usersRoutes);
 router.use('/projects', projectsRoutes);
 router.use('/admins', adminsRoutes);

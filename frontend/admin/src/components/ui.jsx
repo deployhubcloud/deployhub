@@ -1,10 +1,10 @@
 export function StatusBadge({ value }) {
   const v = String(value || 'unknown').toLowerCase()
   let cls = 'badge-gray'
-  if (['running', 'live', 'active', 'success', 'paid'].includes(v)) cls = 'badge-green'
-  else if (['failed', 'crash', 'suspend', 'deleted', 'disabled'].includes(v)) cls = 'badge-red'
-  else if (['building', 'deploying', 'queued', 'pending', 'pending_payment'].includes(v)) cls = 'badge-amber'
-  else if (['stopped', 'draft'].includes(v)) cls = 'badge-blue'
+  if (['running', 'live', 'active', 'success', 'paid', 'healthy'].includes(v)) cls = 'badge-green'
+  else if (['failed', 'crash', 'suspend', 'deleted', 'disabled', 'unhealthy', 'dead', 'missing'].includes(v)) cls = 'badge-red'
+  else if (['building', 'deploying', 'queued', 'pending', 'pending_payment', 'restarting', 'created'].includes(v)) cls = 'badge-amber'
+  else if (['stopped', 'draft', 'exited', 'paused'].includes(v)) cls = 'badge-blue'
   return <span className={`badge ${cls}`}>{v}</span>
 }
 

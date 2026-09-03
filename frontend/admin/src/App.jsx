@@ -10,6 +10,7 @@ import OverviewPage from './pages/OverviewPage'
 import AdminsPage from './pages/AdminsPage'
 import AuditLogsPage from './pages/AuditLogsPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
+import SystemPage from './pages/SystemPage'
 
 function PrivateRoute({ children }) {
   const { admin, loading } = useAuth()
@@ -47,6 +48,7 @@ function RequireNormalAdmin({ children }) {
 
 function HomeRedirect() {
   const { can } = useAuth()
+  if (can('system:manage')) return <Navigate to="/system" replace />
   if (can('dashboard:read')) return <OverviewPage />
   return <Navigate to="/users" replace />
 }
@@ -71,6 +73,14 @@ export default function App() {
         }
       >
         <Route index element={<HomeRedirect />} />
+        <Route
+          path="system"
+          element={
+            <RequirePerm permission="system:manage">
+              <SystemPage />
+            </RequirePerm>
+          }
+        />
         <Route
           path="users"
           element={

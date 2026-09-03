@@ -11,6 +11,7 @@ export const PERMISSIONS = {
     DASHBOARD_READ: 'dashboard:read',
     ADMINS_MANAGE: 'admins:manage',
     AUDIT_READ: 'audit:read',
+    SYSTEM_MANAGE: 'system:manage',
 };
 
 const SUPER_PERMISSIONS = new Set(Object.values(PERMISSIONS));
