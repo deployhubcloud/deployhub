@@ -76,7 +76,7 @@ export const PLATFORM_CONTAINERS = [
         name: 'deployhubadminservice',
         label: 'Admin API',
         group: 'backend',
-        description: 'This control-plane API',
+        description: 'This control-plane API (adminapi.deployhub.cloud)',
         self: true,
         critical: true,
     },

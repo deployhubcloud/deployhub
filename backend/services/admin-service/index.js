@@ -7,12 +7,13 @@ import { adminEnv } from './src/lib/env.js';
 import { connectRedis } from './src/core/redis/client.js';
 import { closeDb, connectDb } from './src/core/db/mongo.js';
 import { createShutdownHandler } from '../../shared/utils/gracefulShutdown.js';
-import { createInternalAUthMiddleware } from '../../shared/middlewares/internalAuth.js';
 import adminRouter from './src/routes/index.js';
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(hpp());
 app.set('trust proxy', 1);
 
@@ -30,12 +31,6 @@ app.use(cookieParser());
 app.get('/health', (_req, res) => {
     res.status(200).json({ success: true, message: 'Healthy', service: 'admin-service' });
 });
-
-app.use(createInternalAUthMiddleware({
-    secret: adminEnv.INTERNAL_SECRET,
-    logger: console,
-    header: 'x-internal-secret',
-}));
 
 app.use('/', adminRouter);
 

@@ -58,6 +58,7 @@ const staticMap = {
   "dashboard.deployhub.cloud": "http://appdeployhub:80",
   "ws.deployhub.cloud": "http://deployhubstreamservice:4008",
   "admin.deployhub.cloud": "http://adminfrontend:80",
+  "adminapi.deployhub.cloud": "http://deployhubadminservice:4010",
 };
 
 

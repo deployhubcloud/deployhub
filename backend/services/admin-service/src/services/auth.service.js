@@ -28,7 +28,7 @@ export const getAdminSessionCookieName = () => COOKIE_NAME;
 export const getSessionCookieOptions = () => ({
     httpOnly: true,
     secure: adminEnv.NODE_ENV === 'production',
-    sameSite: adminEnv.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax',
     path: '/',
 });
 
