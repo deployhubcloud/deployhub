@@ -6,6 +6,8 @@ export const PLATFORM_CONTAINERS = [
         group: 'edge',
         description: 'Public API entrypoint',
         critical: true,
+        port: 4999,
+        healthPath: '/gateway/status',
     },
     {
         id: 'secrets-manager',
@@ -14,6 +16,8 @@ export const PLATFORM_CONTAINERS = [
         group: 'backend',
         description: 'Runtime secrets bootstrap',
         critical: true,
+        port: 4000,
+        healthPath: '/ping',
     },
     {
         id: 'identity-service',
@@ -21,6 +25,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Identity',
         group: 'backend',
         description: 'Auth, sessions, accounts',
+        port: 4001,
+        healthPath: '/health',
     },
     {
         id: 'project-service',
@@ -28,6 +34,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Project',
         group: 'backend',
         description: 'Projects, domains, SSL',
+        port: 4002,
+        healthPath: '/health',
     },
     {
         id: 'build-service',
@@ -35,6 +43,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Build',
         group: 'backend',
         description: 'Build workers',
+        port: 4003,
+        healthPath: '/health',
     },
     {
         id: 'deploy-service',
@@ -42,6 +52,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Deploy',
         group: 'backend',
         description: 'Deploy workers',
+        port: 4004,
+        healthPath: '/health',
     },
     {
         id: 'analytics-service',
@@ -49,6 +61,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Analytics',
         group: 'backend',
         description: 'Traffic summaries',
+        port: 4009,
+        healthPath: '/health',
     },
     {
         id: 'notification-service',
@@ -56,6 +70,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Notification',
         group: 'backend',
         description: 'Email and alerts',
+        port: 4006,
+        healthPath: '/health',
     },
     {
         id: 'stream-service',
@@ -63,6 +79,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Stream',
         group: 'backend',
         description: 'Realtime websocket hub',
+        port: 4008,
+        healthPath: '/health',
     },
     {
         id: 'agent-service',
@@ -70,6 +88,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Agent',
         group: 'backend',
         description: 'AI operator',
+        port: 4011,
+        healthPath: '/health',
     },
     {
         id: 'admin-service',
@@ -79,6 +99,8 @@ export const PLATFORM_CONTAINERS = [
         description: 'This control-plane API (adminapi.deployhub.cloud)',
         self: true,
         critical: true,
+        port: 4010,
+        healthPath: '/health',
     },
     {
         id: 'marketing-frontend',
@@ -86,6 +108,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Marketing site',
         group: 'frontend',
         description: 'deployhub.cloud',
+        port: 80,
+        healthPath: '/',
     },
     {
         id: 'dashboard-frontend',
@@ -93,6 +117,8 @@ export const PLATFORM_CONTAINERS = [
         label: 'Dashboard',
         group: 'frontend',
         description: 'dashboard.deployhub.cloud',
+        port: 80,
+        healthPath: '/',
     },
     {
         id: 'admin-frontend',
@@ -100,7 +126,10 @@ export const PLATFORM_CONTAINERS = [
         label: 'Admin UI',
         group: 'frontend',
         description: 'admin.deployhub.cloud',
+        locked: true,
         critical: true,
+        port: 80,
+        healthPath: '/',
     },
 ];
 

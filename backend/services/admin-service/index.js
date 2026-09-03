@@ -8,6 +8,7 @@ import { connectRedis } from './src/core/redis/client.js';
 import { closeDb, connectDb } from './src/core/db/mongo.js';
 import { createShutdownHandler } from '../../shared/utils/gracefulShutdown.js';
 import adminRouter from './src/routes/index.js';
+import { bootSystemMonitor } from './src/services/system.service.js';
 
 const app = express();
 
@@ -38,6 +39,8 @@ export default async function startApp(port, serviceName) {
     await connectDb();
     await connectRedis();
 
+    const stopMonitor = bootSystemMonitor();
+
     const server = app.listen(port, () => {
         console.log(`${serviceName} running on port ${port}`);
     });
@@ -45,7 +48,12 @@ export default async function startApp(port, serviceName) {
     const shutdown = createShutdownHandler({
         server,
         logger: console,
-        closeResources: [closeDb],
+        closeResources: [
+            async () => {
+                try { stopMonitor?.(); } catch { }
+            },
+            closeDb,
+        ],
     });
 
     process.on('SIGINT', shutdown);
