@@ -3,6 +3,7 @@ import http from "http";
 import httpProxy from "http-proxy";
 import compression from "compression";
 import dotenv from "dotenv";
+import { sendErrorPage } from "./errorPage.js";
 
 dotenv.config();
 
@@ -79,16 +80,16 @@ async function resolveDomain(domain) {
 app.use(async (req, res) => {
   try {
     const host = req.headers.host?.toLowerCase();
-    if (!host) return res.status(400).send("Invalid host");
+    if (!host) return sendErrorPage(res, 400);
 
-    const resolved = await resolveDomain(host);
-    if (!resolved) return res.status(404).send("Domain not configured");
+    const resolved = await resolveDomain(host.split(":")[0]);
+    if (!resolved) return sendErrorPage(res, 404);
 
     return httpProxyServer.web(req, res, { target: resolved.target });
 
   } catch (err) {
     console.error("Router error:", err);
-    res.status(500).send("Internal server error");
+    sendErrorPage(res, 500);
   }
 });
 
@@ -111,10 +112,7 @@ server.on("upgrade", async (req, socket, head) => {
 // ── Proxy errors ─────────────────────────────────────────
 httpProxyServer.on("error", (err, req, res) => {
   console.error("HTTP Proxy error:", err.message);
-  if (res && !res.headersSent) {
-    res.writeHead(502, { "Content-Type": "text/plain" });
-    res.end("Service unavailable");
-  }
+  sendErrorPage(res, 502);
 });
 wsProxyServer.on("error", (err, req, socket) => {
   console.error("WS Proxy error:", err.message);
