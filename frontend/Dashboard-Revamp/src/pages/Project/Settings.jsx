@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api } from '../../api/apiclient'
 import PageHeader from '../../components/PageHeader'
 import Skeleton from '../../components/ui/Skeleton'
+import { LoadState } from '../../components/ui'
 
 function Toggle({ value, onChange, label }) {
   return (
@@ -364,6 +365,8 @@ export function Settings() {
     }
   }
 
+  if (!loading && !initialBuild) return <LoadState error={error || 'Settings are unavailable.'} retry={() => window.location.reload()} />
+
   return (
     <div className="max-w-[900px] mx-auto">
       <PageHeader section="Project" title="Settings" />
@@ -386,7 +389,7 @@ export function Settings() {
             <div className="p-5 grid grid-cols-2 gap-4">
               <div>
                 <FieldLabel>Project Name</FieldLabel>
-                <TextInput value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+                <TextInput value={projectName} readOnly aria-label="Project name" />
               </div>
               <div>
                 <FieldLabel>Project Type</FieldLabel>

@@ -252,7 +252,7 @@ export default function Sessions() {
                   <p className="text-sm text-slate-900 font-medium mb-0.5">
                     Logout from all other devices
                   </p>
-                  <p className="text-xs text-slate-500">Revoke all sessions except this one.</p>
+                  <p className="text-xs text-slate-500">Sign out of every device, including this one.</p>
                 </div>
                 <button
                   onClick={handleRevokeAll}
