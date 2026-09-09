@@ -259,23 +259,25 @@ export default function Shell() {
           onClose={() => setDialog(null)}
         >
           <LoadState loading={buildsLoading} error={buildsError} retry={reloadBuilds}>
-          <div className="activity-list">
-            {builds.slice(0, 6).map((b) => (
-              <button key={b._id} onClick={() => openPage(`/deployments`)}>
-                <span className="activity-icon">
-                  <GitBranch size={17} />
-                </span>
-                <span>
-                  <strong>{b.projectName}</strong>
-                  <small>
-                    {b.commitMessage || 'Deployment'} · {timeAgo(b.createdAt)}
-                  </small>
-                </span>
-                <StatusBadge status={b.buildStatus || b.buildStaus} />
-              </button>
-            ))}
-            {!builds.length && <p className="muted">Your deployment activity will appear here.</p>}
-          </div>
+            <div className="activity-list">
+              {builds.slice(0, 6).map((b) => (
+                <button key={b._id} onClick={() => openPage(`/deployments`)}>
+                  <span className="activity-icon">
+                    <GitBranch size={17} />
+                  </span>
+                  <span>
+                    <strong>{b.projectName}</strong>
+                    <small>
+                      {b.commitMessage || 'Deployment'} · {timeAgo(b.createdAt)}
+                    </small>
+                  </span>
+                  <StatusBadge status={b.buildStatus || b.buildStaus} />
+                </button>
+              ))}
+              {!builds.length && (
+                <p className="muted">Your deployment activity will appear here.</p>
+              )}
+            </div>
           </LoadState>
         </Modal>
       )}

@@ -216,7 +216,12 @@ export default function Auth({ signup = false }) {
                       {visible ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
                   </div>
-                  {signup && <small id="password-requirements">Use uppercase and lowercase letters, a number, and a special character (@$!%*?&).</small>}
+                  {signup && (
+                    <small id="password-requirements">
+                      Use uppercase and lowercase letters, a number, and a special character
+                      (@$!%*?&).
+                    </small>
+                  )}
                 </label>
               </>
             )}

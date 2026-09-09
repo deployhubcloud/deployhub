@@ -343,9 +343,9 @@ export function Settings() {
   }
 
   const handleEnvChange = (i, field, val) => {
-    const updated = [...envVars]
-    updated[i][field] = val
-    setEnvVars(updated)
+    setEnvVars((previous) =>
+      previous.map((row, index) => (index === i ? { ...row, [field]: val } : row)),
+    )
   }
   const addEnvRow = () => setEnvVars([...envVars, { key: '', value: '' }])
   const removeEnvRow = (i) =>
@@ -365,7 +365,13 @@ export function Settings() {
     }
   }
 
-  if (!loading && !initialBuild) return <LoadState error={error || 'Settings are unavailable.'} retry={() => window.location.reload()} />
+  if (!loading && !initialBuild)
+    return (
+      <LoadState
+        error={error || 'Settings are unavailable.'}
+        retry={() => window.location.reload()}
+      />
+    )
 
   return (
     <div className="max-w-[900px] mx-auto">
