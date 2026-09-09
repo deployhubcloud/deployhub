@@ -161,15 +161,17 @@ export const updateHealthMonitoringAndNotification = async (userId, projectId, b
 
     const redis = getRedis();
 
-    const { notifications, monitor, projectPlan } = body;
+    const { notifications, monitor } = body;
 
     const project = await Project.findOne({
         _id: projectId,
-        owner: userId,
+        userId,
         status: { $ne: 'deleted' }
     });
 
     if (!project) throw new AppError("Project not found", 404);
+
+    const projectPlan = project.plan;
 
     if (monitor.enabled && projectPlan !== 'pro') {
         throw new AppError("Pro plan required to enable monitoring", 403);
