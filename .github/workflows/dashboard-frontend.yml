@@ -1,11 +1,11 @@
-name: DashBoard-Frontend CI/CD
+name: Dashboard Revamp CI/CD
 
 on:
   push:
     branches:
       - master
     paths:
-      - 'frontend/Dasboard-Frontend/**'
+      - 'frontend/Dashboard-Revamp/**'
       - '.github/workflows/dashboard-frontend.yml'
 
 permissions:
@@ -23,6 +23,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/Dashboard-Revamp/package-lock.json
+
+      - name: Install dashboard dependencies
+        working-directory: frontend/Dashboard-Revamp
+        run: npm ci
+
+      - name: Lint dashboard
+        working-directory: frontend/Dashboard-Revamp
+        run: npm run lint
 
       - name: DockerHub login
         uses: docker/login-action@v3
@@ -33,9 +43,11 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
+            --build-arg VITE_AUTH_API_URL="https://api.deployhub.cloud/api/v1" \
+            --build-arg VITE_WS_URL="https://ws.deployhub.cloud" \
             --build-arg VITE_RAZORPAY_KEY_ID="${{ secrets.VITE_RAZORPAY_KEY_ID }}" \
             -t ${{ secrets.DOCKER_USERNAME }}/deployhub-dashboard-frontend:latest \
-            ./frontend/Dasboard-Frontend
+            ./frontend/Dashboard-Revamp
 
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
