@@ -265,7 +265,7 @@ export default function NewProject() {
   const resource = useApi('/project/plans', 'plans')
   const plans = normalizePlans(resource.data)
   const supported = Object.values(plans).some((plan) => plan.types.includes(type.toLowerCase()))
-  if (!TYPE_LABELS[type.toLowerCase()]) return <Navigate to="/projects/new/static" replace />
+  if (!TYPE_LABELS[type.toLowerCase()]) return <Navigate to="/projects/new" replace />
   return (
     <LoadState loading={resource.loading} error={resource.error} retry={resource.reload}>
       {supported ? (
@@ -617,7 +617,7 @@ function NewProjectForm({ plans }) {
     }
   }
 
-  if (!TYPE_LABELS[normalizedType]) return <Navigate to="/projects/new/static" replace />
+  if (!TYPE_LABELS[normalizedType]) return <Navigate to="/projects/new" replace />
 
   /* ============================================================
    * Step renderers
@@ -743,9 +743,9 @@ function NewProjectForm({ plans }) {
           <span className="inline-flex h-8 items-center rounded-full bg-emerald-500/10 px-3 text-sm font-medium text-emerald-700">
             {TYPE_LABELS[selectedType]}
           </span>
-          <span className="text-xs text-slate-500">
-            (locked from URL — change via /projects/new/&lt;type&gt;)
-          </span>
+          <Link className="text-xs text-emerald-700" to="/projects/new">
+            Change project type
+          </Link>
         </div>
       </div>
 

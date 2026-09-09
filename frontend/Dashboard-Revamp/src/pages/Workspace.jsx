@@ -207,7 +207,7 @@ export function Dashboard() {
         title={`Let’s build something great, ${user?.fullName?.split(' ')[0] || 'there'}.`}
         description="Your projects, deployments, and a little room for your next idea."
       >
-        <Link className="btn primary" to="/projects/new/static">
+        <Link className="btn primary" to="/projects/new">
           <Plus size={16} />
           New project
         </Link>
@@ -225,7 +225,7 @@ export function Dashboard() {
                 to be out in the world.
               </h2>
               <p>Connect your code. We’ll take care of the rest.</p>
-              <Link to="/projects/new/static">
+              <Link to="/projects/new">
                 Deploy something new
                 <ArrowRight size={15} />
               </Link>
@@ -314,7 +314,7 @@ export function Dashboard() {
         ) : (
           <EmptyState
             action={
-              <Link className="btn primary" to="/projects/new/static">
+              <Link className="btn primary" to="/projects/new">
                 <Plus size={16} />
                 Create project
               </Link>
@@ -413,7 +413,7 @@ export function Projects() {
         title="Your projects"
         description="Everything you’re building, beautifully in sync."
       >
-        <Link className="btn primary" to="/projects/new/static">
+        <Link className="btn primary" to="/projects/new">
           <Plus size={16} />
           New project
         </Link>
@@ -498,7 +498,7 @@ export function Projects() {
               <ProjectCard key={project._id} project={project} list={view === 'list'} />
             ))}
             {view === 'grid' && (
-              <Link className="new-project-card" to="/projects/new/static">
+              <Link className="new-project-card" to="/projects/new">
                 <span>
                   <Plus size={23} />
                 </span>

@@ -184,12 +184,14 @@ export const themes = [
   ]),
 ]
 
+const defaultTheme = themes.find((theme) => theme.id === 'slate')
+
 export function readTheme() {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY)
-    return themes.find((theme) => theme.id === stored) || themes[0]
+    return themes.find((theme) => theme.id === stored) || defaultTheme
   } catch {
-    return themes[0]
+    return defaultTheme
   }
 }
 

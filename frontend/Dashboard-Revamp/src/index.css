@@ -1320,6 +1320,62 @@ kbd {
 .full-projects .project-source {
   margin-top: 24px;
 }
+.project-type-picker {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.project-type-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.project-type-option {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 126px;
+  padding: 24px;
+  border: 1px solid var(--theme-line);
+  border-radius: 12px;
+  background: var(--theme-surface);
+}
+.project-type-option:hover {
+  border-color: var(--theme-accent);
+  background: var(--theme-tint);
+}
+.project-type-option > div {
+  flex: 1;
+  min-width: 0;
+}
+.project-type-option h2 {
+  margin-bottom: 7px;
+  color: var(--theme-text);
+  font-size: 16px;
+}
+.project-type-option p {
+  color: var(--theme-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.project-type-arrow {
+  color: var(--theme-accent);
+}
+.project-type-note {
+  margin-top: 22px;
+  color: var(--theme-muted);
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .project-type-options {
+    grid-template-columns: 1fr;
+  }
+  .project-type-option {
+    min-height: 106px;
+    padding: 20px;
+    gap: 14px;
+  }
+}
+
 .new-project-card {
   display: flex;
   align-items: center;

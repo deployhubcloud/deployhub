@@ -138,7 +138,7 @@ export default function Shell() {
             </span>
             <h3>Built for your next big thing.</h3>
             <p>From first commit to production. We’ve got the infrastructure.</p>
-            <Link to="/projects/new/static" onClick={() => setMobile(false)}>
+            <Link to="/projects/new" onClick={() => setMobile(false)}>
               Let’s ship it
               <ArrowRight size={15} />
             </Link>
@@ -362,7 +362,7 @@ export default function Shell() {
             ))}
           </div>
           <Link
-            to="/projects/new/static"
+            to="/projects/new"
             className="btn primary full-width"
             onClick={() => setDialog(null)}
           >

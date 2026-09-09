@@ -9,6 +9,7 @@ import { Dashboard, Projects, WorkspaceAnalytics, WorkspaceBilling } from './pag
 import Auth from './pages/Auth'
 import Deployments, { BuildLogPage } from './pages/Deployments'
 import { ProjectLogs, ProjectMetrics, ProjectOverview } from './pages/ProjectDetail'
+import ProjectTypes from './pages/ProjectTypes'
 
 const NewProject = lazy(() => import('./pages/NewProject'))
 const Profile = lazy(() => import('./pages/Profile'))
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="Builds" element={<Navigate replace to="/deployments" />} />
             <Route path="analytics" element={<WorkspaceAnalytics />} />
             <Route path="billing" element={<WorkspaceBilling />} />
+            <Route path="projects/new" element={<ProjectTypes />} />
             <Route
               path="projects/new/:type"
               element={

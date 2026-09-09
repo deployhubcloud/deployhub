@@ -1,30 +1,31 @@
-/* Fallback palette while the application restores the saved preference. */
+/* Slate is the default while the application restores the saved preference. */
 :root {
-  --theme-bg: #f0f2f4;
-  --theme-surface: #f8f9fa;
-  --theme-subtle: #e8ecf0;
-  --theme-text: #303743;
-  --theme-muted: #626975;
-  --theme-line: #d8dde3;
-  --theme-accent: #506783;
-  --theme-accent-hover: #3e536e;
-  --theme-on-accent: #f8fafc;
-  --theme-tint: #e5ebf2;
-  --theme-sidebar: #e8ebef;
-  --theme-sidebar-text: #36404e;
-  --theme-sidebar-muted: #58616e;
-  --theme-sidebar-active: #e5ebf2;
+  color-scheme: dark;
+  --theme-bg: #232a33;
+  --theme-surface: #2c3440;
+  --theme-subtle: #363f4c;
+  --theme-text: #e0e5ec;
+  --theme-muted: #adb9c9;
+  --theme-line: #465363;
+  --theme-accent: #a5b9d2;
+  --theme-accent-hover: #bfd0e4;
+  --theme-on-accent: #172129;
+  --theme-tint: #394859;
+  --theme-sidebar: #232a33;
+  --theme-sidebar-text: #d5dfec;
+  --theme-sidebar-muted: #abb8ca;
+  --theme-sidebar-active: #394859;
   --theme-control-line: color-mix(in srgb, var(--theme-muted) 80%, var(--theme-surface));
-  --theme-terminal: #252c35;
+  --theme-terminal: #232a33;
   --theme-terminal-text: #d1d8e1;
   --theme-terminal-muted: #a2afbf;
-  --theme-success: #35694e;
-  --theme-success-bg: #e5efe8;
-  --theme-warning: #805e24;
-  --theme-warning-bg: #f1eadc;
-  --theme-danger: #9a4647;
-  --theme-danger-bg: #f3e5e5;
-  --theme-shadow: #2734490c;
+  --theme-success: #abd3ba;
+  --theme-success-bg: #293c33;
+  --theme-warning: #dec695;
+  --theme-warning-bg: #3e3629;
+  --theme-danger: #e0b0af;
+  --theme-danger-bg: #422f34;
+  --theme-shadow: #00000024;
 }
 
 .theme-changing *,
