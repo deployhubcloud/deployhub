@@ -1,15 +1,11 @@
-import { useState } from "react";
-
-export default function FaqItem({ q, a, delay = 0 }) {
-  const [open, setOpen] = useState(false);
-
+export default function FaqItem({ q, a }) {
   return (
-    <div className="reveal bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden" style={{ transitionDelay: `${delay}ms` }}>
-      <button onClick={() => setOpen(!open)} className="w-full flex justify-between items-center px-6 py-4 text-left hover:bg-white/[0.04] transition-colors">
-        <span className="font-medium text-sm text-white">{q}</span>
-        <span className={`text-amber-400 text-xl leading-none transition-transform duration-200 ${open ? "rotate-45" : ""}`}>+</span>
-      </button>
-      {open && <div className="px-6 pb-5 text-sm text-neutral-400 leading-relaxed">{a}</div>}
-    </div>
+    <details className="faq-item">
+      <summary>
+        {q}
+        <span aria-hidden="true">+</span>
+      </summary>
+      <p>{a}</p>
+    </details>
   );
 }

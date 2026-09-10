@@ -1,12 +1,26 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { applyTheme, readTheme, THEME_STORAGE_KEY } from "../theme";
 
 export default function useTheme() {
-  // always dark
+  const [theme, setThemeState] = useState(readTheme);
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.classList.add("dark");
-    try { localStorage.setItem("theme", "dark"); } catch {}
+    const sync = (event) => {
+      if (event.key !== null && event.key !== THEME_STORAGE_KEY) return;
+      const next = readTheme();
+      applyTheme(next);
+      setThemeState(next);
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
   }, []);
-
-  return { theme: "dark", toggleTheme: () => {} };
+  function setTheme(next) {
+    applyTheme(next);
+    setThemeState(next);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, next.id);
+    } catch {
+      /* Theme still works when storage is blocked. */
+    }
+  }
+  return { theme, setTheme };
 }

@@ -1,118 +1,88 @@
 import { useState } from "react";
+import { DashboardLink, Icon } from "./ui";
+import { runtimes } from "../data";
 
-// supported runtimes for each plan
-const RUNTIMES = {
-  Free: null, // direct redirect to static
-  Starter: [
-    { label: "Static", slug: "static" },
-    { label: "Node.js", slug: "node" },
-    { label: "Go", slug: "go" },
-    { label: "Python", slug: "python" },
-  ],
-  Pro: [
-    { label: "Static", slug: "static" },
-    { label: "Node.js", slug: "node" },
-    { label: "Go", slug: "go" },
-    { label: "Python", slug: "python" },
-    { label: "Java", slug: "java" },
-  ],
-};
-
-export default function PlanCard({ plan, annual, delay = 0 }) {
-  const [showRuntimes, setShowRuntimes] = useState(false);
-  const runtimes = RUNTIMES[plan.name] || null;
-
-  const handleMainClick = () => {
-    if (plan.name === "Free") {
-      // direct redirect to static project creation
-      window.open("https://dashboard.deployhub.cloud/projects/new/static", "_blank");
-    } else {
-      setShowRuntimes(!showRuntimes);
-    }
-  };
-
-  const handleRuntimeSelect = (slug) => {
-    window.open(`https://dashboard.deployhub.cloud/projects/new/${slug}`, "_blank");
-    setShowRuntimes(false);
-  };
-
+export default function PlanCard({ plan, annual }) {
+  const [expanded, setExpanded] = useState(false);
+  const isPro = plan.id === "pro";
   return (
-    <div
-      className={`reveal rounded-2xl p-7 relative transition-all duration-300 ${
-        plan.highlight
-          ? "bg-[#111114] border-2 border-amber-500/30 shadow-2xl shadow-amber-500/10"
-          : "bg-[#111114] border border-white/[0.06]"
-      }`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {plan.badge && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-          <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-black text-xs font-black px-4 py-1 rounded-full tracking-wide uppercase">{plan.badge}</span>
+    <article className={`plan-card ${isPro ? "featured-plan" : ""}`}>
+      <div className="plan-title">
+        <span className="plan-symbol">
+          <Icon name={isPro ? "spark" : plan.id === "free" ? "code" : "box"} />
+        </span>
+        {isPro && <span className="small-tag">Production toolkit</span>}
+      </div>
+      <h2>{plan.name}</h2>
+      <p>{plan.description}</p>
+      <div className="plan-price">
+        <strong>
+          {plan.price === 0
+            ? "Free"
+            : new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(plan.price * (annual ? 12 : 1))}
+        </strong>
+        {plan.price > 0 && <span> / {annual ? "12 months" : "month"}</span>}
+      </div>
+      <span className="plan-price-note">
+        {plan.price === 0
+          ? "For your static projects"
+          : annual
+            ? "12 months at the monthly rate"
+            : "Per project, billed monthly"}
+      </span>
+      {plan.id === "free" ? (
+        <DashboardLink
+          className="button secondary full-width"
+          path="/projects/new/static"
+        >
+          Start free
+        </DashboardLink>
+      ) : (
+        <button
+          className={`button ${isPro ? "primary" : "secondary"} full-width`}
+          aria-expanded={expanded}
+          aria-controls={`runtimes-${plan.id}`}
+          onClick={() => setExpanded(!expanded)}
+        >
+          Explore {plan.name}
+          <Icon name={expanded ? "close" : "arrow"} size={16} />
+        </button>
+      )}
+      {expanded && (
+        <div className="plan-runtimes" id={`runtimes-${plan.id}`}>
+          <span className="eyebrow">CHOOSE YOUR RUNTIME</span>
+          {runtimes
+            .filter((runtime) => plan.types.includes(runtime.id))
+            .map((runtime) => (
+              <DashboardLink
+                key={runtime.id}
+                className="text-link"
+                path={`/projects/new/${runtime.id}`}
+              >
+                {runtime.name}
+              </DashboardLink>
+            ))}
+          <small>Select {plan.name} in the dashboard to continue.</small>
         </div>
       )}
-      <div className="font-sans font-bold text-xl mb-1 text-white">{plan.name}</div>
-      <p className="text-neutral-500 text-sm mb-5 leading-relaxed">{plan.desc}</p>
-      <div className="flex items-end gap-1 mb-6">
-        {plan.monthly !== 0 && <span className="text-neutral-400 text-lg mb-1">₹</span>}
-        <span className="font-sans font-bold text-5xl leading-none text-white">{plan.monthly === 0 ? "Free" : annual ? plan.annual : plan.monthly}</span>
-        {plan.monthly !== 0 && <span className="text-neutral-500 text-sm mb-1">/{annual ? "year" : "mo"}</span>}
-      </div>
-      <ul className="space-y-3 mb-7">
+      <div className="plan-divider" />
+      <span className="eyebrow">WHAT’S INCLUDED</span>
+      <ul>
         {plan.features.map((feature) => (
-          <li key={feature.label} className={`flex items-center gap-3 text-sm ${feature.ok ? "text-neutral-300" : "text-neutral-600"}`}>
-            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] flex-shrink-0 ${feature.ok ? "bg-emerald-400/20 text-emerald-400" : "bg-white/5 text-neutral-600"}`}>
-              {feature.ok ? "✓" : "–"}
-            </span>
-            {feature.label}
+          <li key={feature}>
+            <Icon name="check" size={16} />
+            {feature}
           </li>
         ))}
       </ul>
-
-      {/* Buttons / Runtime Selector */}
-      {runtimes ? (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={handleMainClick}
-            className={`block w-full text-center py-3 rounded-xl text-sm font-bold transition-all ${
-              plan.ctaStyle === "solid"
-                ? "bg-amber-500 text-black hover:bg-amber-400 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/30"
-                : "border border-white/10 text-neutral-300 hover:border-amber-500/30 hover:text-amber-400"
-            }`}
-          >
-            {showRuntimes ? "Cancel" : plan.cta}
-          </button>
-
-          {showRuntimes && (
-            <div className="absolute left-0 right-0 bottom-full mb-2 bg-[#1a1a1f] border border-white/[0.06] rounded-xl shadow-2xl overflow-hidden z-10 animate-in slide-in-from-bottom-2">
-              <p className="px-4 py-2 text-xs text-neutral-500 uppercase tracking-wider">Choose a runtime</p>
-              {runtimes.map((rt) => (
-                <button
-                  key={rt.slug}
-                  onClick={() => handleRuntimeSelect(rt.slug)}
-                  className="w-full text-left px-4 py-2.5 text-sm text-neutral-300 hover:bg-amber-500/10 hover:text-amber-400 transition-colors"
-                >
-                  {rt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        // fallback (should not be needed)
-        <a
-          href="https://dashboard.deployhub.cloud/projects/new/static"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`block w-full text-center py-3 rounded-xl text-sm font-bold transition-all ${
-            plan.ctaStyle === "solid"
-              ? "bg-amber-500 text-black hover:bg-amber-400 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-amber-500/30"
-              : "border border-white/10 text-neutral-300 hover:border-amber-500/30 hover:text-amber-400"
-          }`}
-        >
-          {plan.cta}
-        </a>
-      )}
-    </div>
+      <div className="plan-resources">
+        <Icon name={plan.resources ? "box" : "globe"} size={16} />
+        <span>{plan.resources || "Static hosting with SSL"}</span>
+      </div>
+    </article>
   );
 }
