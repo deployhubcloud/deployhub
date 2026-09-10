@@ -1,119 +1,196 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
-import { useAuth } from '../context/AuthContext'
-import { Shield } from 'lucide-react'
-
+import { useState } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Boxes,
+  Eye,
+  EyeOff,
+  KeyRound,
+  ShieldCheck,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { ErrorState, Logo } from "../components/ui";
+import ThemePicker from "../components/ThemePicker";
+import { message } from "../utils";
 export default function LoginPage() {
-  const { login, verifyOtp } = useAuth()
-  const navigate = useNavigate()
-  const [step, setStep] = useState('credentials')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [loginId, setLoginId] = useState('')
-  const [otp, setOtp] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const onCredentials = async (e) => {
-    e.preventDefault()
-    setBusy(true)
+  const { login, verifyOtp, admin, loading } = useAuth();
+  const location = useLocation();
+  const [step, setStep] = useState("credentials");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [visible, setVisible] = useState(false);
+  const [loginId, setLoginId] = useState("");
+  const [otp, setOtp] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const from = location.state?.from;
+  const destination =
+    typeof from === "string" &&
+    from.startsWith("/") &&
+    !from.startsWith("//") &&
+    !from.startsWith("/login")
+      ? from
+      : "/";
+  if (loading) return <div className="session-loading">Checking session…</div>;
+  if (admin) return <Navigate to={destination} replace />;
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
     try {
-      const data = await login(username, password)
-      setLoginId(data.loginId)
-      setStep('otp')
-      toast.success('OTP sent to your email')
+      if (step === "credentials") {
+        const result = await login(username.trim(), password);
+        setLoginId(result.loginId);
+        setPassword("");
+        setStep("otp");
+      } else await verifyOtp(loginId, otp);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed')
+      setError(message(err));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
-
-  const onOtp = async (e) => {
-    e.preventDefault()
-    setBusy(true)
-    try {
-      await verifyOtp(loginId, otp)
-      toast.success('Welcome back')
-      navigate('/')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'OTP verification failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
-    <div className="min-h-screen grid place-items-center px-4">
-      <div className="w-full max-w-md card p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-11 w-11 rounded-xl bg-[var(--accent-soft)] border border-[rgba(47,158,108,.3)] grid place-items-center">
-            <Shield size={18} className="text-[#7ddeb0]" />
+    <div className="auth-page">
+      <div className="auth-story">
+        <Logo />
+        <div>
+          <span className="eyebrow">DEPLOYHUB ADMINISTRATION</span>
+          <h2>
+            A clear view.
+            <br />A confident next move.
+          </h2>
+          <p>
+            Your platform’s people, projects, and infrastructure. One workspace
+            to keep it all moving.
+          </p>
+          <div className="auth-feature">
+            <Boxes size={20} />
+            <span>Platform-wide visibility</span>
           </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">DeployHub</div>
-            <h1 className="text-2xl font-semibold">Admin Control</h1>
+          <div className="auth-feature">
+            <ShieldCheck size={20} />
+            <span>Access scoped to your role</span>
+          </div>
+          <div className="auth-feature">
+            <KeyRound size={20} />
+            <span>Email verification at sign-in</span>
           </div>
         </div>
-
-        <p className="text-sm text-[var(--muted)] mb-6">
-          {step === 'credentials'
-            ? 'Sign in with username and password. A one-time code will be emailed.'
-            : 'Enter the OTP sent to your registered email.'}
-        </p>
-
-        {step === 'credentials' ? (
-          <form onSubmit={onCredentials} className="space-y-4">
-            <label className="block text-sm">
-              <span className="text-[var(--muted)]">Username</span>
-              <input
-                className="input mt-1"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoComplete="username"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-[var(--muted)]">Password</span>
-              <input
-                type="password"
-                className="input mt-1"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </label>
-            <button disabled={busy} className="btn btn-primary w-full">
-              {busy ? 'Sending OTP…' : 'Continue'}
+        <small>Built for the people behind the platform.</small>
+      </div>
+      <div className="auth-main">
+        <div className="auth-theme">
+          <ThemePicker />
+        </div>
+        <div className="auth-form">
+          <span className="auth-icon">
+            <ShieldCheck size={27} />
+          </span>
+          <span className="eyebrow">ADMIN WORKSPACE</span>
+          <h1>
+            {step === "credentials" ? "Welcome back." : "Check your inbox."}
+          </h1>
+          <p>
+            {step === "credentials"
+              ? "Sign in to your administrator account. We’ll send a verification code to your registered email."
+              : "Enter the six-digit code sent to your registered email. The code expires after 10 minutes."}
+          </p>
+          <div className="auth-steps">
+            <span className={step === "credentials" ? "active" : "complete"}>
+              01 · Credentials
+            </span>
+            <i />
+            <span className={step === "otp" ? "active" : ""}>
+              02 · Verification
+            </span>
+          </div>
+          <form onSubmit={submit} className="form-stack">
+            {step === "credentials" ? (
+              <>
+                <label className="field">
+                  Username
+                  <input
+                    autoFocus
+                    className="input"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete="username"
+                    required
+                  />
+                </label>
+                <label className="field">
+                  Password
+                  <span className="password-input">
+                    <input
+                      className="input"
+                      type={visible ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="copy-button"
+                      aria-label={visible ? "Hide password" : "Show password"}
+                      onClick={() => setVisible(!visible)}
+                    >
+                      {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </span>
+                </label>
+              </>
+            ) : (
+              <label className="field">
+                Verification code
+                <input
+                  autoFocus
+                  className="input otp-input"
+                  value={otp}
+                  onChange={(e) =>
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                />
+              </label>
+            )}
+            <ErrorState error={error} />
+            <button className="btn btn-primary full-width" disabled={busy}>
+              {busy
+                ? "Please wait…"
+                : step === "credentials"
+                  ? "Send verification code"
+                  : "Enter workspace"}
+              <ArrowRight size={16} />
             </button>
+            {step === "otp" && (
+              <button
+                type="button"
+                className="btn btn-ghost full-width"
+                disabled={busy}
+                onClick={() => {
+                  setStep("credentials");
+                  setOtp("");
+                  setError("");
+                }}
+              >
+                <ArrowLeft size={15} />
+                Use another account
+              </button>
+            )}
           </form>
-        ) : (
-          <form onSubmit={onOtp} className="space-y-4">
-            <label className="block text-sm">
-              <span className="text-[var(--muted)]">OTP</span>
-              <input
-                className="input mt-1 mono tracking-[0.35em] text-center text-lg"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                maxLength={6}
-                required
-              />
-            </label>
-            <button disabled={busy} className="btn btn-primary w-full">
-              {busy ? 'Verifying…' : 'Verify & enter'}
-            </button>
-            <button type="button" className="btn btn-ghost w-full" onClick={() => setStep('credentials')}>
-              Back
-            </button>
-          </form>
-        )}
-
-        <p className="text-xs text-[var(--muted)] mt-6">
-          Session cookie only — ends when the browser closes.
-        </p>
+          <p className="auth-footnote">
+            <ShieldCheck size={14} />
+            For authorized DeployHub administrators.
+          </p>
+        </div>
       </div>
     </div>
-  )
+  );
 }

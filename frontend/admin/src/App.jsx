@@ -1,144 +1,100 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { useAuth } from './context/AuthContext'
-import LoginPage from './pages/LoginPage'
-import AdminLayout from './layouts/AdminLayout'
-import UsersPage from './pages/UsersPage'
-import UserDetailPage from './pages/UserDetailPage'
-import ProjectsPage from './pages/ProjectsPage'
-import ProjectDetailPage from './pages/ProjectDetailPage'
-import OverviewPage from './pages/OverviewPage'
-import AdminsPage from './pages/AdminsPage'
-import AuditLogsPage from './pages/AuditLogsPage'
-import ChangePasswordPage from './pages/ChangePasswordPage'
-import SystemPage from './pages/SystemPage'
-
-function PrivateRoute({ children }) {
-  const { admin, loading } = useAuth()
-  if (loading) {
+import { Navigate, Route, Routes, useLocation, Link } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import AdminLayout from "./layouts/AdminLayout";
+import UsersPage from "./pages/UsersPage";
+import UserDetailPage from "./pages/UserDetailPage";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
+import OverviewPage from "./pages/OverviewPage";
+import AdminsPage from "./pages/AdminsPage";
+import AuditLogsPage from "./pages/AuditLogsPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
+import SystemPage from "./pages/SystemPage";
+import { EmptyState, ErrorState } from "./components/ui";
+function PrivateRoute() {
+  const { admin, loading, sessionError, refreshMe } = useAuth();
+  const location = useLocation();
+  if (loading)
     return (
-      <div className="min-h-screen grid place-items-center text-[var(--muted)]">
-        Checking session…
+      <div className="session-loading" role="status">
+        Checking your admin session…
       </div>
-    )
-  }
-  if (!admin) return <Navigate to="/login" replace />
-  return children
+    );
+  if (sessionError)
+    return (
+      <div className="session-loading">
+        <ErrorState error={sessionError} retry={refreshMe} />
+      </div>
+    );
+  if (!admin)
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location.pathname + location.search }}
+        replace
+      />
+    );
+  return <AdminLayout />;
 }
-
-function PublicOnly({ children }) {
-  const { admin, loading } = useAuth()
-  if (loading) return null
-  if (admin) return <Navigate to="/" replace />
-  return children
-}
-
 function RequirePerm({ permission, children }) {
-  const { can, loading } = useAuth()
-  if (loading) return null
-  if (!can(permission)) return <Navigate to="/users" replace />
-  return children
+  const { can } = useAuth();
+  return can(permission) ? (
+    children
+  ) : (
+    <EmptyState
+      title="This area needs additional access"
+      text="Your current role does not have permission to view this page."
+      action={
+        <Link className="btn btn-primary" to="/">
+          Back to workspace
+        </Link>
+      }
+    />
+  );
 }
-
-function RequireNormalAdmin({ children }) {
-  const { isSuper, loading } = useAuth()
-  if (loading) return null
-  if (isSuper) return <Navigate to="/" replace />
-  return children
+function Home() {
+  const { can } = useAuth();
+  if (can("dashboard:read")) return <OverviewPage />;
+  if (can("users:read")) return <Navigate to="/users" replace />;
+  return <EmptyState title="No workspace access assigned" />;
 }
-
-function HomeRedirect() {
-  const { can } = useAuth()
-  if (can('system:manage')) return <Navigate to="/system" replace />
-  if (can('dashboard:read')) return <OverviewPage />
-  return <Navigate to="/users" replace />
-}
-
 export default function App() {
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicOnly>
-            <LoginPage />
-          </PublicOnly>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <AdminLayout />
-          </PrivateRoute>
-        }
-      >
-        <Route index element={<HomeRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<PrivateRoute />}>
+        <Route index element={<Home />} />
+        {[
+          ["system", "system:manage", <SystemPage />],
+          ["users", "users:read", <UsersPage />],
+          ["users/:userId", "users:read", <UserDetailPage />],
+          ["projects", "projects:read", <ProjectsPage />],
+          ["projects/:projectId", "projects:read", <ProjectDetailPage />],
+          ["admins", "admins:manage", <AdminsPage />],
+          ["audit-logs", "audit:read", <AuditLogsPage />],
+        ].map(([path, permission, page]) => (
+          <Route
+            key={path}
+            path={path}
+            element={<RequirePerm permission={permission}>{page}</RequirePerm>}
+          />
+        ))}
+        <Route path="password" element={<ChangePasswordPage />} />
         <Route
-          path="system"
+          path="*"
           element={
-            <RequirePerm permission="system:manage">
-              <SystemPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="users"
-          element={
-            <RequirePerm permission="users:read">
-              <UsersPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="users/:userId"
-          element={
-            <RequirePerm permission="users:read">
-              <UserDetailPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="projects"
-          element={
-            <RequirePerm permission="projects:read">
-              <ProjectsPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="projects/:projectId"
-          element={
-            <RequirePerm permission="projects:read">
-              <ProjectDetailPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="admins"
-          element={
-            <RequirePerm permission="admins:manage">
-              <AdminsPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="audit-logs"
-          element={
-            <RequirePerm permission="audit:read">
-              <AuditLogsPage />
-            </RequirePerm>
-          }
-        />
-        <Route
-          path="password"
-          element={
-            <RequireNormalAdmin>
-              <ChangePasswordPage />
-            </RequireNormalAdmin>
+            <EmptyState
+              title="Page not found"
+              action={
+                <Link to="/" className="btn btn-primary">
+                  Back to workspace
+                </Link>
+              }
+            />
           }
         />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }

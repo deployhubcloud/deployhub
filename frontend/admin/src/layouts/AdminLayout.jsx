@@ -1,115 +1,370 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Boxes, LogOut, Shield, UserCog, ScrollText, KeyRound, Server } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
-import toast from 'react-hot-toast'
-
-const linkClass = ({ isActive }) =>
-  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
-    isActive
-      ? 'bg-[var(--accent-soft)] text-[var(--text)] border border-[rgba(47,158,108,.25)]'
-      : 'text-[var(--muted)] hover:bg-[var(--panel-2)] hover:text-[var(--text)] border border-transparent'
-  }`
-
-function NavSection({ title, children }) {
-  const items = Array.isArray(children) ? children.filter(Boolean) : children ? [children] : []
-  if (!items.length) return null
+import { useEffect, useState } from "react";
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import {
+  Activity,
+  ArrowRight,
+  Boxes,
+  Command,
+  ExternalLink,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Search,
+  Server,
+  ShieldCheck,
+  UserCog,
+  Users,
+  X,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../api/client";
+import { Avatar, EmptyState, ErrorState, Logo, Modal } from "../components/ui";
+import ThemePicker from "../components/ThemePicker";
+import { message } from "../utils";
+const navigation = [
+  {
+    to: "/",
+    label: "Overview",
+    icon: LayoutDashboard,
+    permission: "dashboard:read",
+    group: "WORKSPACE",
+  },
+  {
+    to: "/users",
+    label: "Users",
+    icon: Users,
+    permission: "users:read",
+    group: "WORKSPACE",
+  },
+  {
+    to: "/projects",
+    label: "Projects",
+    icon: Boxes,
+    permission: "projects:read",
+    group: "WORKSPACE",
+  },
+  {
+    to: "/system",
+    label: "Infrastructure",
+    icon: Server,
+    permission: "system:manage",
+    group: "OPERATIONS",
+  },
+  {
+    to: "/audit-logs",
+    label: "Activity log",
+    icon: Activity,
+    permission: "audit:read",
+    group: "OPERATIONS",
+  },
+  {
+    to: "/admins",
+    label: "Access & team",
+    icon: UserCog,
+    permission: "admins:manage",
+    group: "ADMINISTRATION",
+  },
+];
+function CommandSearch({ onClose, links }) {
+  const { can } = useAuth();
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (query.trim().length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError("");
+      const sources = [
+        ["users", "users:read"],
+        ["projects", "projects:read"],
+      ].filter(([, permission]) => can(permission));
+      const responses = await Promise.allSettled(
+        sources.map(async ([type]) => {
+          const { data } = await api.get("/" + type, {
+            params: { q: query.trim(), limit: 5 },
+            signal: controller.signal,
+          });
+          return (data[type] || []).map((item) => ({
+            to: "/" + type + "/" + item._id,
+            label: item.fullName || item.name || item.email,
+            description: item.email || item.subdomain || item._id,
+            type,
+          }));
+        }),
+      );
+      if (!controller.signal.aborted) {
+        setResults(
+          responses.flatMap((result) =>
+            result.status === "fulfilled" ? result.value : [],
+          ),
+        );
+        setError(
+          responses.some((result) => result.status === "rejected")
+            ? "Some search results are unavailable. Try again."
+            : "",
+        );
+        setLoading(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, can]);
+  const pages = links.filter((link) =>
+    link.label.toLowerCase().includes(query.toLowerCase()),
+  );
   return (
-    <div className="mb-5">
-      <div className="px-3 mb-1.5 text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">{title}</div>
-      <div className="flex flex-col gap-1">{items}</div>
-    </div>
-  )
+    <Modal
+      title="Find anything in your workspace"
+      className="search-dialog"
+      onClose={onClose}
+    >
+      <label className="command-input">
+        <Search size={20} />
+        <input
+          autoFocus
+          placeholder="Search users, projects, or pages…"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setResults([]);
+            setError("");
+            setLoading(event.target.value.trim().length >= 2);
+          }}
+          aria-label="Search workspace"
+        />
+      </label>
+      <ErrorState error={error} />
+      <div className="command-results">
+        <span className="eyebrow">PAGES</span>
+        {pages.map((link) => (
+          <button
+            key={link.to}
+            onClick={() => {
+              navigate(link.to);
+              onClose();
+            }}
+          >
+            <link.icon size={17} />
+            <span>{link.label}</span>
+            <ArrowRight size={15} />
+          </button>
+        ))}
+        {query.trim().length >= 2 && (
+          <>
+            <span className="eyebrow">RECORDS {loading && "· SEARCHING…"}</span>
+            {results.map((result) => (
+              <button
+                key={result.to}
+                onClick={() => {
+                  navigate(result.to);
+                  onClose();
+                }}
+              >
+                <Avatar name={result.label} />
+                <span>
+                  {result.label}
+                  <small>{result.description}</small>
+                </span>
+                <span className="result-type">{result.type}</span>
+              </button>
+            ))}
+            {!loading && !results.length && (
+              <EmptyState
+                title="No matching records"
+                text="Try a name, email, or repository."
+              />
+            )}
+          </>
+        )}
+      </div>
+      <div className="command-footer">
+        <kbd>esc</kbd> to close
+        <span>Results respect your admin permissions</span>
+      </div>
+    </Modal>
+  );
 }
-
 export default function AdminLayout() {
-  const { admin, logout, isSuper, can } = useAuth()
-  const navigate = useNavigate()
-
-  const onLogout = async () => {
-    await logout()
-    toast.success('Logged out')
-    navigate('/login')
+  const { admin, logout, can, isSuper } = useAuth();
+  const [mobile, setMobile] = useState(false);
+  const [search, setSearch] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const location = useLocation();
+  const links = navigation.filter((link) => can(link.permission));
+  const current = links.find((link) =>
+    link.to === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(link.to),
+  );
+  const detail = /^\/(users|projects)\/[^/]+/.test(location.pathname);
+  useEffect(() => {
+    const handler = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearch((value) => !value);
+      }
+      if (event.key === "Escape") setMobile(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+  async function signOut() {
+    setLoggingOut(true);
+    try {
+      await logout();
+    } catch (error) {
+      toast.error(message(error));
+    } finally {
+      setLoggingOut(false);
+    }
   }
-
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-      <aside className="border-r border-[var(--line)] bg-[var(--bg-elevated)]/90 backdrop-blur-xl p-5 flex flex-col lg:sticky lg:top-0 lg:h-screen">
-        <div className="mb-8 flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-[var(--accent-soft)] border border-[rgba(47,158,108,.3)] grid place-items-center">
-            <Shield size={18} className="text-[#7ddeb0]" />
-          </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">DeployHub</div>
-            <div className="text-lg font-semibold leading-tight">Control Plane</div>
-          </div>
+    <div className="console-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <header className="console-header">
+        <div className="console-identity">
+          <Link to="/" aria-label="DeployHub admin home">
+            <Logo />
+          </Link>
+          <span className="identity-divider">/</span>
+          <span className="workspace-mark">
+            <ShieldCheck size={15} />
+          </span>
+          <strong>Platform</strong>
+          <span className="console-tier">ADMIN</span>
         </div>
-
-        <nav className="flex-1 overflow-auto">
-          <NavSection title="System">
-            {can('system:manage') && (
-              <NavLink to="/system" className={linkClass}>
-                <Server size={16} /> Infrastructure
-              </NavLink>
-            )}
-            {can('dashboard:read') && (
-              <NavLink to="/" end className={linkClass}>
-                <LayoutDashboard size={16} /> Overview
-              </NavLink>
-            )}
-            {can('admins:manage') && (
-              <NavLink to="/admins" className={linkClass}>
-                <UserCog size={16} /> Admins
-              </NavLink>
-            )}
-            {can('audit:read') && (
-              <NavLink to="/audit-logs" className={linkClass}>
-                <ScrollText size={16} /> Audit Logs
-              </NavLink>
-            )}
-          </NavSection>
-
-          <NavSection title="Platform">
-            {can('users:read') && (
-              <NavLink to="/users" className={linkClass}>
-                <Users size={16} /> Users
-              </NavLink>
-            )}
-            {can('projects:read') && (
-              <NavLink to="/projects" className={linkClass}>
-                <Boxes size={16} /> Projects
-              </NavLink>
-            )}
-          </NavSection>
-
-          {!isSuper && (
-            <NavSection title="Account">
-              <NavLink to="/password" className={linkClass}>
-                <KeyRound size={16} /> Password
-              </NavLink>
-            </NavSection>
-          )}
-        </nav>
-
-        <div className="mt-auto pt-6 border-t border-[var(--line)] space-y-3">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">Signed in</div>
-            <div className="text-sm mt-1 truncate">{admin?.email}</div>
-            <div className="text-xs text-[var(--muted)] mono mt-0.5">{admin?.username || admin?.adminId}</div>
-            <div className="mt-2">
-              <span className={`badge ${isSuper ? 'badge-amber' : 'badge-blue'}`}>
-                {isSuper ? 'super admin' : 'normal admin'}
+        <div className="console-tools">
+          <button
+            className="console-search"
+            onClick={() => setSearch(true)}
+            aria-label="Open workspace search"
+          >
+            <Search size={16} />
+            <span>Jump to anything...</span>
+            <kbd>
+              <Command size={11} /> K
+            </kbd>
+          </button>
+          <ThemePicker />
+          <details className="account-menu">
+            <summary aria-label="Open account menu">
+              <Avatar name={admin.username || admin.adminId} />
+            </summary>
+            <div className="account-popover">
+              <strong>{admin.username || admin.adminId}</strong>
+              <small>{admin.email}</small>
+              <span className="access-note">
+                {isSuper ? "Super administrator" : "Support administrator"}
               </span>
+              {!isSuper && (
+                <Link to="/password">
+                  <KeyRound size={15} /> Account security
+                </Link>
+              )}
+              <a
+                href="https://dashboard.deployhub.cloud"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={15} /> Customer dashboard
+              </a>
+              <button onClick={signOut} disabled={loggingOut}>
+                <LogOut size={15} />
+                {loggingOut ? "Signing out..." : "Sign out"}
+              </button>
             </div>
-          </div>
-          <button onClick={onLogout} className="btn btn-ghost w-full justify-start">
-            <LogOut size={16} /> Logout
+          </details>
+          <button
+            className="icon-button console-menu"
+            aria-label="Open navigation"
+            aria-expanded={mobile}
+            onClick={() => setMobile(!mobile)}
+          >
+            {mobile ? <X size={19} /> : <Menu size={19} />}
           </button>
         </div>
-      </aside>
-
-      <main className="p-6 md:p-8 overflow-auto min-w-0">
+      </header>
+      <div className="console-nav-row">
+        <nav
+          className={mobile ? "console-nav is-open" : "console-nav"}
+          aria-label="Admin navigation"
+        >
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.to === "/"}
+              onClick={() => setMobile(false)}
+            >
+              <link.icon size={16} />
+              <span>{link.label}</span>
+            </NavLink>
+          ))}
+          {!isSuper && (
+            <NavLink to="/password" onClick={() => setMobile(false)}>
+              <KeyRound size={16} />
+              Security
+            </NavLink>
+          )}
+        </nav>
+        <span className="workspace-scope">
+          <ShieldCheck size={13} />{" "}
+          {isSuper ? "Platform controls" : "Support workspace"}
+        </span>
+      </div>
+      <main
+        id="main-content"
+        className={
+          "console-main" +
+          (detail ? " entity-workspace" : "") +
+          (location.pathname === "/" ? " is-overview" : "")
+        }
+        tabIndex={-1}
+      >
+        <div className="console-location">
+          <span>Workspace</span>
+          <span>/</span>
+          <Link to={current?.to || "/password"}>
+            {current?.label || "Account security"}
+          </Link>
+          {detail && (
+            <>
+              <span>/</span>
+              <span>Workspace details</span>
+            </>
+          )}
+          <span className="location-right">DeployHub console</span>
+        </div>
         <Outlet />
       </main>
+      <footer className="console-footer">
+        <span>
+          <ShieldCheck size={12} /> DeployHub administration
+        </span>
+        <span>Workspace access is scoped to your role</span>
+        <button onClick={() => setSearch(true)}>
+          Quick navigation <kbd>⌘ K</kbd>
+        </button>
+      </footer>
+      {search && (
+        <CommandSearch onClose={() => setSearch(false)} links={links} />
+      )}
     </div>
-  )
+  );
 }

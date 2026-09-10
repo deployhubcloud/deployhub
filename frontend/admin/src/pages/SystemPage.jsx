@@ -1,498 +1,641 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import toast from 'react-hot-toast'
+import { useState } from "react";
 import {
-  Cpu,
-  HardDrive,
-  Play,
-  RefreshCw,
-  Square,
-  RotateCcw,
-  ScrollText,
-  Download,
   Activity,
-} from 'lucide-react'
-import { api } from '../api/client'
-import { PageHeader, StatCard, StatusBadge } from '../components/ui'
-
-function formatBytes(n) {
-  const v = Number(n) || 0
-  if (v < 1024) return `${v} B`
-  const units = ['KB', 'MB', 'GB', 'TB']
-  let x = v / 1024
-  let i = 0
-  while (x >= 1024 && i < units.length - 1) {
-    x /= 1024
-    i += 1
-  }
-  return `${x.toFixed(x >= 10 ? 0 : 1)} ${units[i]}`
-}
-
-function formatAge(iso) {
-  if (!iso || iso.startsWith('0001')) return '—'
-  const t = new Date(iso).getTime()
-  if (!Number.isFinite(t)) return '—'
-  const s = Math.max(0, Math.floor((Date.now() - t) / 1000))
-  if (s < 60) return `${s}s`
-  if (s < 3600) return `${Math.floor(s / 60)}m`
-  if (s < 86400) return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
-  return `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h`
-}
-
-function Sparkline({ values, color = '#2f9e6c' }) {
-  const pts = (values || []).map((n) => Math.max(0, Number(n) || 0))
-  if (pts.length < 2) {
-    return <div className="h-8 w-[120px] rounded bg-[var(--panel-3)]" />
-  }
-  const w = 120
-  const h = 32
-  const max = Math.max(...pts, 1)
-  const d = pts
-    .map((p, i) => {
-      const x = (i / (pts.length - 1)) * w
-      const y = h - 2 - (p / max) * (h - 4)
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
+  Boxes,
+  Download,
+  HardDrive,
+  ScrollText,
+  Search,
+  Server,
+  ShieldCheck,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import useResource from "../hooks/useResource";
+import { api } from "../api/client";
+import {
+  ConfirmButton,
+  CopyValue,
+  DataStamp,
+  DetailList,
+  EmptyState,
+  ErrorState,
+  Modal,
+  PageHeader,
+  Panel,
+  RefreshButton,
+  ResourceState,
+  StatCard,
+  StatusBadge,
+  Tabs,
+} from "../components/ui";
+import { bytes, dateTime } from "../utils";
+function Sparkline({ values, label }) {
+  const points = (values || []).filter((value) => Number.isFinite(value));
+  if (points.length < 2)
+    return <span className="muted">Collecting samples</span>;
+  const max = Math.max(...points, 1);
+  const path = points
+    .map(
+      (point, index) =>
+        (index ? "L" : "M") +
+        (index / (points.length - 1)) * 240 +
+        "," +
+        (48 - (point / max) * 42),
+    )
+    .join(" ");
   return (
-    <svg width={w} height={h} className="overflow-visible">
-      <path d={d} fill="none" stroke={color} strokeWidth="1.6" />
+    <svg
+      viewBox="0 0 240 52"
+      className="sparkline"
+      role="img"
+      aria-label={label}
+    >
+      <path d={path} fill="none" stroke="currentColor" strokeWidth="2" />
     </svg>
-  )
+  );
 }
-
-function UsageBar({ value, tone = 'green' }) {
-  const pct = Math.max(0, Math.min(100, Number(value) || 0))
-  const color =
-    pct >= 85 ? 'bg-[#d45454]' : pct >= 65 ? 'bg-[#c9a227]' : tone === 'blue' ? 'bg-[#4d8fd6]' : 'bg-[var(--accent)]'
+function Usage({ value }) {
+  if (value == null || !Number.isFinite(value))
+    return <span className="muted">Unavailable</span>;
   return (
-    <div className="min-w-[88px]">
-      <div className="flex justify-between text-[11px] text-[var(--muted)] mb-1 tabular-nums">
-        <span>{pct.toFixed(1)}%</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-[var(--panel-3)] overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+    <div className="usage">
+      <span>{value.toFixed(1)}%</span>
+      <div className="progress-track">
+        <i style={{ width: Math.max(0, Math.min(100, value)) + "%" }} />
       </div>
     </div>
-  )
+  );
 }
-
-const GROUPS = [
-  { id: 'edge', title: 'Edge' },
-  { id: 'backend', title: 'Backend services' },
-  { id: 'frontend', title: 'Frontends' },
-]
-
-export default function SystemPage() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [busyId, setBusyId] = useState('')
-  const [auto, setAuto] = useState(true)
-  const [logUnit, setLogUnit] = useState(null)
-  const [logText, setLogText] = useState('')
-  const [logFilter, setLogFilter] = useState('')
-  const [logBusy, setLogBusy] = useState(false)
-
-  const load = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true)
-    try {
-      const res = await api.get('/system')
-      setData(res.data)
-    } catch (err) {
-      if (!quiet) toast.error(err.response?.data?.message || 'Failed to load infrastructure')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  useEffect(() => {
-    if (!auto) return undefined
-    const id = setInterval(() => load(true), 8000)
-    return () => clearInterval(id)
-  }, [auto, load])
-
-  const act = async (unit, action) => {
-    const verb = action === 'stop' ? 'Stop' : action === 'restart' ? 'Restart' : 'Start'
-    const warn = unit.critical
-      ? `\n\nThis unit is on the critical path. ${action === 'stop' ? 'Stopping it can take the platform offline.' : 'Restarting may briefly interrupt traffic.'}`
-      : ''
-    if (!window.confirm(`${verb} ${unit.label}?${warn}`)) return
-
-    setBusyId(unit.id)
-    try {
-      const res = await api.post(`/system/${unit.id}/${action}`)
-      const done = { start: 'started', stop: 'stopped', restart: 'restarted' }[action]
-      toast.success(`${unit.label} ${done}`)
-      setData((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          units: (prev.units || []).map((u) => (u.id === unit.id ? { ...u, ...res.data.unit } : u)),
-        }
-      })
-      setTimeout(() => load(true), 1200)
-    } catch (err) {
-      toast.error(err.response?.data?.message || `${verb} failed`)
-    } finally {
-      setBusyId('')
-    }
+function UnitLogs({ unit, onClose }) {
+  const resource = useResource("/system/" + unit.id + "/logs", { tail: 400 });
+  const [filter, setFilter] = useState("");
+  const text = resource.data?.text || "";
+  const filtered = filter
+    ? text
+        .split("\n")
+        .filter((line) => line.toLowerCase().includes(filter.toLowerCase()))
+        .join("\n")
+    : text;
+  function download() {
+    const url = URL.createObjectURL(
+      new Blob([filtered], { type: "text/plain" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = unit.id + ".log";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-
-  const openLogs = async (unit) => {
-    setLogUnit(unit)
-    setLogFilter('')
-    setLogBusy(true)
-    setLogText('')
-    try {
-      const res = await api.get(`/system/${unit.id}/logs`, { params: { tail: 400 } })
-      setLogText(res.data.text || '')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to load logs')
-      setLogText('')
-    } finally {
-      setLogBusy(false)
-    }
-  }
-
-  const filteredLogs = useMemo(() => {
-    const q = logFilter.trim().toLowerCase()
-    if (!q) return logText
-    return logText
-      .split('\n')
-      .filter((line) => line.toLowerCase().includes(q))
-      .join('\n')
-  }, [logText, logFilter])
-
-  const downloadLogs = () => {
-    const blob = new Blob([filteredLogs || logText || ''], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${logUnit?.id || 'container'}.log`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const host = data?.host
-  const summary = data?.summary
-  const disk = data?.disk
-  const events = data?.events || []
-  const unitsByGroup = useMemo(() => {
-    const map = { edge: [], backend: [], frontend: [] }
-    for (const u of data?.units || []) {
-      if (map[u.group]) map[u.group].push(u)
-      else map.backend.push(u)
-    }
-    return map
-  }, [data])
-
-  const graphUnits = (data?.units || []).filter((u) => (u.history || []).length > 1)
-
   return (
-    <div>
+    <Modal
+      title={unit.label + " · logs"}
+      className="log-dialog"
+      onClose={onClose}
+    >
+      <div className="log-toolbar">
+        <label className="search-input">
+          <Search size={15} />
+          <input
+            aria-label="Filter log lines"
+            placeholder="Filter log lines…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </label>
+        <RefreshButton resource={resource} />
+        <button
+          className="btn btn-ghost"
+          disabled={!filtered}
+          onClick={download}
+        >
+          <Download size={15} />
+          Download
+        </button>
+      </div>
+      <ErrorState error={resource.error} retry={resource.reload} />
+      <pre className="log-output" tabIndex={0}>
+        {resource.loading
+          ? "Loading container logs…"
+          : filtered || "No matching log output."}
+      </pre>
+      <div className="panel-note">Latest 400 lines · {unit.name}</div>
+    </Modal>
+  );
+}
+export default function SystemPage() {
+  const [live, setLive] = useState(true);
+  const [fleetView, setFleetView] = useState("map");
+  const [tab, setTab] = useState("fleet");
+  const [query, setQuery] = useState("");
+  const [group, setGroup] = useState("");
+  const [status, setStatus] = useState("");
+  const [logs, setLogs] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const resource = useResource("/system", {}, { interval: live ? 8000 : 0 });
+  const data = resource.data;
+  const units = (data?.units || []).filter(
+    (unit) =>
+      (unit.label + " " + unit.name)
+        .toLowerCase()
+        .includes(query.toLowerCase()) &&
+      (!group || unit.group === group) &&
+      (!status ||
+        (status === "attention"
+          ? !unit.running || unit.probe?.ok === false
+          : unit.status === status)),
+  );
+  async function act(unit, action) {
+    await api.post("/system/" + unit.id + "/" + action);
+    toast.success(
+      unit.label +
+        " " +
+        { start: "started", stop: "stopped", restart: "restarted" }[action],
+    );
+    resource.reload();
+  }
+  function actions(unit) {
+    return (
+      <div className="row-actions">
+        {unit.present && (
+          <button className="btn btn-ghost" onClick={() => setLogs(unit)}>
+            <ScrollText size={14} />
+            Logs
+          </button>
+        )}
+        {["start", "restart", "stop"]
+          .filter(
+            (action) => unit["can" + action[0].toUpperCase() + action.slice(1)],
+          )
+          .map((action) => (
+            <ConfirmButton
+              key={action}
+              label={action[0].toUpperCase() + action.slice(1)}
+              className={action === "stop" ? "btn btn-danger" : "btn btn-ghost"}
+              match={unit.critical ? unit.label : undefined}
+              confirmText={
+                action[0].toUpperCase() +
+                action.slice(1) +
+                " " +
+                unit.label +
+                "? " +
+                (unit.critical
+                  ? "This is a critical service. The operation may interrupt platform traffic."
+                  : "This changes the running state of this container.")
+              }
+              onConfirm={() => act(unit, action)}
+            />
+          ))}
+      </div>
+    );
+  }
+  return (
+    <>
       <PageHeader
+        eyebrow="OPERATIONS"
         title="Infrastructure"
-        subtitle="Live Docker fleet — health probes, 15-minute CPU/RAM, logs, and events."
+        subtitle="Inspect service health, resource usage, and container activity."
         actions={
           <>
-            <label className="btn btn-ghost text-sm">
+            <label className="live-toggle">
               <input
                 type="checkbox"
-                className="accent-[var(--accent)]"
-                checked={auto}
-                onChange={(e) => setAuto(e.target.checked)}
+                checked={live}
+                onChange={(e) => setLive(e.target.checked)}
               />
-              Live refresh
+              <span className={live ? "live-dot" : ""} />
+              Auto-refresh · 8s
             </label>
-            <button type="button" className="btn btn-ghost" onClick={() => load()} disabled={loading}>
-              <RefreshCw size={14} /> Refresh
-            </button>
+            <RefreshButton resource={resource} />
           </>
         }
       />
-
-      <div className="grid sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <StatCard label="Running" value={loading ? '—' : summary?.running} hint={`${summary?.total || 0} managed units`} />
-        <StatCard label="Stopped" value={loading ? '—' : summary?.stopped} hint={`${summary?.missing || 0} missing`} />
-        <StatCard
-          label="Unhealthy"
-          value={loading ? '—' : summary?.unhealthy}
-          hint="HTTP probe failures"
-        />
-        <StatCard
-          label="Host CPUs"
-          value={loading ? '—' : host?.cpus ?? '—'}
-          hint={host?.dockerVersion ? `Docker ${host.dockerVersion}` : 'Docker host'}
-        />
-        <StatCard
-          label="Host memory"
-          value={loading ? '—' : host?.memory ? formatBytes(host.memory) : '—'}
-          hint={disk ? `images ${formatBytes(disk.layersSize)}` : host?.os || ''}
-        />
-      </div>
-
-      {graphUnits.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-sm uppercase tracking-[0.18em] text-[var(--muted)] mb-3">
-            Last 15 minutes
-          </h2>
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {graphUnits.map((unit) => (
-              <div key={unit.id} className="card p-4">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="font-medium text-sm">{unit.label}</div>
-                  <span className="text-[11px] text-[var(--muted)] tabular-nums">
-                    CPU {unit.usage?.cpuPercent?.toFixed?.(1) ?? '—'}%
-                  </span>
-                </div>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-[var(--muted)] mb-1">CPU</div>
-                    <Sparkline values={unit.history.map((h) => h.cpuPercent)} color="#2f9e6c" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-[var(--muted)] mb-1">Memory</div>
-                    <Sparkline values={unit.history.map((h) => h.memPercent)} color="#4d8fd6" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-[var(--muted)] mt-2">
-            Graphs fill after the sampler has run (~10s). High CPU/RAM and failed health send email to the super-admin inbox (30 min cooldown).
-          </p>
-        </section>
-      )}
-
-      {GROUPS.map((group) => (
-        <section key={group.id} className="mt-8">
-          <h2 className="text-sm uppercase tracking-[0.18em] text-[var(--muted)] mb-3">{group.title}</h2>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Unit</th>
-                  <th>Status</th>
-                  <th>Probe</th>
-                  <th>CPU</th>
-                  <th>Memory</th>
-                  <th>Uptime</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {(unitsByGroup[group.id] || []).map((unit) => {
-                  const busy = busyId === unit.id
-                  return (
-                    <tr key={unit.id}>
-                      <td>
-                        <div className="font-medium">{unit.label}</div>
-                        <div className="text-xs text-[var(--muted)] mt-0.5">{unit.description}</div>
-                        <div className="text-[11px] text-[var(--muted)] mono mt-1">{unit.name}</div>
-                      </td>
-                      <td>
-                        <div className="flex flex-wrap gap-1.5">
-                          <StatusBadge value={unit.status} />
-                          {unit.dockerHealth ? <StatusBadge value={unit.dockerHealth} /> : null}
-                          {unit.self ? <span className="badge badge-gray">this api</span> : null}
-                          {unit.locked && !unit.self ? <span className="badge badge-gray">protected</span> : null}
-                          {unit.critical ? <span className="badge badge-amber">critical</span> : null}
-                          {unit.restartCount > 0 ? (
-                            <span className="badge badge-gray">{unit.restartCount} restarts</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        {unit.probe ? (
-                          <div>
-                            <StatusBadge value={unit.probe.ok ? 'healthy' : 'unhealthy'} />
-                            <div className="text-[11px] text-[var(--muted)] mt-1 tabular-nums">
-                              {unit.probe.ms}ms
-                              {unit.probe.status ? ` · ${unit.probe.status}` : ''}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[var(--muted)]">—</span>
-                        )}
-                      </td>
-                      <td>
-                        {unit.running && unit.usage ? (
-                          <div className="flex items-center gap-2">
-                            <Cpu size={13} className="text-[var(--muted)]" />
-                            <UsageBar value={unit.usage.cpuPercent} />
-                          </div>
-                        ) : (
-                          <span className="text-[var(--muted)]">—</span>
-                        )}
-                      </td>
-                      <td>
-                        {unit.running && unit.usage?.memory ? (
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <HardDrive size={13} className="text-[var(--muted)]" />
-                              <UsageBar value={unit.usage.memory.percent} tone="blue" />
-                            </div>
-                            <div className="text-[11px] text-[var(--muted)] mt-1 tabular-nums">
-                              {formatBytes(unit.usage.memory.used)} / {formatBytes(unit.usage.memory.limit)}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[var(--muted)]">—</span>
-                        )}
-                      </td>
-                      <td className="text-sm text-[var(--muted)] tabular-nums">{formatAge(unit.startedAt)}</td>
-                      <td>
-                        <div className="flex justify-end gap-1.5">
-                          {unit.present && (
-                            <button
-                              type="button"
-                              className="btn btn-ghost py-1.5 px-2.5 text-xs"
-                              onClick={() => openLogs(unit)}
-                            >
-                              <ScrollText size={12} /> Logs
-                            </button>
-                          )}
-                          {unit.canStart && (
-                            <button
-                              type="button"
-                              className="btn btn-primary py-1.5 px-2.5 text-xs"
-                              disabled={busy}
-                              onClick={() => act(unit, 'start')}
-                            >
-                              <Play size={12} /> Start
-                            </button>
-                          )}
-                          {unit.canRestart && (
-                            <button
-                              type="button"
-                              className="btn btn-ghost py-1.5 px-2.5 text-xs"
-                              disabled={busy}
-                              onClick={() => act(unit, 'restart')}
-                            >
-                              <RotateCcw size={12} /> Restart
-                            </button>
-                          )}
-                          {unit.canStop && (
-                            <button
-                              type="button"
-                              className="btn btn-danger py-1.5 px-2.5 text-xs"
-                              disabled={busy}
-                              onClick={() => act(unit, 'stop')}
-                            >
-                              <Square size={12} /> Stop
-                            </button>
-                          )}
-                          {unit.locked ? (
-                            <span className="text-[11px] text-[var(--muted)]">protected</span>
-                          ) : null}
-                          {!unit.present ? (
-                            <span className="text-[11px] text-[var(--muted)]">not deployed</span>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
-
-      <section className="mt-8">
-        <h2 className="text-sm uppercase tracking-[0.18em] text-[var(--muted)] mb-3">
-          Docker events
-        </h2>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Unit</th>
-                <th>Event</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="text-[var(--muted)]">
-                    No recent platform container events.
-                  </td>
-                </tr>
-              ) : (
-                events.map((ev, i) => (
-                  <tr key={`${ev.ts}-${ev.id}-${i}`}>
-                    <td className="text-sm text-[var(--muted)] tabular-nums">
-                      {ev.ts ? new Date(ev.ts).toLocaleString() : '—'}
-                    </td>
-                    <td>
-                      <div>{ev.label}</div>
-                      <div className="text-[11px] mono text-[var(--muted)]">{ev.name}</div>
-                    </td>
-                    <td>
-                      <StatusBadge value={ev.status} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="mt-8 card p-5">
-        <h2 className="text-sm uppercase tracking-[0.18em] text-[var(--muted)] mb-3">Not in Docker</h2>
-        <p className="text-sm text-[var(--muted)] mb-3">
-          These run on the host and are not managed here.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-3">
-          {(data?.excluded || []).map((item) => (
-            <div key={item.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-4">
-              <div className="font-medium">{item.label}</div>
-              <div className="text-xs text-[var(--muted)] mt-1">{item.note}</div>
+      <ResourceState resource={resource}>
+        {data && (
+          <>
+            <div className="stats-grid">
+              <StatCard
+                label="Running services"
+                value={data.summary?.running}
+                hint={(data.summary?.total ?? "—") + " managed units"}
+                icon={Server}
+                onClick={() => {
+                  setStatus("running");
+                  setTab("fleet");
+                }}
+              />
+              <StatCard
+                label="Needs attention"
+                value={
+                  data.summary
+                    ? new Set(
+                        (data.units || [])
+                          .filter(
+                            (unit) => !unit.running || unit.probe?.ok === false,
+                          )
+                          .map((unit) => unit.id),
+                      ).size
+                    : null
+                }
+                hint="Stopped, missing, or unhealthy"
+                icon={Activity}
+                tone="warning"
+                onClick={() => {
+                  setStatus("attention");
+                  setTab("fleet");
+                }}
+              />
+              <StatCard
+                label="Host CPUs"
+                value={data.host?.cpus}
+                hint={
+                  data.host?.dockerVersion
+                    ? "Docker " + data.host.dockerVersion
+                    : "Host configuration"
+                }
+                icon={Boxes}
+              />
+              <StatCard
+                label="Host memory"
+                value={bytes(data.host?.memory)}
+                hint={data.host?.os || "Docker host"}
+                icon={HardDrive}
+              />
             </div>
-          ))}
-        </div>
-      </section>
-
-      {logUnit && (
-        <div className="fixed inset-0 z-50 bg-black/55 grid place-items-center p-4" onClick={() => setLogUnit(null)}>
-          <div
-            className="card w-full max-w-4xl max-h-[85vh] flex flex-col p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <div>
-                <div className="font-semibold">{logUnit.label} logs</div>
-                <div className="text-xs text-[var(--muted)] mono">{logUnit.name}</div>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" className="btn btn-ghost text-xs" onClick={() => openLogs(logUnit)} disabled={logBusy}>
-                  <Activity size={12} /> Reload
-                </button>
-                <button type="button" className="btn btn-ghost text-xs" onClick={downloadLogs} disabled={!logText}>
-                  <Download size={12} /> Download
-                </button>
-                <button type="button" className="btn btn-ghost text-xs" onClick={() => setLogUnit(null)}>
-                  Close
-                </button>
-              </div>
-            </div>
-            <input
-              className="input mb-3"
-              placeholder="Filter lines…"
-              value={logFilter}
-              onChange={(e) => setLogFilter(e.target.value)}
+            <Tabs
+              items={[
+                { id: "fleet", label: "Service fleet" },
+                { id: "metrics", label: "Resource history" },
+                { id: "events", label: "Container events" },
+                { id: "host", label: "Host details" },
+              ]}
+              value={tab}
+              onChange={setTab}
             />
-            <pre className="flex-1 overflow-auto rounded-xl bg-[#0a0e0c] border border-[var(--line)] p-3 text-[12px] leading-relaxed text-[#c5d4cb] min-h-[240px] whitespace-pre-wrap">
-              {logBusy ? 'Loading…' : filteredLogs || 'No log output'}
-            </pre>
-          </div>
-        </div>
+            {tab === "fleet" && (
+              <Panel
+                title="Service fleet"
+                className="fleet-panel"
+                actions={
+                  <div className="display-toggle">
+                    <button
+                      aria-pressed={fleetView === "map"}
+                      onClick={() => setFleetView("map")}
+                    >
+                      Map
+                    </button>
+                    <button
+                      aria-pressed={fleetView === "table"}
+                      onClick={() => setFleetView("table")}
+                    >
+                      Table
+                    </button>
+                  </div>
+                }
+                subtitle={units.length + " services in this view"}
+              >
+                <div className="filter-bar">
+                  <label className="search-input">
+                    <Search size={16} />
+                    <input
+                      aria-label="Search services"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Find a service…"
+                    />
+                  </label>
+                  <select
+                    className="select"
+                    aria-label="Service group"
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value)}
+                  >
+                    <option value="">All groups</option>
+                    <option value="edge">Edge</option>
+                    <option value="backend">Backend</option>
+                    <option value="frontend">Frontend</option>
+                  </select>
+                  <select
+                    className="select"
+                    aria-label="Service state"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                  >
+                    <option value="">All states</option>
+                    <option value="running">Running</option>
+                    <option value="attention">Needs attention</option>
+                    <option value="exited">Stopped</option>
+                    <option value="missing">Missing</option>
+                  </select>
+                </div>
+                {fleetView === "map" ? (
+                  <div className="fleet-map">
+                    {units.map((unit) => (
+                      <article className="fleet-node" key={unit.id}>
+                        <div className="fleet-node-heading">
+                          <button onClick={() => setDetail(unit)}>
+                            <Server size={18} />
+                            {unit.label}
+                          </button>
+                          {unit.critical && (
+                            <ShieldCheck
+                              size={15}
+                              aria-label="Critical service"
+                            />
+                          )}
+                        </div>
+                        <p>
+                          {unit.group} / {unit.name}
+                        </p>
+                        <div className="fleet-node-status">
+                          <StatusBadge value={unit.status} />
+                          <span>
+                            {unit.locked
+                              ? "Protected"
+                              : unit.probe
+                                ? (unit.probe.ok ? "Healthy" : "Unhealthy") +
+                                  " · " +
+                                  unit.probe.ms +
+                                  " ms"
+                                : "No health probe"}
+                          </span>
+                        </div>
+                        <div className="fleet-node-metrics">
+                          <div>
+                            <span>CPU usage</span>
+                            <Usage value={unit.usage?.cpuPercent} />
+                          </div>
+                          <div>
+                            <span>Memory usage</span>
+                            <Usage value={unit.usage?.memory?.percent} />
+                          </div>
+                        </div>
+                        {actions(unit)}
+                      </article>
+                    ))}
+                    {!units.length && (
+                      <EmptyState title="No services match these filters" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="table-wrap">
+                    <table className="table fleet-table">
+                      <thead>
+                        <tr>
+                          <th>Service</th>
+                          <th>Status</th>
+                          <th>Health probe</th>
+                          <th>CPU</th>
+                          <th>Memory</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {units.length ? (
+                          units.map((unit) => (
+                            <tr key={unit.id}>
+                              <td>
+                                <button
+                                  className="table-link"
+                                  onClick={() => setDetail(unit)}
+                                >
+                                  <span className="runtime-avatar">
+                                    <Server size={18} />
+                                  </span>
+                                  <span>
+                                    <strong>{unit.label}</strong>
+                                    <small>
+                                      {unit.group} · {unit.name}
+                                    </small>
+                                  </span>
+                                </button>
+                                {unit.critical && (
+                                  <span className="cell-subtitle">
+                                    Critical service
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <StatusBadge value={unit.status} />
+                                {unit.locked && (
+                                  <small className="cell-subtitle">
+                                    Protected
+                                  </small>
+                                )}
+                              </td>
+                              <td>
+                                {unit.probe ? (
+                                  <>
+                                    <StatusBadge
+                                      value={
+                                        unit.probe.ok ? "healthy" : "unhealthy"
+                                      }
+                                    />
+                                    <small className="cell-subtitle">
+                                      {unit.probe.ms} ms · HTTP{" "}
+                                      {unit.probe.status || "—"}
+                                    </small>
+                                  </>
+                                ) : (
+                                  <span className="muted">No probe</span>
+                                )}
+                              </td>
+                              <td>
+                                <Usage value={unit.usage?.cpuPercent} />
+                              </td>
+                              <td>
+                                <Usage value={unit.usage?.memory?.percent} />
+                                <small className="cell-subtitle">
+                                  {bytes(unit.usage?.memory?.used)}
+                                </small>
+                              </td>
+                              <td>{actions(unit)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6}>
+                              <EmptyState title="No services match these filters" />
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Panel>
+            )}
+            {tab === "metrics" && (
+              <>
+                <div className="section-caption">
+                  <h2>Recent resource history</h2>
+                  <p>
+                    Samples collected by the infrastructure monitor. Missing
+                    samples are not estimated.
+                  </p>
+                </div>
+                <div className="metric-grid">
+                  {(data.units || [])
+                    .filter((unit) => unit.history?.length > 1)
+                    .map((unit) => (
+                      <Panel
+                        key={unit.id}
+                        title={unit.label}
+                        subtitle={unit.history.length + " samples"}
+                      >
+                        <div className="metric-charts">
+                          <div>
+                            <span>
+                              CPU · {unit.usage?.cpuPercent?.toFixed(1) ?? "—"}%
+                            </span>
+                            <Sparkline
+                              values={unit.history.map(
+                                (sample) => sample.cpuPercent,
+                              )}
+                              label={unit.label + " CPU history"}
+                            />
+                          </div>
+                          <div>
+                            <span>
+                              Memory ·{" "}
+                              {unit.usage?.memory?.percent?.toFixed(1) ?? "—"}%
+                            </span>
+                            <Sparkline
+                              values={unit.history.map(
+                                (sample) => sample.memPercent,
+                              )}
+                              label={unit.label + " memory history"}
+                            />
+                          </div>
+                        </div>
+                      </Panel>
+                    ))}
+                </div>
+                {!(data.units || []).some(
+                  (unit) => unit.history?.length > 1,
+                ) && (
+                  <EmptyState
+                    title="Waiting for resource samples"
+                    text="History appears after the infrastructure monitor collects enough readings."
+                  />
+                )}
+              </>
+            )}
+            {tab === "events" && (
+              <Panel title="Recent container events">
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Service</th>
+                        <th>Event</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.events?.length ? (
+                        data.events.map((event, index) => (
+                          <tr key={event.ts + "-" + index}>
+                            <td className="muted nowrap">
+                              {dateTime(event.ts)}
+                            </td>
+                            <td>
+                              <strong>{event.label}</strong>
+                              <small className="cell-subtitle">
+                                {event.name}
+                              </small>
+                            </td>
+                            <td>
+                              <StatusBadge value={event.status} />
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3}>
+                            <EmptyState title="No recent container events" />
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
+            )}
+            {tab === "host" && (
+              <div className="two-columns">
+                <Panel title="Docker host">
+                  <DetailList
+                    items={[
+                      ["Operating system", data.host?.os],
+                      ["CPU cores", data.host?.cpus],
+                      ["Memory", bytes(data.host?.memory)],
+                      ["Docker version", data.host?.dockerVersion],
+                      ["Image storage", bytes(data.disk?.layersSize)],
+                    ]}
+                  />
+                </Panel>
+                <Panel
+                  title="Host-managed processes"
+                  subtitle="These run outside Docker and cannot be controlled here."
+                >
+                  <div className="host-processes">
+                    {(data.excluded || []).map((item) => (
+                      <div key={item.id}>
+                        <ShieldCheck size={19} />
+                        <div>
+                          <strong>{item.label}</strong>
+                          <p>{item.note}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
+            )}
+          </>
+        )}
+      </ResourceState>
+      <DataStamp resource={resource} />
+      {logs && (
+        <UnitLogs key={logs.id} unit={logs} onClose={() => setLogs(null)} />
       )}
-    </div>
-  )
+      {detail && (
+        <Modal
+          title={detail.label}
+          className="detail-drawer"
+          onClose={() => setDetail(null)}
+        >
+          <div className="drawer-summary">
+            <StatusBadge value={detail.status} />
+            <p>{detail.description}</p>
+          </div>
+          <DetailList
+            items={[
+              ["Container name", <CopyValue value={detail.name} />],
+              ["Image", detail.image],
+              ["Group", detail.group],
+              ["Started", dateTime(detail.startedAt)],
+              ["Restart count", detail.restartCount],
+              ["Ports", detail.ports?.join(", ") || "—"],
+              ["Protected", detail.locked ? "Yes" : "No"],
+              ["Critical", detail.critical ? "Yes" : "No"],
+            ]}
+          />
+          <div className="modal-footer">
+            <button
+              className="btn btn-primary"
+              disabled={!detail.present}
+              onClick={() => {
+                setLogs(detail);
+                setDetail(null);
+              }}
+            >
+              Inspect logs
+              <ScrollText size={15} />
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
 }

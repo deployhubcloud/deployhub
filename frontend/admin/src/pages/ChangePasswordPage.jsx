@@ -1,81 +1,114 @@
-import { useState } from 'react'
-import toast from 'react-hot-toast'
-import { api } from '../api/client'
-import { PageHeader } from '../components/ui'
-
+import { useState } from "react";
+import { KeyRound, ShieldCheck } from "lucide-react";
+import { api } from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import { ErrorState, PageHeader, Panel } from "../components/ui";
+import { message } from "../utils";
 export default function ChangePasswordPage() {
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const onSubmit = async (e) => {
-    e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      toast.error('New password and confirm password do not match')
-      return
+  const { isSuper } = useAuth();
+  const [form, setForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    setSaved(false);
+    if (form.newPassword !== form.confirmPassword) {
+      setError("The new passwords do not match.");
+      return;
     }
-    setBusy(true)
+    setBusy(true);
     try {
-      await api.patch('/auth/password', { currentPassword, newPassword })
-      toast.success('Password updated')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
+      await api.patch("/auth/password", {
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setSaved(true);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to change password')
+      setError(message(err));
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
-
   return (
-    <div className="max-w-lg">
+    <>
       <PageHeader
-        title="Change password"
-        subtitle="Update the password you use to log in. OTP will still be sent to your email."
+        eyebrow="YOUR ACCOUNT"
+        title="Account security"
+        subtitle="Manage the password you use to access this workspace."
       />
-
-      <form onSubmit={onSubmit} className="card p-5 space-y-4">
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">Current password</span>
-          <input
-            type="password"
-            className="input mt-1"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">New password</span>
-          <input
-            type="password"
-            className="input mt-1"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-[var(--muted)]">Confirm new password</span>
-          <input
-            type="password"
-            className="input mt-1"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
-        </label>
-        <button disabled={busy} className="btn btn-primary">
-          {busy ? 'Saving…' : 'Update password'}
-        </button>
-      </form>
-    </div>
-  )
+      <div className="settings-layout">
+        <Panel
+          title="Password"
+          subtitle="Email verification still applies each time you sign in."
+        >
+          {isSuper ? (
+            <div className="panel-body">
+              <div className="notice">
+                <ShieldCheck size={20} />
+                The super administrator credentials are managed through the
+                platform’s server configuration.
+              </div>
+            </div>
+          ) : (
+            <form className="form-stack panel-body" onSubmit={submit}>
+              {[
+                ["currentPassword", "Current password"],
+                ["newPassword", "New password"],
+                ["confirmPassword", "Confirm new password"],
+              ].map(([key, label]) => (
+                <label className="field" key={key}>
+                  {label}
+                  <input
+                    className="input"
+                    type="password"
+                    value={form[key]}
+                    autoComplete={
+                      key === "currentPassword"
+                        ? "current-password"
+                        : "new-password"
+                    }
+                    minLength={key === "currentPassword" ? undefined : 8}
+                    required
+                    onChange={(event) =>
+                      setForm({ ...form, [key]: event.target.value })
+                    }
+                  />
+                </label>
+              ))}
+              <p className="field-hint">
+                Use at least eight characters for your new password.
+              </p>
+              <ErrorState error={error} />
+              {saved && (
+                <div className="notice success" role="status">
+                  Your password has been updated.
+                </div>
+              )}
+              <div className="form-actions">
+                <button className="btn btn-primary" disabled={busy}>
+                  <KeyRound size={15} />
+                  {busy ? "Updating…" : "Update password"}
+                </button>
+              </div>
+            </form>
+          )}
+        </Panel>
+        <div className="settings-help">
+          <ShieldCheck size={24} />
+          <h3>Your account, protected.</h3>
+          <p>
+            Use a unique password. Your registered email is used to verify each
+            login.
+          </p>
+        </div>
+      </div>
+    </>
+  );
 }
