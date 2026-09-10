@@ -2,24 +2,25 @@ import { projectClient, identityClient, buildClient, deployClient } from '../uti
 import { cacheKeys, getCache, invalidateAdminCache, setCache } from '../utils/cache.js';
 
 export async function listProjects(params = {}) {
-    const cacheKey = `${cacheKeys.projectsList(params.userId)}:${JSON.stringify(params)}`;
-    const cached = await getCache(cacheKey);
+    const { fresh, ...query } = params;
+    const cacheKey = `${cacheKeys.projectsList(query.userId)}:${JSON.stringify(query)}`;
+    const cached = fresh === '1' ? null : await getCache(cacheKey);
     if (cached) return { ...cached, cached: true };
 
-    const { data } = await projectClient().get('/admin/projects', { params });
-    await setCache(cacheKey, data, 60 * 60);
+    const { data } = await projectClient().get('/admin/projects', { params: query });
+    await setCache(cacheKey, data, 30);
     return { ...data, cached: false };
 }
 
-export async function getProjectDeep(projectId) {
+export async function getProjectDeep(projectId, { fresh = false } = {}) {
     const cacheKey = `deployhub:admin:cache:project:deep:${projectId}`;
-    const cached = await getCache(cacheKey);
+    const cached = fresh ? null : await getCache(cacheKey);
     if (cached) return { ...cached, cached: true };
 
     const [projectRes, buildsRes, deploymentsRes] = await Promise.all([
         projectClient().get(`/admin/projects/${projectId}`),
-        buildClient().get('/admin/builds', { params: { projectId, limit: 50 } }).catch(() => ({ data: { builds: [] } })),
-        deployClient().get('/admin/deployments', { params: { projectId, limit: 50 } }).catch(() => ({ data: { deployments: [] } })),
+        buildClient().get('/admin/builds', { params: { projectId, limit: 50 } }).catch(() => null),
+        deployClient().get('/admin/deployments', { params: { projectId, limit: 50 } }).catch(() => null),
     ]);
 
     let owner = null;
@@ -36,18 +37,19 @@ export async function getProjectDeep(projectId) {
     const payload = {
         ...projectRes.data,
         owner,
-        builds: buildsRes.data?.builds || [],
-        deployments: deploymentsRes.data?.deployments || [],
+        builds: buildsRes?.data?.builds || [],
+        deployments: deploymentsRes?.data?.deployments || [],
+        availability: { builds: Boolean(buildsRes), deployments: Boolean(deploymentsRes), owner: Boolean(owner) },
         counts: {
-            builds: buildsRes.data?.pagination?.total ?? (buildsRes.data?.builds?.length || 0),
-            deployments: deploymentsRes.data?.pagination?.total ?? (deploymentsRes.data?.deployments?.length || 0),
+            builds: buildsRes ? (buildsRes.data?.pagination?.total ?? buildsRes.data?.builds?.length ?? 0) : null,
+            deployments: deploymentsRes ? (deploymentsRes.data?.pagination?.total ?? deploymentsRes.data?.deployments?.length ?? 0) : null,
             ssl: projectRes.data?.sslCertificates?.length || 0,
             pendingOrders: projectRes.data?.billing?.pendingOrders?.length || 0,
             completedOrders: projectRes.data?.billing?.completedOrders?.length || 0,
         },
     };
 
-    await setCache(cacheKey, payload, 60 * 60);
+    if (buildsRes && deploymentsRes && owner) await setCache(cacheKey, payload, 30);
     return { ...payload, cached: false };
 }
 
@@ -90,5 +92,19 @@ export async function deleteBuild(buildId) {
 export async function deleteDeployment(deploymentId) {
     const { data } = await deployClient().delete(`/admin/deployments/${deploymentId}`);
     await invalidateAdminCache();
+    return data;
+}
+
+export async function listProjectHistory(projectId, type, params = {}) {
+    const page = Number(params.page ?? 1);
+    const requestedLimit = Number(params.limit ?? 25);
+    if (!['builds', 'deployments'].includes(type) || !Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(requestedLimit) || requestedLimit < 1) {
+        const error = new Error('Invalid history pagination');
+        error.status = 400;
+        throw error;
+    }
+    const limit = Math.min(100, requestedLimit);
+    const client = type === 'builds' ? buildClient() : deployClient();
+    const { data } = await client.get('/admin/' + type, { params: { projectId, page, limit } });
     return data;
 }

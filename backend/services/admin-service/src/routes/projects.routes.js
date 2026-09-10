@@ -7,6 +7,7 @@ import {
     deleteProjectDeploymentsController,
     getProjectController,
     listProjectsController,
+    listProjectHistoryController,
     purgeProjectCacheController,
     updateProjectController,
 } from '../controllers/projects.controller.js';
@@ -29,6 +30,8 @@ router.delete(
     deleteDeploymentController
 );
 router.get('/:projectId', getProjectController);
+router.get('/:projectId/builds', listProjectHistoryController('builds'));
+router.get('/:projectId/deployments', listProjectHistoryController('deployments'));
 router.patch(
     '/:projectId',
     requirePermission(PERMISSIONS.PROJECTS_WRITE),

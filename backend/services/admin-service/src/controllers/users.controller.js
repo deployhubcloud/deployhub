@@ -13,7 +13,7 @@ export const listUsersController = async (req, res) => {
 
 export const getUserController = async (req, res) => {
     try {
-        const data = await usersService.getUserDeep(req.params.userId);
+        const data = await usersService.getUserDeep(req.params.userId, { fresh: req.query.fresh === '1' });
         return res.status(200).json(data);
     } catch (error) {
         return res.status(error.response?.status || 500).json({

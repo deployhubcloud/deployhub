@@ -1,5 +1,13 @@
 import * as projectsService from '../services/projects.service.js';
 
+export const listProjectHistoryController = (type) => async (req, res) => {
+    try {
+        return res.status(200).json(await projectsService.listProjectHistory(req.params.projectId, type, req.query));
+    } catch (error) {
+        return res.status(error.response?.status || error.status || 500).json({ message: error.response?.data?.message || error.message || 'Failed to load project history' });
+    }
+};
+
 export const listProjectsController = async (req, res) => {
     try {
         const data = await projectsService.listProjects(req.query);
@@ -13,7 +21,7 @@ export const listProjectsController = async (req, res) => {
 
 export const getProjectController = async (req, res) => {
     try {
-        const data = await projectsService.getProjectDeep(req.params.projectId);
+        const data = await projectsService.getProjectDeep(req.params.projectId, { fresh: req.query.fresh === '1' });
         return res.status(200).json(data);
     } catch (error) {
         return res.status(error.response?.status || 500).json({
