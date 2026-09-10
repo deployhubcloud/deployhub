@@ -8,11 +8,8 @@ import { getProjectDataById } from '../../../../shared/utils/getProjectDataById.
 import { getBuildDataById } from '../../../../shared/utils/getBuildDataById.js';
 import { buildZipUrl } from '../utils/minio/minio.js';
 import fs from 'fs';
+import { deployStaticProject } from '../services/deployStaticProject.js';
 import path from 'path';
-import os from 'os';
-import { pipeline } from 'stream/promises';
-import tar from 'tar-stream';
-import { reloadNginx } from '../../../../shared/nginx/reloadNginx.js';
 import RedisPubSub from '../../../../shared/redis/pubSubRedis.js';
 import Redis from 'ioredis';
 import { getUserGithubAccessToken } from '../../../../shared/utils/getUserGIthubAccesstoken.js';
@@ -20,7 +17,6 @@ import { checkAndPullImage } from '../../../../shared/docker/checkAndPullImage.j
 import { deleteDockerHubImage } from '../../../../shared/docker/deleteDockerHubImage.js';
 import { Deployment } from '../model/deployment.model.js';
 import { docker } from '../utils/docker.js';
-import { execInContainer } from '../utils/execInContainer.js';
 import { getRedis } from '../core/redis/client.js';
 import { publishProjectStatus } from '../../../../shared/utils/publishProjectStatus.js';
 import { monitoringQueue } from '../utils/queues/queues.js';
@@ -42,79 +38,6 @@ const redisPubSub = new RedisPubSub(
 );
 
 const redis = getRedis();
-
-// wrap local file into tar stream for putArchive
-async function createTarFromFile(filePath, archiveName) {
-    const pack = tar.pack();
-    const fileBuffer = await fs.promises.readFile(filePath);
-    pack.entry({ name: archiveName, size: fileBuffer.length }, fileBuffer, (err) => {
-        if (err) pack.destroy(err);
-        else pack.finalize();
-    });
-    return pack;
-}
-
-//  Static deployment function 
-async function deployStaticProject({ docker, projectId, buildId, buildsZipUrl, staticRoot }) {
-    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), `deployhub-${projectId}-`));
-    const zipPath = path.join(tempDir, 'build.zip');
-    let container = null;
-
-    try {
-
-        // 1. Download ZIP from MinIO
-        console.log(`[deploy-static] Downloading zip project=${projectId} build=${buildId}`);
-        const response = await axios({ method: 'GET', url: buildsZipUrl, responseType: 'stream' });
-        await pipeline(response.data, fs.createWriteStream(zipPath));
-
-        await checkAndPullImage(docker, `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`)
-
-        // 2. Create & start helper container
-        container = await docker.createContainer({
-            Image: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
-            name: `deployhub-helper-${projectId}-${buildId}`,
-            HostConfig: {
-                Binds: [`${staticRoot}:/data/static`],
-                AutoRemove: false,
-            },
-        });
-        await container.start();
-        console.log(`[deploy-static] Helper container started: ${container.id}`);
-
-
-        // 3. Create target dir inside container
-        const targetDir = `/data/static/${projectId}`;
-        await execInContainer(container, ['mkdir', '-p', targetDir]);
-
-
-        // 4. Copy ZIP via putArchive (needs tar stream)
-        const tarStream = await createTarFromFile(zipPath, 'build.zip');
-        await container.putArchive(tarStream, { path: targetDir });
-
-
-        // 5. Unzip inside container
-        await execInContainer(container, ['unzip', '-o', `${targetDir}/build.zip`, '-d', targetDir]);
-
-
-        // 6. Delete zip inside container
-        await execInContainer(container, ['rm', '-f', `${targetDir}/build.zip`]);
-        console.log(`deploy-static Done for project=${projectId}`);
-
-    } finally {
-        if (container) {
-            try {
-                const info = await container.inspect();
-                if (info.State.Running) await container.stop({ t: 5 });
-            } catch (e) { console.warn(`[deploy-static] stop failed: ${e.message}`); }
-            try {
-                await container.remove({ force: true });
-            } catch (e) { console.warn(`[deploy-static] remove failed: ${e.message}`); }
-        }
-        try {
-            await fs.promises.rm(tempDir, { recursive: true, force: true });
-        } catch (e) { console.warn(`[deploy-static] temp cleanup failed: ${e.message}`); }
-    }
-}
 
 const insertEnv = (projectEnv) => {
     const envVariables = [];
@@ -240,8 +163,8 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
         // Static
         if (projectData.type === 'static') {
             const localStaticRoot = path.resolve("static")
-            if (!fs.existsSync(localStaticRoot)) {
-                fs.mkdirSync(localStaticRoot, { recursive: true });
+            if (DEPLOY_SERVICE_ENV.NODE_ENV !== 'production') {
+                await fs.promises.mkdir(localStaticRoot, { recursive: true });
             }
             const staticRoot = DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? '/home/rahul/docker/data/static' : `${localStaticRoot}`;
             console.log(staticRoot);
@@ -254,9 +177,9 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 buildId: buildId.toString(),
                 buildsZipUrl,
                 staticRoot,
+                helperImage: `${DEPLOY_SERVICE_ENV.DOCKER_USERNAME}/deployhub-static-helper`,
+                reload: DEPLOY_SERVICE_ENV.NODE_ENV === 'production',
             });
-
-            await DEPLOY_SERVICE_ENV.NODE_ENV === 'production' ? reloadNginx() : ""
 
             if (projectData?.customDomains?.length > 0) {
                 deploymentUrl = `${reqType}${projectData.customDomains}`
@@ -486,10 +409,10 @@ const deployWorker = new Worker(QUEUE_NAMES.DEPLOY, async (job) => {
                 projectId: projectId,
                 projectstatus: "failed",
                 userId,
-                projectName: projectData.name,
-                buildId: buildData?._id,
-                logsUrl: buildData.logUrl,
-                serviceType: projectData.type
+                projectName: projectData?.name,
+                buildId: buildData?._id ?? buildId,
+                logsUrl: buildData?.logUrl,
+                serviceType: projectData?.type
             })
         );
 
@@ -569,4 +492,17 @@ deployWorker.on("completed", async (job, results) => {
 deployWorker.on('failed', async (job, err) => {
     console.log(err)
     console.error('Job Failed');
+});
+
+// Report lock/connection problems before they turn into an unexplained stalled job.
+deployWorker.on('error', (error) => {
+    console.error('[deploy-worker] Worker error:', error);
+});
+
+deployWorker.on('lockRenewalFailed', (jobIds) => {
+    console.error('[deploy-worker] Lock renewal failed:', jobIds);
+});
+
+deployWorker.on('stalled', (jobId) => {
+    console.warn(`[deploy-worker] Job ${jobId} stalled; check worker restarts, Redis connectivity and resource usage`);
 });
