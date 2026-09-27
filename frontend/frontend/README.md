@@ -4,7 +4,7 @@ React + Vite marketing website in `frontend/frontend`. Routes: `/`, `/pricing`, 
 
 Run `npm ci`, then `npm run dev`. Use `npm run lint` and `npm run build` before shipping.
 
-The UI uses the same Manrope/DM Sans fonts, logo, semantic color roles, and ten palettes as Dashboard-Revamp. Slate is the default. Keep `src/theme.js` aligned with `../Dashboard-Revamp/src/theme.js`; the local copy allows this folder to build independently in Docker. Preferences persist under `deployhub.appearance.v1`, sync between tabs on the same origin, and fall back to Slate when storage is unavailable. Separate deployed subdomains keep separate browser preferences.
+The UI uses the same Manrope/DM Sans fonts, logo, semantic color roles, and Light and Dark themes as Dashboard-Revamp. Light uses an off-white canvas with neutral greys; Dark uses a black canvas with neutral greys and is the default. Keep `src/theme.js` aligned with `../Dashboard-Revamp/src/theme.js`; the local copy allows this folder to build independently in Docker. Preferences persist under `deployhub.appearance.v1`, sync between tabs on the same origin, and fall back to Dark when storage is unavailable. Existing light palette preferences migrate to Light; other retired or invalid preferences migrate to Dark. Separate deployed subdomains keep separate browser preferences.
 
 All project CTAs link to the existing dashboard creation routes. `VITE_DASHBOARD_URL` optionally changes the destination at build time; the default is `https://dashboard.deployhub.cloud`.
 

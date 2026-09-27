@@ -23,9 +23,8 @@ export default function ThemePicker() {
       {open && (
         <Modal
           title="Workspace appearance"
-          description="Ten considered palettes. Choose the one that feels comfortable."
+          description="Choose Light or Dark for your workspace."
           onClose={() => setOpen(false)}
-          wide
         >
           <div className="theme-picker-intro">
             <span>
@@ -34,78 +33,64 @@ export default function ThemePicker() {
             </span>
             <span>Applied instantly · Saved automatically</span>
           </div>
-          {[false, true].map((dark) => (
-            <section key={String(dark)} className="theme-collection">
-              <h3 className="theme-collection-label">
-                {dark ? 'After hours' : 'Daylight'}
-                <span>{dark ? '3 dark palettes' : '7 light palettes'}</span>
-              </h3>
-              <div
-                className={`theme-options ${dark ? 'dark-collection' : ''}`}
-                role="group"
-                aria-label={dark ? 'Dark themes' : 'Light themes'}
+          <div className="theme-options" role="group" aria-label="Choose a theme">
+            {themes.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                data-theme-option={item.id}
+                className="theme-option"
+                aria-pressed={theme.id === item.id}
+                aria-label={`${item.name} theme`}
+                onClick={() => selectTheme(item.id)}
               >
-                {themes
-                  .filter((item) => item.dark === dark)
-                  .map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      data-theme-option={item.id}
-                      className="theme-option"
-                      aria-pressed={theme.id === item.id}
-                      aria-label={`${item.name} theme, ${item.dark ? 'dark' : 'light'}`}
-                      onClick={() => selectTheme(item.id)}
-                    >
-                      <div
-                        className="theme-preview"
-                        aria-hidden="true"
-                        style={{ background: item.colors.bg, borderColor: item.colors.line }}
-                      >
-                        <div
-                          className="theme-preview-sidebar"
-                          style={{ background: item.colors.sidebar }}
-                        >
-                          <i style={{ background: item.colors.accent }} />
-                          <span style={{ background: item.colors['sidebar-muted'] }} />
-                          <span style={{ background: item.colors['sidebar-muted'] }} />
-                        </div>
-                        <div className="theme-preview-content">
-                          <i style={{ background: item.colors.muted }} />
-                          <div>
-                            <span
-                              style={{
-                                background: item.colors.surface,
-                                borderColor: item.colors.line,
-                              }}
-                            />
-                            <span
-                              style={{
-                                background: item.colors.surface,
-                                borderColor: item.colors.line,
-                              }}
-                            />
-                          </div>
-                          <b style={{ background: item.colors.tint }}>
-                            <i style={{ background: item.colors.accent }} />
-                          </b>
-                        </div>
-                        {theme.id === item.id && (
-                          <span className="theme-selected-mark">
-                            <Check size={13} />
-                          </span>
-                        )}
-                      </div>
-                      <span className="theme-option-name">
-                        {item.name}
-                        {item.dark ? <Moon size={12} /> : <Sun size={12} />}
-                      </span>
-                      <small>{item.description}</small>
-                    </button>
-                  ))}
-              </div>
-            </section>
-          ))}
+                <div
+                  className="theme-preview"
+                  aria-hidden="true"
+                  style={{ background: item.colors.bg, borderColor: item.colors.line }}
+                >
+                  <div
+                    className="theme-preview-sidebar"
+                    style={{ background: item.colors.sidebar }}
+                  >
+                    <i style={{ background: item.colors.accent }} />
+                    <span style={{ background: item.colors['sidebar-muted'] }} />
+                    <span style={{ background: item.colors['sidebar-muted'] }} />
+                  </div>
+                  <div className="theme-preview-content">
+                    <i style={{ background: item.colors.muted }} />
+                    <div>
+                      <span
+                        style={{
+                          background: item.colors.surface,
+                          borderColor: item.colors.line,
+                        }}
+                      />
+                      <span
+                        style={{
+                          background: item.colors.surface,
+                          borderColor: item.colors.line,
+                        }}
+                      />
+                    </div>
+                    <b style={{ background: item.colors.tint }}>
+                      <i style={{ background: item.colors.accent }} />
+                    </b>
+                  </div>
+                  {theme.id === item.id && (
+                    <span className="theme-selected-mark">
+                      <Check size={13} />
+                    </span>
+                  )}
+                </div>
+                <span className="theme-option-name">
+                  {item.name}
+                  {item.dark ? <Moon size={12} /> : <Sun size={12} />}
+                </span>
+                <small>{item.description}</small>
+              </button>
+            ))}
+          </div>
           <div className="theme-picker-footer">
             <p>
               One choice, everywhere.

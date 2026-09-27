@@ -28,9 +28,9 @@ export default function ThemePicker() {
       >
         <div className="dialog-heading">
           <div>
-            <span className="eyebrow">MAKE YOURSELF AT HOME</span>
-            <h2 id="theme-title">A little more you.</h2>
-            <p>The same quiet palettes as your dashboard.</p>
+            <span className="eyebrow">APPEARANCE</span>
+            <h2 id="theme-title">Choose your theme.</h2>
+            <p>Choose Light or Dark for your workspace.</p>
           </div>
           <button
             autoFocus
@@ -72,7 +72,7 @@ export default function ThemePicker() {
           ))}
         </fieldset>
         <p className="dialog-note">
-          Your preference is saved in this browser. Slate is the default.
+          Your preference is saved in this browser. Dark is the default.
         </p>
       </dialog>
     </>

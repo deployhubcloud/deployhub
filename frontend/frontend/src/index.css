@@ -7,19 +7,19 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   color-scheme: dark;
-  --theme-bg: #232a33;
-  --theme-surface: #2c3440;
-  --theme-subtle: #363f4c;
-  --theme-text: #e0e5ec;
-  --theme-muted: #adb9c9;
-  --theme-line: #465363;
-  --theme-accent: #a5b9d2;
-  --theme-accent-hover: #bfd0e4;
-  --theme-on-accent: #172129;
-  --theme-tint: #394859;
+  --theme-bg: #000000;
+  --theme-surface: #0a0a0a;
+  --theme-subtle: #171717;
+  --theme-text: #ededed;
+  --theme-muted: #a1a1a1;
+  --theme-line: #2e2e2e;
+  --theme-accent: #ededed;
+  --theme-accent-hover: #ffffff;
+  --theme-on-accent: #0a0a0a;
+  --theme-tint: #1f1f1f;
   --theme-success: #abd3ba;
   --theme-success-bg: #293c33;
-  --theme-shadow: #00000024;
+  --theme-shadow: #00000066;
   color: var(--theme-text);
   background: var(--theme-bg);
 }
@@ -1412,7 +1412,7 @@ svg {
 
 /* Native dialog supplies Escape handling and a keyboard focus trap. */
 .theme-dialog {
-  width: min(660px, calc(100% - 32px));
+  width: min(520px, calc(100% - 32px));
   max-height: calc(100dvh - 40px);
   margin: auto;
   padding: 28px;
@@ -1423,7 +1423,7 @@ svg {
   box-shadow: 0 25px 90px #00000040;
 }
 .theme-dialog::backdrop {
-  background: rgb(15 20 28 / 62%);
+  background: rgb(0 0 0 / 62%);
   backdrop-filter: blur(5px);
 }
 .dialog-heading {
@@ -1449,7 +1449,7 @@ svg {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 .theme-option {

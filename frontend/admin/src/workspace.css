@@ -1,11 +1,7 @@
 /* Console layout: global navigation, workspaces, contextual exploration. */
 :root {
-  --console-canvas: color-mix(
-    in srgb,
-    var(--theme-bg) 94%,
-    var(--theme-text) 6%
-  );
-  --console-sheet: var(--theme-bg);
+  --console-canvas: var(--theme-bg);
+  --console-sheet: var(--theme-surface);
   --console-border: color-mix(in srgb, var(--theme-line) 65%, transparent);
 }
 body {
@@ -256,9 +252,9 @@ body {
   padding: 8px 12px;
 }
 .btn-primary {
-  background: var(--theme-text);
-  color: var(--theme-bg);
-  border-color: var(--theme-text);
+  background: var(--theme-accent);
+  color: var(--theme-on-accent);
+  border-color: var(--theme-accent);
   font-weight: 650;
 }
 .btn-primary:hover {

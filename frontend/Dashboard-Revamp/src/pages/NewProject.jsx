@@ -651,7 +651,7 @@ function NewProjectForm({ plans }) {
             >
               {selected && (
                 <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-900">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                     <path
                       fillRule="evenodd"
                       d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-4-4a1 1 0 011.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z"

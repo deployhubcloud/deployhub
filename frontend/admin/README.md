@@ -1,6 +1,6 @@
 # DeployHub administration
 
-React + Vite admin workspace using the same ten appearance palettes as Dashboard-Revamp. Slate is the default; the selected palette persists in local storage for the current origin. Every record, metric and operation uses the admin API. There is no demo-data fallback.
+React + Vite admin workspace using the same Light and Dark themes as Dashboard-Revamp. Dark is the default; the selected theme persists in local storage for the current origin. Saved legacy themes migrate to Light or Dark. Every record, metric and operation uses the admin API. There is no demo-data fallback.
 
 ## Run
 
